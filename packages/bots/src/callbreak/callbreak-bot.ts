@@ -12,6 +12,10 @@ export class CallbreakBotStrategy
 {
   constructor(public readonly difficulty: 'easy' | 'medium' = 'medium') {}
 
+  chooseMove(view: CallbreakPublicView, _seat: number): CallbreakMove {
+    return this.decide(view, new SeedRng(`${Date.now()}`));
+  }
+
   decide(view: CallbreakPublicView, rng: SeedRng, budgetMs = 500): CallbreakMove {
     const hand = view.myHand;
     if (!hand || hand.length === 0) {

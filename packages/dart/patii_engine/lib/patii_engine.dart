@@ -1,5 +1,10 @@
 /// Pure deterministic Dart game engine abstractions for Patii.
-library patii_engine;
+library;
+
+export 'src/prng.dart';
+export 'src/callbreak.dart';
+export 'src/marriage.dart';
+export 'src/local_table_engine.dart';
 
 enum Suit { S, H, D, C, X }
 

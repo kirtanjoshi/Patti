@@ -5,6 +5,10 @@ class PlayingCardWidget extends StatelessWidget {
   final Card card;
   final bool isLegal;
   final bool isSelected;
+  final bool isFaceDown;
+  final String? badgeText;
+  final double width;
+  final double height;
   final VoidCallback? onTap;
 
   const PlayingCardWidget({
@@ -12,6 +16,10 @@ class PlayingCardWidget extends StatelessWidget {
     required this.card,
     this.isLegal = true,
     this.isSelected = false,
+    this.isFaceDown = false,
+    this.badgeText,
+    this.width = 56.0,
+    this.height = 84.0,
     this.onTap,
   });
 
@@ -56,7 +64,7 @@ class PlayingCardWidget extends StatelessWidget {
     final cardColor = isRed ? colorScheme.error : colorScheme.onSurface;
 
     return Semantics(
-      label: '$rankLabel of ${card.suit.name}',
+      label: isFaceDown ? 'Hidden card' : '$rankLabel of ${card.suit.name}',
       button: isLegal,
       child: GestureDetector(
         onTap: isLegal ? onTap : null,
@@ -66,10 +74,10 @@ class PlayingCardWidget extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
-            width: 56.0,
-            height: 84.0,
+            width: width,
+            height: height,
             decoration: BoxDecoration(
-              color: colorScheme.surface,
+              color: isFaceDown ? colorScheme.secondary : colorScheme.surface,
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(
                 color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
@@ -77,44 +85,102 @@ class PlayingCardWidget extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
+                  color: colorScheme.shadow.withValues(alpha: 0.12),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             padding: const EdgeInsets.all(4.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: Text(
-                    rankLabel,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: cardColor,
-                      fontWeight: FontWeight.bold,
+            child: isFaceDown
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.grid_view_rounded,
+                          size: 20,
+                          color: colorScheme.onSecondary.withValues(alpha: 0.7),
+                        ),
+                        if (badgeText != null) ...[
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              badgeText!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onPrimary,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                  )
+                : Stack(
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Align(
+                            alignment: Alignment.topLeft,
+                            child: Text(
+                              rankLabel,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: cardColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            suitSymbol,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: cardColor,
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: Text(
+                              rankLabel,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: cardColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (badgeText != null)
+                        Positioned(
+                          bottom: 2,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                badgeText!,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onPrimaryContainer,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-                Text(
-                  suitSymbol,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: cardColor,
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Text(
-                    rankLabel,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: cardColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
