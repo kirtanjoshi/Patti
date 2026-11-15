@@ -1,0 +1,38 @@
+{
+  "marriageScoringFixtures": [
+    {
+      "name": "Classic mode: 4 players, winner has seen maal, standard settlement",
+      "mode": "classic",
+      "players": [
+        { "seat": 0, "maal": 10, "sawMaal": true },
+        { "seat": 1, "maal": 5, "sawMaal": true },
+        { "seat": 2, "maal": 2, "sawMaal": true },
+        { "seat": 3, "maal": 0, "sawMaal": false }
+      ],
+      "winnerSeat": 0,
+      "finishedWithDublees": false,
+      "expectedT": 17,
+      "expectedPayments": [
+        { "seat": 1, "P_i": 0 },
+        { "seat": 2, "P_i": 12 },
+        { "seat": 3, "P_i": 27 }
+      ]
+    },
+    {
+      "name": "Murder mode: non-seers maal becomes 0",
+      "mode": "murder",
+      "players": [
+        { "seat": 0, "maal": 8, "sawMaal": true },
+        { "seat": 1, "maal": 4, "sawMaal": true },
+        { "seat": 2, "maal": 6, "sawMaal": false }
+      ],
+      "winnerSeat": 0,
+      "finishedWithDublees": false,
+      "expectedT": 12,
+      "expectedPayments": [
+        { "seat": 1, "P_i": 3 },
+        { "seat": 2, "P_i": 22 }
+      ]
+    }
+  ]
+}

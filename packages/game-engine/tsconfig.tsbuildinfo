@@ -1,1 +1,0 @@
-{"root":["./src/index.ts","./src/core/card.ts","./src/core/crypto.ts","./src/core/interface.ts","./src/core/prng.ts","./src/core/table-shell.ts","./src/core/types.ts","./src/games/callbreak/callbreak.ts","./src/games/callbreak/scoring.ts","./src/games/callbreak/simulation.ts","./src/games/callbreak/types.ts","./src/games/callbreak/validation.ts"],"version":"5.9.3"}
