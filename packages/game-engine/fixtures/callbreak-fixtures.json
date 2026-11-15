@@ -1,0 +1,54 @@
+{
+  "description": "Callbreak official test fixtures matching PRD Section 5.1",
+  "scoringFixtures": [
+    {
+      "name": "Nepali style: make call with extra tricks",
+      "style": "nepali",
+      "bid": 4,
+      "tricksWon": 6,
+      "expectedRoundScore": 4.2
+    },
+    {
+      "name": "Nepali style: miss call",
+      "style": "nepali",
+      "bid": 4,
+      "tricksWon": 3,
+      "expectedRoundScore": -4.0
+    },
+    {
+      "name": "Nepali style: exact call",
+      "style": "nepali",
+      "bid": 3,
+      "tricksWon": 3,
+      "expectedRoundScore": 3.0
+    },
+    {
+      "name": "Pagat style: exact call",
+      "style": "pagat",
+      "bid": 3,
+      "tricksWon": 3,
+      "expectedRoundScore": 3.0
+    },
+    {
+      "name": "Pagat style: call + 1 trick",
+      "style": "pagat",
+      "bid": 3,
+      "tricksWon": 4,
+      "expectedRoundScore": 3.1
+    },
+    {
+      "name": "Pagat style: overtricks beyond call+1 fails",
+      "style": "pagat",
+      "bid": 3,
+      "tricksWon": 5,
+      "expectedRoundScore": -3.0
+    },
+    {
+      "name": "Pagat style: high bid 8+ success scores 13",
+      "style": "pagat",
+      "bid": 8,
+      "tricksWon": 8,
+      "expectedRoundScore": 13.0
+    }
+  ]
+}

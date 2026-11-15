@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'features/games/callbreak/callbreak_table_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,7 +110,14 @@ class LobbyPlaceholderScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CallbreakTableScreen(),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.flash_on),
                     label: Text(
                       'lobby.quick_match'.tr(),

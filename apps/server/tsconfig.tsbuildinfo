@@ -1,1 +1,1 @@
-{"root":["./src/app.module.ts","./src/main.ts"],"version":"5.9.3"}
+{"root":["./src/app.module.ts","./src/main.ts","./src/gateways/game.gateway.ts","./src/modules/auth/auth.controller.ts","./src/modules/auth/auth.module.ts","./src/modules/auth/auth.service.ts","./src/modules/matchmaking/matchmaking.module.ts","./src/modules/matchmaking/matchmaking.service.ts","./src/modules/table/table-runtime.ts","./src/modules/table/table.module.ts","./src/modules/table/table.service.ts","./src/modules/wallet/wallet.module.ts","./src/modules/wallet/wallet.service.ts"],"version":"5.9.3"}

@@ -31,5 +31,20 @@
     "pot": "Pot",
     "your_turn": "Your Turn",
     "waiting": "Waiting for players..."
+  },
+  "callbreak": {
+    "bid": "Bid",
+    "select_bid": "Select your bid (1-8)",
+    "tricks": "Tricks",
+    "bids": "Bids",
+    "lead_suit": "Lead Suit",
+    "round_over": "Round Complete",
+    "game_over": "Game Over",
+    "points": "Points",
+    "placement": "Placement",
+    "rematch": "Rematch",
+    "leave_confirm": "Are you sure you want to leave the table?",
+    "leave": "Leave",
+    "stay": "Stay"
   }
 }
