@@ -46,5 +46,26 @@
     "leave_confirm": "Are you sure you want to leave the table?",
     "leave": "Leave",
     "stay": "Stay"
+  },
+  "room": {
+    "title": "Private Room",
+    "create": "Create Room",
+    "join": "Join Room",
+    "enter_code": "Enter 6-character room code",
+    "code_label": "Room Code",
+    "host": "Host",
+    "players": "Players",
+    "start_game": "Start Game",
+    "rules": "House Rules",
+    "share_code": "Share Code"
+  },
+  "economy": {
+    "daily_reward": "Daily Reward",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "day": "Day",
+    "free_chest": "Free Chest",
+    "available_now": "Available Now",
+    "streak": "Streak"
   }
 }
