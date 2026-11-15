@@ -111,6 +111,9 @@ void main() {
 
   group('TeenPattiTableScreen Widget Tests', () {
     testWidgets('renders Teen Patti table with 5 seats, pot, cards and actions', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       await tester.pumpWidget(
         const MaterialApp(
           home: TeenPattiTableScreen(initialPlayerCount: 5),
@@ -142,6 +145,7 @@ void main() {
       // Tap Chaal 200
       await tester.tap(find.widgetWithText(FilledButton, 'teenpatti.chaal 200'));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
     });
   });
 }

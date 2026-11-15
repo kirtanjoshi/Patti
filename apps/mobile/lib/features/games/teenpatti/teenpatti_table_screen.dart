@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
@@ -58,12 +59,19 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   int _roundNumber = 1;
   bool _isGameOver = false;
   List<int> _winnerSeats = [];
+  Timer? _botTimer;
 
   @override
   void initState() {
     super.initState();
     _playerCount = widget.initialPlayerCount.clamp(2, 7);
     _startNewRound();
+  }
+
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    super.dispose();
   }
 
   void _startNewRound() {
@@ -97,29 +105,21 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
 
   int _nextActiveSeat(int fromSeat) {
     for (int step = 1; step < _players.length; step++) {
-      final nextSeat = (fromSeat + step) % _players.length;
-      if (!_players[nextSeat].isPacked) {
-        return nextSeat;
-      }
+      final s = (fromSeat + step) % _players.length;
+      if (!_players[s].isPacked) return s;
     }
     return fromSeat;
   }
 
   int _previousActiveSeat(int fromSeat) {
     for (int step = 1; step < _players.length; step++) {
-      final prevSeat = (fromSeat - step + _players.length) % _players.length;
-      if (!_players[prevSeat].isPacked) {
-        return prevSeat;
-      }
+      final s = (fromSeat - step + _players.length) % _players.length;
+      if (!_players[s].isPacked) return s;
     }
     return fromSeat;
   }
 
-  void _onToggleSeen() {
-    setState(() {
-      _myState.isSeen = !_myState.isSeen;
-    });
-  }
+  void _onToggleSeen() => setState(() => _myState.isSeen = !_myState.isSeen);
 
   void _onChaal(int amount) {
     if (_isGameOver || _currentTurnSeat != 0) return;
@@ -172,9 +172,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: Text('teenpatti.sideshow'.tr()),
-        content: Text(
-          '${'teenpatti.sideshow_request'.tr()} -> ${prevPlayer.name}',
-        ),
+        content: Text('${'teenpatti.sideshow_request'.tr()} -> ${prevPlayer.name}'),
         actions: [
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -250,7 +248,8 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   void _triggerBotTurnIfNeeded() {
     if (_isGameOver || _currentTurnSeat == 0) return;
 
-    Future.delayed(const Duration(milliseconds: 700), () {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 700), () {
       if (!mounted || _isGameOver) return;
 
       final bot = _players[_currentTurnSeat];
@@ -403,7 +402,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
 
             // User's 3-card Hand Display (with Blind/Seen 3D flip toggle)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: TeenPattiHandWidget(
                 cards: _myState.hand,
                 isSeen: _myState.isSeen,
@@ -539,9 +538,11 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
               ? '${'teenpatti.seen'.tr()} · ${player.totalBet}'
               : '${'teenpatti.blind'.tr()} · ${player.totalBet}';
 
+      final maxLeft = math.max(8.0, w - 128.0);
+      final maxTop = math.max(8.0, h - 64.0);
       return Positioned(
-        left: (x - 60).clamp(8.0, w - 128.0),
-        top: (y - 28).clamp(8.0, h - 64.0),
+        left: (x - 60).clamp(8.0, maxLeft),
+        top: (y - 28).clamp(8.0, maxTop),
         child: SeatWidget(
           displayName: player.name,
           statusText: statusText,

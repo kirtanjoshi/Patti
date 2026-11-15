@@ -119,16 +119,16 @@ class TeenPattiHandWidget extends StatelessWidget {
                               child: PlayingCardWidget(
                                 card: card,
                                 isFaceDown: false,
-                                width: 64.0,
-                                height: 96.0,
+                                width: 56.0,
+                                height: 84.0,
                                 onTap: onToggleSeen,
                               ),
                             )
                           : PlayingCardWidget(
                               card: card,
                               isFaceDown: true,
-                              width: 64.0,
-                              height: 96.0,
+                              width: 56.0,
+                              height: 84.0,
                               onTap: onToggleSeen,
                             ),
                     ),
