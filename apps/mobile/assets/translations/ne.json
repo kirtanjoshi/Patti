@@ -1,0 +1,35 @@
+{
+  "app_name": "पत्ती",
+  "lobby": {
+    "title": "पत्ती लबी",
+    "quick_match": "छिटो खेल",
+    "private_room": "निजी कोठा",
+    "offline_mode": "अफलाइन बोट्स",
+    "coins": "सिक्का",
+    "level": "तह",
+    "games": {
+      "callbreak": "कल ब्रेक",
+      "marriage": "म्यारिज",
+      "teenpatti": "तीन पत्ती",
+      "kitti": "कित्ती",
+      "dhumbal": "धुम्बल",
+      "jutpatti": "जुटपत्ती",
+      "rummy": "नेपाली रम्मी",
+      "jokerrummy": "जोकर रम्मी"
+    }
+  },
+  "actions": {
+    "play": "खेल्नुहोस्",
+    "cancel": "रद्द गर्नुहोस्",
+    "confirm": "पुष्टि गर्नुहोस्",
+    "back": "पछाडि",
+    "rejoin": "पुनः जोडिनुहोस्",
+    "leave": "छोड्नुहोस्"
+  },
+  "table": {
+    "round": "राउन्ड",
+    "pot": "पट",
+    "your_turn": "तपाईंको पालो",
+    "waiting": "खेलाडीहरू पर्खिँदै..."
+  }
+}

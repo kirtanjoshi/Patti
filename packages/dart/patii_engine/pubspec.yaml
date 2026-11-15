@@ -1,0 +1,14 @@
+name: patii_engine
+description: Pure deterministic Dart port of the Patii card game engine for offline play.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  meta: ^1.15.0
+
+dev_dependencies:
+  test: ^1.25.8
+  lints: ^5.0.0

@@ -1,0 +1,13 @@
+name: patii
+packages:
+  - apps/mobile
+  - packages/dart/*
+
+scripts:
+  analyze:
+    run: melos exec -- "dart analyze . || flutter analyze ."
+    description: Run analyzer in all Dart/Flutter packages.
+
+  test:
+    run: melos exec --dir-exists="test" -- "flutter test || dart test"
+    description: Run tests in all Dart/Flutter packages.

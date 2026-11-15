@@ -1,0 +1,217 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum GameId {
+  CALLBREAK
+  MARRIAGE
+  TEEN_PATTI
+  KITTI
+  DHUMBAL
+  JUTPATTI
+  NEPALI_RUMMY
+  JOKER_RUMMY
+}
+
+enum AuthProvider {
+  GUEST
+  GOOGLE
+  PHONE
+}
+
+enum UserStatus {
+  ACTIVE
+  MUTED
+  BANNED
+}
+
+enum MatchMode {
+  QUICK
+  PRIVATE
+}
+
+enum WalletAccountType {
+  USER
+  HOUSE_RAKE
+  HOUSE_BOT
+  HOUSE_REWARDS
+  HOUSE_IAP
+}
+
+enum TxKind {
+  SIGNUP
+  DAILY
+  CHEST
+  RESCUE
+  LEVEL_UP
+  FIRST_WIN
+  REFERRAL
+  HOLD
+  RELEASE
+  SETTLE
+  RAKE
+  AD_REWARD
+  IAP
+  ADMIN_ADJUST
+}
+
+model User {
+  id          String         @id @default(cuid())
+  displayName String
+  avatarId    Int            @default(0)
+  language    String         @default("en") // "en" | "ne"
+  country     String?
+  xp          Int            @default(0)
+  level       Int            @default(1)
+  rating      Int            @default(1200)
+  status      UserStatus     @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  lastSeenAt  DateTime?
+  identities  AuthIdentity[]
+  wallet      WalletAccount?
+  devices     Device[]
+  stats       GameStat[]
+  matchSeats  MatchPlayer[]
+}
+
+model AuthIdentity {
+  id         String       @id @default(cuid())
+  userId     String
+  provider   AuthProvider
+  providerId String       // firebase uid / device id
+  phone      String?
+  email      String?
+  user       User         @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerId])
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  userId     String
+  fcmToken   String?
+  platform   String   // android | ios
+  appVersion String
+  ipHash     String?
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model WalletAccount {
+  id      String            @id @default(cuid())
+  type    WalletAccountType
+  userId  String?           @unique
+  balance BigInt            @default(0)
+  held    BigInt            @default(0)
+  user    User?             @relation(fields: [userId], references: [id])
+}
+
+model WalletTx {
+  id             String   @id @default(cuid())
+  kind           TxKind
+  debitAccount   String
+  creditAccount  String
+  amount         BigInt
+  matchId        String?
+  idempotencyKey String   @unique
+  meta           Json?
+  createdAt      DateTime @default(now())
+
+  @@index([debitAccount, createdAt])
+  @@index([creditAccount, createdAt])
+}
+
+model Match {
+  id        String        @id @default(cuid())
+  game      GameId
+  mode      MatchMode
+  tier      String?
+  rules     Json
+  seedHash  String
+  seed      String
+  moveLog   Json          // compressed array of moves
+  startedAt DateTime
+  endedAt   DateTime
+  players   MatchPlayer[]
+
+  @@index([game, endedAt])
+}
+
+model MatchPlayer {
+  id        String   @id @default(cuid())
+  matchId   String
+  userId    String?  // null for bots
+  botLevel  String?
+  seat      Int
+  points    Float
+  coinDelta BigInt
+  placement Int
+  match     Match    @relation(fields: [matchId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model GameStat {
+  userId  String
+  game    GameId
+  played  Int    @default(0)
+  won     Int    @default(0)
+  bestWin BigInt @default(0)
+  user    User   @relation(fields: [userId], references: [id])
+
+  @@id([userId, game])
+}
+
+model Friendship {
+  userId    String
+  friendId  String
+  status    String   // pending | accepted | blocked
+  createdAt DateTime @default(now())
+
+  @@id([userId, friendId])
+}
+
+model DailyReward {
+  userId      String    @id
+  streak      Int
+  lastClaimAt DateTime
+  chestAt     DateTime?
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reportedId String
+  matchId    String?
+  reason     String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+}
+
+model AdminUser {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  role         String  // owner | moderator | support
+  passwordHash String
+  totpSecret   String?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  target    String
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+
+model RemoteConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

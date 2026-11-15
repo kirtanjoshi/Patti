@@ -1,0 +1,11 @@
+{
+  "name": "@patii/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "flutter analyze .",
+    "test": "flutter test",
+    "lint": "flutter analyze .",
+    "typecheck": "flutter analyze ."
+  }
+}

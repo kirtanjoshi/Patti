@@ -1,0 +1,35 @@
+{
+  "app_name": "Patii",
+  "lobby": {
+    "title": "Patii Lobby",
+    "quick_match": "Quick Match",
+    "private_room": "Private Room",
+    "offline_mode": "Offline vs Bots",
+    "coins": "Coins",
+    "level": "Level",
+    "games": {
+      "callbreak": "Callbreak",
+      "marriage": "Marriage",
+      "teenpatti": "Teen Patti",
+      "kitti": "Kitti",
+      "dhumbal": "Dhumbal",
+      "jutpatti": "Jutpatti",
+      "rummy": "Nepali Rummy",
+      "jokerrummy": "Joker Rummy"
+    }
+  },
+  "actions": {
+    "play": "Play",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "rejoin": "Rejoin",
+    "leave": "Leave"
+  },
+  "table": {
+    "round": "Round",
+    "pot": "Pot",
+    "your_turn": "Your Turn",
+    "waiting": "Waiting for players..."
+  }
+}

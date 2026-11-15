@@ -1,0 +1,46 @@
+# Node / JS
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+.turbo/
+
+# Next.js
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/build/
+apps/mobile/.dart_tool/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+~$*.docx
+
+# Docker / local infra data
+infra/data/
+postgres_data/
+redis_data/
