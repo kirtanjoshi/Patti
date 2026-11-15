@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/games/callbreak/callbreak_table_screen.dart';
+import 'features/games/marriage/marriage_table_screen.dart';
+import 'features/games/teenpatti/teenpatti_table_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -120,7 +122,63 @@ class LobbyPlaceholderScreen extends StatelessWidget {
                     },
                     icon: const Icon(Icons.flash_on),
                     label: Text(
-                      'lobby.quick_match'.tr(),
+                      '${'lobby.quick_match'.tr()}: ${'lobby.games.callbreak'.tr()}',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12.0),
+              Semantics(
+                button: true,
+                label: 'lobby.games.marriage'.tr(),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48.0),
+                  child: FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MarriageTableScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.style),
+                    label: Text(
+                      '${'lobby.quick_match'.tr()}: ${'lobby.games.marriage'.tr()}',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12.0),
+              Semantics(
+                button: true,
+                label: 'lobby.games.teenpatti'.tr(),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48.0),
+                  child: FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TeenPattiTableScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.casino_outlined),
+                    label: Text(
+                      '${'lobby.quick_match'.tr()}: ${'lobby.games.teenpatti'.tr()}',
                       style: theme.textTheme.labelLarge,
                     ),
                   ),

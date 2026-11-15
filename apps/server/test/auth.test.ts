@@ -22,4 +22,9 @@ describe('AuthService Token Management', () => {
     const tampered = `${parts[0]}.${parts[1]}.invalid_signature_xyz`;
     expect(() => authService.verifyAccessToken(tampered)).toThrow();
   });
+
+  it('rejects expired or malformed tokens', () => {
+    expect(() => authService.verifyAccessToken('invalid.token')).toThrow();
+    expect(() => authService.verifyAccessToken('')).toThrow();
+  });
 });

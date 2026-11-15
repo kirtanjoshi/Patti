@@ -145,4 +145,21 @@ export class AuthService {
 
     return this.generateTokens(newUser.id, newUser.displayName, true);
   }
+
+  /**
+   * Account deletion adhering to App Store / Google Play requirements (PRD Phase 10)
+   */
+  public async deleteAccount(userId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      await tx.authIdentity.deleteMany({ where: { userId } });
+      await tx.device.deleteMany({ where: { userId } });
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          status: UserStatus.BANNED,
+          displayName: 'Deleted User',
+        },
+      });
+    });
+  }
 }

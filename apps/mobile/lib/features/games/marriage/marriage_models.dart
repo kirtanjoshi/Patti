@@ -270,3 +270,104 @@ List<Card> sortCardsByRank(List<Card> cards) {
   });
   return copy;
 }
+
+List<MarriageMeldSlot> createInitialMeldSlots(MeldType type) {
+  final count = type == MeldType.pure ? 3 : 7;
+  return List.generate(
+    count,
+    (index) => MarriageMeldSlot(id: index, type: type),
+  );
+}
+
+List<List<Card>> findAutoGroupPureCombinations(List<Card> hand) {
+  final combinations = <List<Card>>[];
+  final remaining = List<Card>.from(hand);
+
+  // Check for tunnelas
+  final groupedByRankAndSuit = <String, List<Card>>{};
+  for (final c in remaining) {
+    final key = '${c.rank}_${c.suit}';
+    groupedByRankAndSuit.putIfAbsent(key, () => []).add(c);
+  }
+  for (final group in groupedByRankAndSuit.values) {
+    if (group.length >= 3 && combinations.length < 3) {
+      final tunnela = group.take(3).toList();
+      combinations.add(tunnela);
+      for (final c in tunnela) {
+        remaining.removeWhere((x) => x.id == c.id);
+      }
+    }
+  }
+
+  // Check for pure sequences in remaining
+  final suits = [Suit.S, Suit.H, Suit.D, Suit.C];
+  bool found = true;
+  while (found && combinations.length < 3) {
+    found = false;
+    for (final suit in suits) {
+      final suitCards = remaining.where((c) => c.suit == suit).toList();
+      if (suitCards.length < 3) continue;
+      for (int i = 0; i < suitCards.length; i++) {
+        for (int j = i + 1; j < suitCards.length; j++) {
+          for (int k = j + 1; k < suitCards.length; k++) {
+            final trio = [suitCards[i], suitCards[j], suitCards[k]];
+            if (MarriageMeldSlot.isPureSequence(trio)) {
+              combinations.add(trio);
+              for (final c in trio) {
+                remaining.removeWhere((x) => x.id == c.id);
+              }
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+        if (found) break;
+      }
+      if (found) break;
+    }
+  }
+
+  return combinations;
+}
+
+List<Card> createInitialStockPile() => [
+      const Card(suit: Suit.S, rank: 1, deck: 1, id: 'AS1'),
+      const Card(suit: Suit.H, rank: 4, deck: 1, id: '4H1'),
+      const Card(suit: Suit.D, rank: 12, deck: 1, id: 'QD1'),
+      const Card(suit: Suit.C, rank: 9, deck: 1, id: '9C1'),
+      const Card(suit: Suit.S, rank: 3, deck: 1, id: '3S1'),
+    ];
+
+List<Card> createInitialDiscardPile() => [
+      const Card(suit: Suit.H, rank: 2, deck: 0, id: '2H0'),
+    ];
+
+List<Card> createInitialMarriageHand() => [
+      // Pure Sequence 1 (also Marriage with cut joker)
+      const Card(suit: Suit.C, rank: 10, deck: 0, id: '10C0'),
+      const Card(suit: Suit.C, rank: 11, deck: 1, id: 'JC1'),
+      const Card(suit: Suit.C, rank: 12, deck: 0, id: 'QC0'),
+      // Pure Sequence 2
+      const Card(suit: Suit.S, rank: 4, deck: 0, id: '4S0'),
+      const Card(suit: Suit.S, rank: 5, deck: 0, id: '5S0'),
+      const Card(suit: Suit.S, rank: 6, deck: 0, id: '6S0'),
+      // Tunnela (3 identical 7 of diamonds)
+      const Card(suit: Suit.D, rank: 7, deck: 0, id: '7D0'),
+      const Card(suit: Suit.D, rank: 7, deck: 1, id: '7D1'),
+      const Card(suit: Suit.D, rank: 7, deck: 2, id: '7D2'),
+      // Alter card
+      const Card(suit: Suit.S, rank: 11, deck: 0, id: 'JS0'),
+      // Dublees and other cards
+      const Card(suit: Suit.C, rank: 2, deck: 0, id: '2C0'),
+      const Card(suit: Suit.C, rank: 2, deck: 1, id: '2C1'),
+      const Card(suit: Suit.S, rank: 13, deck: 0, id: 'KS0'),
+      const Card(suit: Suit.S, rank: 13, deck: 1, id: 'KS1'),
+      const Card(suit: Suit.H, rank: 8, deck: 0, id: '8H0'),
+      const Card(suit: Suit.H, rank: 9, deck: 0, id: '9H0'),
+      const Card(suit: Suit.H, rank: 10, deck: 0, id: '10H0'),
+      const Card(suit: Suit.D, rank: 3, deck: 0, id: '3D0'),
+      const Card(suit: Suit.D, rank: 5, deck: 0, id: '5D0'),
+      const Card(suit: Suit.S, rank: 9, deck: 0, id: '9S0'),
+      const Card(suit: Suit.D, rank: 1, deck: 0, id: 'AD0'),
+    ];

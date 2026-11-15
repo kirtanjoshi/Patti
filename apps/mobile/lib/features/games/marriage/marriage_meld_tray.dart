@@ -57,7 +57,7 @@ class MarriageMeldTray extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header Row: Mode Switcher & Tools
+          // Header Row: Title & Action Tools
           Row(
             children: [
               Icon(
@@ -74,45 +74,17 @@ class MarriageMeldTray extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (!hasSeenMaal) ...[
-                // Mode Toggle: 3 Pure vs 7 Dublees
-                SegmentedButton<MeldType>(
-                  segments: [
-                    ButtonSegment(
-                      value: MeldType.pure,
-                      label: Text(
-                        'marriage.pure_sequences'.tr(),
-                        style: theme.textTheme.labelSmall,
-                      ),
-                    ),
-                    ButtonSegment(
-                      value: MeldType.dublee,
-                      label: Text(
-                        'marriage.dublees'.tr(),
-                        style: theme.textTheme.labelSmall,
-                      ),
-                    ),
-                  ],
-                  selected: {meldType},
-                  onSelectionChanged: (newSelection) {
-                    onMeldTypeChanged?.call(newSelection.first);
-                  },
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                  ),
-                ),
-                const SizedBox(width: 8.0),
-              ],
               // Auto-group helper
               Semantics(
                 button: true,
                 label: 'marriage.auto_group'.tr(),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
                   child: IconButton(
                     tooltip: 'marriage.auto_group'.tr(),
-                    icon: Icon(Icons.auto_fix_high, color: colorScheme.primary),
+                    icon: Icon(Icons.auto_fix_high,
+                        color: colorScheme.primary),
                     onPressed: onAutoGroup,
                   ),
                 ),
@@ -122,16 +94,51 @@ class MarriageMeldTray extends StatelessWidget {
                 button: true,
                 label: 'marriage.clear_tray'.tr(),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
                   child: IconButton(
                     tooltip: 'marriage.clear_tray'.tr(),
-                    icon: Icon(Icons.delete_sweep_outlined, color: colorScheme.onSurfaceVariant),
+                    icon: Icon(Icons.delete_sweep_outlined,
+                        color: colorScheme.onSurfaceVariant),
                     onPressed: onClearTray,
                   ),
                 ),
               ),
             ],
           ),
+          if (!hasSeenMaal) ...[
+            const SizedBox(height: 4.0),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<MeldType>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: MeldType.pure,
+                    label: Text(
+                      'marriage.pure_sequences'.tr(),
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: MeldType.dublee,
+                    label: Text(
+                      'marriage.dublees'.tr(),
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ),
+                ],
+                selected: {meldType},
+                onSelectionChanged: (newSelection) {
+                  onMeldTypeChanged?.call(newSelection.first);
+                },
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8.0),
 
           // Meld Slots (Horizontal List)
