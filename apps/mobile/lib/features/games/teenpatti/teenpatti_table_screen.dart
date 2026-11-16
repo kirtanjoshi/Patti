@@ -2,44 +2,33 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
-import 'package:patii_engine/patii_engine.dart' as engine;
-import '../../table/widgets/seat_widget.dart';
-import 'teenpatti_action_bar.dart';
+import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/spacing.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/widgets/chips.dart';
+import '../../../../core/widgets/table_felt.dart';
+import '../../../../core/widgets/table_shell.dart';
+import '../../../../core/widgets/toast_banner.dart';
 import 'teenpatti_evaluator.dart';
-import 'teenpatti_hand_widget.dart';
-import 'teenpatti_pot_widget.dart';
+import 'widgets/teenpatti_action_bar.dart';
+import 'widgets/teenpatti_hand_fan.dart';
+import 'widgets/teenpatti_pot_center.dart';
+import 'widgets/teenpatti_seat_layer.dart';
 
-/// Player state for Teen Patti table simulation.
-class _PlayerState {
-  final int seat;
-  final String name;
-  final bool isMe;
-  final bool isBot;
-  bool isSeen = false;
-  bool isPacked = false;
-  int totalBet;
-  int blindRounds = 0;
-  List<engine.Card> hand;
-
-  _PlayerState({
-    required this.seat,
-    required this.name,
-    required this.isMe,
-    required this.isBot,
-    this.totalBet = 100,
-    required this.hand,
-  });
-}
-
-/// Teen Patti Table Screen implementing PRD Section 5.3 and 10.2.
-/// Supports 2 to 7 players around an oval table layout, 3-card hand display
-/// with toggleable Blind/Seen mode, animated pot/chips, and action bar controls.
+/// Redesigned Casino-Style Teen Patti Table Screen (Landscape).
+/// Features:
+/// - Orientation locked to Landscape via TableShell
+/// - Authentic Oval Felt Table with 14px wood rail and gold inner line
+/// - Evenly distributed seats around the rail with "You" at bottom-center
+/// - Central 3D ChipStack pot with live stakes and parabolic chip-toss motion
+/// - 3-Card hand fan with 3D flip rotation ("See Cards") and live hand ranking
+/// - Premium action bar: Pack (crimson), SideShow (ghost outline), Chaal/Show (gold CTA)
 class TeenPattiTableScreen extends StatefulWidget {
   final int initialPlayerCount;
 
   const TeenPattiTableScreen({
     super.key,
-    this.initialPlayerCount = 5, // PRD 5.3 default quick match: 5
+    this.initialPlayerCount = 5,
   });
 
   @override
@@ -51,7 +40,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   static const int _maxBlindRounds = 4;
 
   late int _playerCount;
-  late List<_PlayerState> _players;
+  late List<TeenPattiPlayerState> _players;
   int _currentTurnSeat = 0;
   int _currentStake = _bootAmount;
   int _pot = 0;
@@ -60,6 +49,12 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   bool _isGameOver = false;
   List<int> _winnerSeats = [];
   Timer? _botTimer;
+
+  // Chip toss animation state
+  bool _isTossing = false;
+  Offset? _chipTossStart;
+  Offset? _chipTossEnd;
+  int _tossAmount = 100;
 
   @override
   void initState() {
@@ -78,7 +73,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     final deck = TeenPattiEvaluator.createShuffledDeck();
     _players = List.generate(_playerCount, (index) {
       final hand = deck.sublist(index * 3, index * 3 + 3);
-      return _PlayerState(
+      return TeenPattiPlayerState(
         seat: index,
         name: index == 0 ? 'You' : 'Bot $index',
         isMe: index == 0,
@@ -92,16 +87,16 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
       _currentStake = _bootAmount;
       _pot = _bootAmount * _playerCount;
       _lastBetAmount = _bootAmount;
-      _currentTurnSeat = 0; // Local player first or dealer next
+      _currentTurnSeat = 0; // Local player first
       _isGameOver = false;
       _winnerSeats = [];
     });
   }
 
-  List<_PlayerState> get _activePlayers =>
+  List<TeenPattiPlayerState> get _activePlayers =>
       _players.where((p) => !p.isPacked).toList();
 
-  _PlayerState get _myState => _players[0];
+  TeenPattiPlayerState get _myState => _players[0];
 
   int _nextActiveSeat(int fromSeat) {
     for (int step = 1; step < _players.length; step++) {
@@ -119,17 +114,35 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     return fromSeat;
   }
 
-  void _onToggleSeen() => setState(() => _myState.isSeen = !_myState.isSeen);
+  void _triggerChipToss(Offset from, Offset to, int amount) {
+    if (!mounted) return;
+    setState(() {
+      _chipTossStart = from;
+      _chipTossEnd = to;
+      _tossAmount = amount;
+      _isTossing = true;
+    });
+  }
+
+  void _onToggleSeen() {
+    setState(() => _myState.isSeen = !_myState.isSeen);
+    ToastBanner.show(
+      context,
+      _myState.isSeen ? 'teenpatti.cards_revealed'.tr() : 'teenpatti.cards_hidden'.tr(),
+      icon: _myState.isSeen ? Icons.visibility : Icons.visibility_off,
+    );
+  }
 
   void _onChaal(int amount) {
     if (_isGameOver || _currentTurnSeat != 0) return;
+
+    _triggerChipToss(const Offset(380, 260), const Offset(420, 140), amount);
 
     setState(() {
       _myState.totalBet += amount;
       _pot += amount;
       _lastBetAmount = amount;
 
-      // Update stake if raise occurred
       final isRaise = _myState.isSeen
           ? amount > _currentStake * 2
           : amount > _currentStake;
@@ -158,6 +171,8 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
       }
     });
 
+    ToastBanner.show(context, 'You packed your hand', icon: Icons.close);
+
     if (!_isGameOver) {
       _triggerBotTurnIfNeeded();
     }
@@ -167,15 +182,35 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     final prevSeat = _previousActiveSeat(0);
     final prevPlayer = _players[prevSeat];
 
-    // Side Show between Seat 0 and previous active seen player
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text('teenpatti.sideshow'.tr()),
-        content: Text('${'teenpatti.sideshow_request'.tr()} -> ${prevPlayer.name}'),
+        backgroundColor: PatiiColors.navyElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: PatiiSpacing.rounded16,
+          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+        ),
+        title: Text(
+          'teenpatti.sideshow'.tr(),
+          style: PatiiTypography.cinzel(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: PatiiColors.goldLight,
+          ),
+        ),
+        content: Text(
+          '${'teenpatti.sideshow_request'.tr()} -> ${prevPlayer.name}',
+          style: PatiiTypography.poppins(
+            fontSize: 14,
+            color: PatiiColors.textPrimary,
+          ),
+        ),
         actions: [
-          FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PatiiColors.gold,
+              foregroundColor: PatiiColors.navy,
+            ),
             onPressed: () {
               Navigator.pop(dialogCtx);
               _resolveSideShow(0, prevSeat);
@@ -192,11 +227,12 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     final scoreB = TeenPattiEvaluator.evaluateScore(_players[seatB].hand);
 
     setState(() {
-      // In Teen Patti tie or lower score: requester packs
       if (scoreA <= scoreB) {
         _players[seatA].isPacked = true;
+        ToastBanner.show(context, '${_players[seatA].name} lost side show and packed!');
       } else {
         _players[seatB].isPacked = true;
+        ToastBanner.show(context, '${_players[seatB].name} lost side show and packed!');
       }
       _checkRemainingWinner();
       if (!_isGameOver) {
@@ -212,7 +248,6 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   void _onShow() {
     if (_activePlayers.length != 2) return;
 
-    // Evaluate both players
     int bestScore = -1;
     int winnerSeat = _activePlayers.first.seat;
 
@@ -249,7 +284,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     if (_isGameOver || _currentTurnSeat == 0) return;
 
     _botTimer?.cancel();
-    _botTimer = Timer(const Duration(milliseconds: 700), () {
+    _botTimer = Timer(const Duration(milliseconds: 650), () {
       if (!mounted || _isGameOver) return;
 
       final bot = _players[_currentTurnSeat];
@@ -259,7 +294,6 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         return;
       }
 
-      // Simple heuristic bot: 10% pack, else chaal
       final shouldPack = math.Random().nextDouble() < 0.10 && _activePlayers.length > 2;
 
       setState(() {
@@ -296,19 +330,71 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
-        title: Text(winner.isMe ? 'teenpatti.you_won'.tr() : 'teenpatti.winner'.tr()),
-        content: Text('teenpatti.player_won'.tr(args: [winner.name])),
+        backgroundColor: PatiiColors.navyElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: PatiiSpacing.rounded16,
+          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+        ),
+        title: Text(
+          winner.isMe ? 'teenpatti.you_won'.tr() : 'teenpatti.winner'.tr(),
+          style: PatiiTypography.cinzel(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: PatiiColors.goldLight,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.emoji_events, size: 48, color: PatiiColors.gold),
+            const SizedBox(height: 12),
+            Text(
+              'teenpatti.player_won'.tr(args: [winner.name]),
+              style: PatiiTypography.poppins(
+                fontSize: 15,
+                color: PatiiColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '+$_pot chips',
+              style: PatiiTypography.cinzel(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: PatiiColors.goldLight,
+              ),
+            ),
+          ],
+        ),
         actions: [
-          FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              setState(() {
-                _roundNumber++;
-                _startNewRound();
-              });
-            },
-            child: Text('teenpatti.next_deal'.tr()),
+          Center(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PatiiColors.gold,
+                foregroundColor: PatiiColors.navy,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                setState(() {
+                  _roundNumber++;
+                  _startNewRound();
+                });
+              },
+              child: Text(
+                'teenpatti.next_deal'.tr(),
+                style: PatiiTypography.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: PatiiColors.navy,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -318,39 +404,44 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   void _showRulesDialog() {
     showDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text('teenpatti.rules_title'.tr()),
-        content: Text('teenpatti.rules_summary'.tr()),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('actions.confirm'.tr()),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PatiiColors.navyElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: PatiiSpacing.rounded16,
+          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.style, color: PatiiColors.gold),
+            const SizedBox(width: 8),
+            Text(
+              'teenpatti.rules_title'.tr(),
+              style: PatiiTypography.cinzel(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: PatiiColors.goldLight,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Text(
+            'teenpatti.rules_summary'.tr(),
+            style: PatiiTypography.poppins(
+              fontSize: 13,
+              color: PatiiColors.textPrimary,
+              height: 1.5,
+            ),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showLeaveConfirmDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text('teenpatti.leave'.tr()),
-        content: Text('teenpatti.leave_confirm'.tr()),
+        ),
         actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('teenpatti.stay'.tr()),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              Navigator.pop(context);
-            },
-            child: Text('teenpatti.leave'.tr()),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PatiiColors.gold,
+              foregroundColor: PatiiColors.navy,
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it'),
           ),
         ],
       ),
@@ -359,199 +450,96 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final prevSeat = _previousActiveSeat(0);
     final canSideShow = _myState.isSeen &&
         _activePlayers.length > 2 &&
         _players[prevSeat].isSeen;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            _buildTopBar(theme, colorScheme),
-
-            // Oval Table Playing Area with 2 to 7 player seats
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    children: [
-                      // Oval felt table
-                      _buildOvalFelt(constraints, colorScheme),
-
-                      // Center Pot and Stakes Display with Chip Toss Animation
-                      Center(
-                        child: TeenPattiPotWidget(
-                          pot: _pot,
-                          currentStake: _currentStake,
-                          lastBetAmount: _lastBetAmount,
-                        ),
-                      ),
-
-                      // Elliptical distribution of 2 to 7 players
-                      ..._buildSeats(constraints),
-                    ],
-                  );
-                },
-              ),
-            ),
-
-            // User's 3-card Hand Display (with Blind/Seen 3D flip toggle)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: TeenPattiHandWidget(
-                cards: _myState.hand,
-                isSeen: _myState.isSeen,
-                onToggleSeen: _onToggleSeen,
-              ),
-            ),
-
-            // Teen Patti Action Bar
-            TeenPattiActionBar(
-              isMyTurn: _currentTurnSeat == 0 &&
-                  !_myState.isPacked &&
-                  !_isGameOver,
-              isSeen: _myState.isSeen,
-              currentStake: _currentStake,
-              activePlayerCount: _activePlayers.length,
-              canSideShow: canSideShow,
-              canShow: _activePlayers.length == 2,
-              isBlindLimitReached: _myState.blindRounds >= _maxBlindRounds,
-              onChaal: _onChaal,
-              onPack: _onPack,
-              onSideShow: _onSideShow,
-              onShow: _onShow,
-              onSeeCards: _onToggleSeen,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(ThemeData theme, ColorScheme colorScheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Semantics(
-            button: true,
-            label: 'teenpatti.leave'.tr(),
-            child: IconButton(
-              style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
-              icon: const Icon(Icons.arrow_back),
-              onPressed: _showLeaveConfirmDialog,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16.0),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Text(
-              '${'table.round'.tr()} $_roundNumber · ${'teenpatti.players_count'.tr(args: ['$_playerCount'])}',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+    return TableShell(
+      gameTitle: 'Teen Patti',
+      roundInfo: '${'table.round'.tr()} $_roundNumber',
+      pot: _pot,
+      feltShape: TableFeltShape.oval,
+      onRulesTap: _showRulesDialog,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
             children: [
-              // Player count switch popup (2-7 players)
-              PopupMenuButton<int>(
-                icon: const Icon(Icons.group_outlined),
-                tooltip: 'teenpatti.players_count'.tr(args: ['$_playerCount']),
-                onSelected: (count) {
-                  setState(() {
-                    _playerCount = count;
-                    _startNewRound();
-                  });
-                },
-                itemBuilder: (context) => [2, 3, 4, 5, 6, 7].map(
-                  (count) => PopupMenuItem(
-                    value: count,
-                    child: Text('teenpatti.players_count'.tr(args: ['$count'])),
+              // 1. Center Pot & Stakes Display with Chip Stacks
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: TeenPattiPotCenter(
+                    pot: _pot,
+                    currentStake: _currentStake,
+                    lastBetAmount: _lastBetAmount,
                   ),
-                ).toList(),
+                ),
               ),
-              IconButton(
-                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
-                icon: const Icon(Icons.info_outline),
-                onPressed: _showRulesDialog,
+
+              // 2. Evenly distributed Seats around the Oval Rail
+              TeenPattiSeatLayer(
+                players: _players,
+                currentTurnSeat: _currentTurnSeat,
+                isGameOver: _isGameOver,
+                winnerSeats: _winnerSeats,
+                constraints: constraints,
               ),
+
+              // 3. User 3-Card Hand Fan (Bottom Center)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 48,
+                child: Center(
+                  child: TeenPattiHandFan(
+                    cards: _myState.hand,
+                    isSeen: _myState.isSeen,
+                    onToggleSeen: _onToggleSeen,
+                  ),
+                ),
+              ),
+
+              // 4. Bottom Casino Action Bar
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 2,
+                child: Center(
+                  child: TeenPattiActionBar(
+                    isMyTurn: _currentTurnSeat == 0 &&
+                        !_myState.isPacked &&
+                        !_isGameOver,
+                    isSeen: _myState.isSeen,
+                    currentStake: _currentStake,
+                    activePlayerCount: _activePlayers.length,
+                    canSideShow: canSideShow,
+                    canShow: _activePlayers.length == 2,
+                    isBlindLimitReached:
+                        _myState.blindRounds >= _maxBlindRounds,
+                    onChaal: _onChaal,
+                    onPack: _onPack,
+                    onSideShow: _onSideShow,
+                    onShow: _onShow,
+                    onSeeCards: _onToggleSeen,
+                  ),
+                ),
+              ),
+
+              // 5. Parabolic Chip Toss Overlay (if active)
+              if (_isTossing && _chipTossStart != null && _chipTossEnd != null)
+                ChipToss(
+                  startOffset: _chipTossStart!,
+                  endOffset: _chipTossEnd!,
+                  amount: _tossAmount,
+                  onComplete: () {
+                    if (mounted) setState(() => _isTossing = false);
+                  },
+                ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
-  }
-
-  Widget _buildOvalFelt(BoxConstraints constraints, ColorScheme colorScheme) {
-    return Center(
-      child: Container(
-        width: constraints.maxWidth * 0.90,
-        height: constraints.maxHeight * 0.86,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.all(
-            Radius.elliptical(
-              constraints.maxWidth * 0.45,
-              constraints.maxHeight * 0.43,
-            ),
-          ),
-          border: Border.all(
-            color: colorScheme.outlineVariant,
-            width: 2.0,
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildSeats(BoxConstraints constraints) {
-    final w = constraints.maxWidth;
-    final h = constraints.maxHeight;
-    final cx = w / 2;
-    final cy = h / 2;
-    final rx = w * 0.38;
-    final ry = h * 0.35;
-
-    return List.generate(_players.length, (i) {
-      final player = _players[i];
-      // Distribute seats clockwise around oval, Seat 0 at bottom center
-      final angle = (math.pi / 2) + (i * 2 * math.pi / _players.length);
-      final x = cx - rx * math.cos(angle - (math.pi / 2));
-      final y = cy + ry * math.sin(angle - (math.pi / 2));
-
-      final statusText = player.isPacked
-          ? 'teenpatti.packed'.tr()
-          : player.isSeen
-              ? '${'teenpatti.seen'.tr()} · ${player.totalBet}'
-              : '${'teenpatti.blind'.tr()} · ${player.totalBet}';
-
-      final maxLeft = math.max(8.0, w - 128.0);
-      final maxTop = math.max(8.0, h - 64.0);
-      return Positioned(
-        left: (x - 60).clamp(8.0, maxLeft),
-        top: (y - 28).clamp(8.0, maxTop),
-        child: SeatWidget(
-          displayName: player.name,
-          statusText: statusText,
-          isCurrentTurn: _currentTurnSeat == player.seat && !_isGameOver,
-          isBot: player.isBot,
-          isPacked: player.isPacked,
-          isWinner: _winnerSeats.contains(player.seat),
-        ),
-      );
-    });
   }
 }

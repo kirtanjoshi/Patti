@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patii_engine/patii_engine.dart';
-import 'package:patii/features/games/marriage/marriage_meld_tray.dart';
+import 'package:patii/core/widgets/buttons.dart';
 import 'package:patii/features/games/marriage/marriage_models.dart';
 import 'package:patii/features/games/marriage/marriage_table_screen.dart';
+import 'package:patii/features/games/marriage/widgets/marriage_meld_drawer.dart';
 
 void main() {
   group('Marriage Logic Tests', () {
@@ -89,9 +90,9 @@ void main() {
   });
 
   group('Marriage Widget Tests', () {
-    testWidgets('MarriageTableScreen renders table, seats, center piles and hand',
+    testWidgets('MarriageTableScreen renders landscape table, seats, center piles and hand without overflow (852x393)',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1200, 900));
+      await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
@@ -99,6 +100,7 @@ void main() {
           home: MarriageTableScreen(),
         ),
       );
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(MarriageTableScreen), findsOneWidget);
       expect(find.text('Bot 1'), findsOneWidget);
@@ -106,12 +108,16 @@ void main() {
       expect(find.text('Bot 3'), findsOneWidget);
       expect(find.text('You'), findsOneWidget);
 
-      expect(find.byType(MarriageMeldTray), findsOneWidget);
+      expect(find.byType(MarriageMeldDrawer), findsOneWidget);
+
+      // Clean up widget tree to dispose animations
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
     });
 
-    testWidgets('Auto Group populates meld slots and allows Seeing Maal',
+    testWidgets('MarriageTableScreen renders without overflow on small landscape (640x360)',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1200, 900));
+      await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
@@ -119,23 +125,57 @@ void main() {
           home: MarriageTableScreen(),
         ),
       );
+      await tester.pump(const Duration(milliseconds: 100));
 
-      // Tap Auto Group button in Meld Tray
+      expect(find.byType(MarriageTableScreen), findsOneWidget);
+      expect(find.text('Bot 1'), findsOneWidget);
+      expect(find.text('Bot 2'), findsOneWidget);
+      expect(find.text('Bot 3'), findsOneWidget);
+      expect(find.text('You'), findsOneWidget);
+
+      // Clean up widget tree to dispose animations
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('Auto Group populates meld slots and allows Seeing Maal in drawer',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(852, 393));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: MarriageTableScreen(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Expand the meld drawer by tapping it
+      final meldDrawerBar = find.byType(MarriageMeldDrawer);
+      expect(meldDrawerBar, findsOneWidget);
+      await tester.tap(meldDrawerBar);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Tap Auto Group button in Meld Drawer
       final autoGroupBtn = find.byIcon(Icons.auto_fix_high);
       expect(autoGroupBtn, findsOneWidget);
       await tester.tap(autoGroupBtn);
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Now all 3 pure slots should be valid, enabling "See Maal" button
-      final seeMaalBtn = find.widgetWithText(FilledButton, 'marriage.see_maal');
+      final seeMaalBtn = find.widgetWithText(GoldButton, 'marriage.see_maal');
       expect(seeMaalBtn, findsOneWidget);
 
       // Tap See Maal
-      await tester.tap(seeMaalBtn);
-      await tester.pump();
+      await tester.tap(seeMaalBtn, warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Maal is now seen: Declare button appears
       expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+
+      // Clean up widget tree to dispose animations
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
     });
   });
 }

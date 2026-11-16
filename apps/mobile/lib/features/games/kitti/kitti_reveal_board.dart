@@ -1,9 +1,16 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
-import '../../table/widgets/playing_card_widget.dart';
+import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/widgets/buttons.dart';
+import '../../../../core/widgets/glass_sheet.dart';
+import '../../../../core/widgets/playing_card.dart';
 import 'kitti_models.dart';
 
+/// Casino-Style Kitti Reveal Board.
+/// Reveals the 3 shows compared across all players, highlighting the winner,
+/// any Salami bonus, or Kitti carryover.
 class KittiRevealBoard extends StatefulWidget {
   final List<KittiPlayer> players;
   final KittiRoundSummary summary;
@@ -37,8 +44,6 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final showResult = widget.summary.showResults.length > _activeShowIndex
         ? widget.summary.showResults[_activeShowIndex]
         : null;
@@ -56,22 +61,20 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
           // Salami or Kitti Carryover Banner
           if (widget.summary.isSalami)
             _buildCelebrationBanner(
-              colorScheme: colorScheme,
-              theme: theme,
               icon: Icons.auto_awesome,
               title: 'kitti.salami_bonus'.tr(),
               subtitle: 'kitti.salami_desc'.tr(),
+              color: PatiiColors.gold,
             )
           else if (widget.summary.isKittiCarryover)
             _buildCelebrationBanner(
-              colorScheme: colorScheme,
-              theme: theme,
               icon: Icons.sync,
               title: 'kitti.kitti_carryover'.tr(),
               subtitle: 'kitti.kitti_desc'.tr(),
+              color: PatiiColors.warning,
             ),
 
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 6.0),
 
           // Show selector tabs (1st Show, 2nd Show, 3rd Show)
           Row(
@@ -83,19 +86,30 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                 child: Semantics(
                   button: true,
                   label: _showLabel(index),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                    child: ChoiceChip(
-                      label: Text(_showLabel(index)),
-                      selected: isSelected,
-                      selectedColor: colorScheme.primary,
-                      labelStyle: theme.textTheme.labelMedium?.copyWith(
-                        color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _activeShowIndex = index),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? PatiiColors.gold
+                            : PatiiColors.navySurface.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(16.0),
+                        border: Border.all(
+                          color: isSelected
+                              ? PatiiColors.goldLight
+                              : PatiiColors.goldDark.withValues(alpha: 0.35),
+                          width: 1.0,
+                        ),
                       ),
-                      onSelected: (val) {
-                        if (val) setState(() => _activeShowIndex = index);
-                      },
+                      child: Text(
+                        _showLabel(index),
+                        style: PatiiTypography.cinzel(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? PatiiColors.navy : PatiiColors.textPrimary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -103,22 +117,18 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
             }),
           ),
 
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 6.0),
 
           // Show Outcome Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
+          GlassPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   showResult?.isVoid == true ? Icons.handshake : Icons.emoji_events,
-                  size: 20,
-                  color: colorScheme.primary,
+                  size: 18,
+                  color: PatiiColors.gold,
                 ),
                 const SizedBox(width: 8.0),
                 Text(
@@ -127,16 +137,17 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                       : (winningPlayer != null
                           ? 'kitti.show_winner'.tr(args: [winningPlayer.displayName])
                           : ''),
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  style: PatiiTypography.cinzel(
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
+                    color: PatiiColors.goldLight,
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 6.0),
 
           // Player Shows Grid for the active show
           ...widget.players.where((p) => !p.isFolded).map((player) {
@@ -148,74 +159,60 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                 : <Card>[];
 
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
+              padding: const EdgeInsets.symmetric(vertical: 3.0),
+              child: GlassPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                customBorder: Border.all(
                   color: isThisWinner
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.25)
-                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(
-                    color: isThisWinner ? colorScheme.primary : colorScheme.outlineVariant,
-                    width: isThisWinner ? 2.0 : 1.0,
-                  ),
+                      ? PatiiColors.gold
+                      : Colors.white.withValues(alpha: 0.08),
+                  width: isThisWinner ? 1.5 : 1.0,
                 ),
                 child: Row(
                   children: [
-                    // Player info column
-                    Expanded(
-                      flex: 3,
+                    // Player info
+                    SizedBox(
+                      width: 80.0,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                player.displayName,
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                              if (isThisWinner) ...[
-                                const SizedBox(width: 4.0),
-                                Icon(Icons.star, size: 14, color: colorScheme.primary),
-                              ],
-                            ],
+                          Text(
+                            player.displayName,
+                            style: PatiiTypography.poppins(
+                              fontSize: 12,
+                              fontWeight: isThisWinner ? FontWeight.bold : FontWeight.w500,
+                              color: isThisWinner ? PatiiColors.goldLight : PatiiColors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2.0),
                           if (evaluation != null)
                             Text(
                               evaluation.labelKey.tr(),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isThisWinner ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                                fontWeight: isThisWinner ? FontWeight.bold : FontWeight.normal,
-                              ),
+                              style: PatiiTypography.caption(
+                                color: isThisWinner ? PatiiColors.success : PatiiColors.textMuted,
+                                bold: isThisWinner,
+                              ).copyWith(fontSize: 9),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          const SizedBox(height: 2.0),
-                          Text(
-                            'kitti.shows_won'.tr(args: [player.showWins.toString()]),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8.0),
 
-                    // Cards row
+                    // Cards in this show
                     Expanded(
-                      flex: 4,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: handCards.map((card) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                            child: PlayingCardWidget(
+                            child: PlayingCard.table(
                               card: card,
-                              width: 44.0,
-                              height: 64.0,
+                              width: 32.0,
+                              height: 46.0,
                             ),
                           );
                         }).toList(),
@@ -227,32 +224,14 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
             );
           }),
 
-          const SizedBox(height: 16.0),
+          const SizedBox(height: 10.0),
 
           // Next Deal Button
-          Semantics(
-            button: true,
+          GoldButton(
             label: 'kitti.next_deal'.tr(),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48.0),
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                ),
-                onPressed: widget.onNextDeal,
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: Text(
-                  'kitti.next_deal'.tr(),
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
+            icon: Icons.play_arrow_rounded,
+            height: 42,
+            onPressed: widget.onNextDeal,
           ),
         ],
       ),
@@ -260,40 +239,38 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
   }
 
   Widget _buildCelebrationBanner({
-    required ColorScheme colorScheme,
-    required ThemeData theme,
     required IconData icon,
     required String title,
     required String subtitle,
+    required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: colorScheme.primary, width: 1.5),
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(color: color, width: 1.2),
       ),
       child: Row(
         children: [
-          Icon(icon, color: colorScheme.onPrimaryContainer, size: 28),
-          const SizedBox(width: 12.0),
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 8.0),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
+                  style: PatiiTypography.cinzel(
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
+                    color: color,
                   ),
                 ),
-                const SizedBox(height: 2.0),
                 Text(
                   subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
-                  ),
+                  style: PatiiTypography.caption(color: PatiiColors.textSecondary),
                 ),
               ],
             ),

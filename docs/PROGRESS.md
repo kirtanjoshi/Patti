@@ -54,6 +54,15 @@ Current Status: **Production Ready (All 8 Games, Server Runtime, Mobile Table UI
   - Auth Security: Tampered JWT token rejection, guest device separation, GDPR/Store compliant account deletion endpoint (`DELETE /auth/account`).
   - k6 load test script (`apps/server/loadtest/k6-load.js`) simulating 5,000 concurrent socket connections to `/game` with p95 < 150ms connection latency.
   - Verification: 21 turborepo tasks green, 14 server tests passing, 8 bots tests passing, 11 Flutter tests passing, 3 Dart parity fixture tests passing.
+- [x] **Wave 7 — Presentation-Layer Casino Visual Redesign (PRD Section 10)**
+  - Design Tokens: `lib/core/theme/` (`feltGreen`, `feltGreenDark`, `woodRail`, `gold`, `goldLight`, `goldDark`, `crimson`, `navySurface`, Cinzel, Poppins, Mukta).
+  - Shared Components: `PlayingCard` (Dhaka back, court letter panel, gold glow), `CardHand` (dynamic overlapping arc fan, no clipping), `PlayerSeat` (circular avatar, turn timer ring, gold pulse), `CoinCounter`, `ChipStack` & `ChipToss`, `GoldButton`/`GhostButton`/`DangerButton`, `TableFelt`, `GlassSheet`, `ToastBanner`.
+  - Portrait Lobby: 2-column 8-game grid with code-drawn card motifs, live player counts, daily bonus countdown, dev gallery entry.
+  - Landscape Tables: `TableShell` auto-locks tables to landscape, 14px wood rail, gold inner line, responsive HUD.
+  - All 8 Games Redesigned: Callbreak (single-row 1-8 circular bids, zero overlap), Teen Patti (7-seat oval felt, 3D flip card reveal, chips pot), Marriage (21-card fan, collapsible 36px bottom meld drawer, 3 Pure/7 Dublees toggle), Kitti (3x3 arrange board, 3-show reveal board), Dhumbal (hand total chip, JHYAP! button), Jutpatti (Jodi pairs tray), Nepali Rummy & Joker Rummy (Cut Joker indicator, suit/rank sorting).
+  - Audio & Haptics: `AudioService` with 6 procedural sound effects (`shuffle`, `deal`, `card_snap`, `chip`, `win_jingle`, `your_turn`) and haptic impact.
+  - Multi-Screen Zero-Overflow Audit: 28 audit tests verified on 360x640, 393x852, 600x960, and 1024x600 tablet viewports.
+  - Verification: 62/62 Flutter tests passing, 0 analysis warnings, all files under 500 lines.
 
 ---
 
@@ -85,6 +94,6 @@ Current Status: **Production Ready (All 8 Games, Server Runtime, Mobile Table UI
   - 3/3 tests passing against PRD JSON test fixtures (`dart test`).
 - **Flutter Mobile App (`apps/mobile`)**:
   - `flutter analyze .`: No issues found!
-  - `flutter test`: 11/11 tests passing (`widget_test.dart`, `callbreak_ui_test.dart`, `kitti_ui_test.dart`, `marriage_ui_test.dart`).
+  - `flutter test`: 62/62 tests passing across 8 test suites (`callbreak_ui_test.dart`, `casino_lobby_screen_test.dart`, `gallery_screen_test.dart`, `kitti_ui_test.dart`, `marriage_ui_test.dart`, `more_games_ui_test.dart`, `multi_screen_audit_test.dart`, `teenpatti_ui_test.dart`, `widget_test.dart`).
 - **Admin App (`apps/admin`)**:
   - Next.js 15 build & typecheck successful; static routes pre-rendered (`/`, `/users`, `/tables`, `/economy`, `/audit`).

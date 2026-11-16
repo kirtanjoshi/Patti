@@ -1,9 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
-import '../../table/widgets/playing_card_widget.dart';
+import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/widgets/glass_sheet.dart';
+import '../../../../core/widgets/playing_card.dart';
 import 'kitti_evaluator.dart';
 
+/// Casino-Style Kitti 3x3 Arrange Board (Responsive Landscape/Portrait).
+/// In Landscape, Show 1, Show 2, and Show 3 sit horizontally in a row.
+/// Each show accepts 3 cards via drag-and-drop or tap, showing real-time evaluation.
 class KittiArrangeBoard extends StatelessWidget {
   final List<List<Card>> slots;
   final Card? selectedCard;
@@ -36,43 +42,56 @@ class KittiArrangeBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape ||
+            constraints.maxWidth > 340;
 
-    return Semantics(
-      label: 'kitti.slot_hint'.tr(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: List.generate(3, (index) {
+        final slotWidgets = List.generate(3, (index) {
           final slotCards = index < slots.length ? slots[index] : <Card>[];
           final evaluation = slotCards.length == 3
               ? KittiEvaluator.evaluate(slotCards)
               : null;
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: _buildSlotContainer(
-              context: context,
-              theme: theme,
-              colorScheme: colorScheme,
-              slotIndex: index,
-              cards: slotCards,
-              evaluation: evaluation,
-            ),
+          return _buildSlotContainer(
+            context: context,
+            slotIndex: index,
+            cards: slotCards,
+            evaluation: evaluation,
+            isCompact: isLandscape,
           );
-        }),
-      ),
+        });
+
+        if (isLandscape) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: slotWidgets.map((w) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: w,
+              ),
+            )).toList(),
+          );
+        } else {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: slotWidgets.map((w) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: w,
+            )).toList(),
+          );
+        }
+      },
     );
   }
 
   Widget _buildSlotContainer({
     required BuildContext context,
-    required ThemeData theme,
-    required ColorScheme colorScheme,
     required int slotIndex,
     required List<Card> cards,
     required KittiHandEvaluation? evaluation,
+    required bool isCompact,
   }) {
     final title = _slotTitle(slotIndex);
     final isFull = cards.length == 3;
@@ -85,130 +104,139 @@ class KittiArrangeBoard extends StatelessWidget {
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
 
-        return InkWell(
+        return GestureDetector(
           onTap: () => onSlotTap(slotIndex),
-          borderRadius: BorderRadius.circular(12.0),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            decoration: BoxDecoration(
+          child: GlassPanel(
+            padding: const EdgeInsets.all(6.0),
+            customBorder: Border.all(
               color: isHovered
-                  ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                  : colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(12.0),
-              border: Border.all(
-                color: isHovered
-                    ? colorScheme.primary
-                    : (isFull ? colorScheme.primary.withValues(alpha: 0.5) : colorScheme.outlineVariant),
-                width: isHovered || isFull ? 1.5 : 1.0,
-              ),
+                  ? PatiiColors.gold
+                  : (isFull
+                      ? PatiiColors.success.withValues(alpha: 0.6)
+                      : PatiiColors.goldDark.withValues(alpha: 0.3)),
+              width: isHovered || isFull ? 1.5 : 1.0,
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Header row: Slot name, Hand evaluation badge, card count
+                // Slot Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+                    Flexible(
+                      child: Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                        style: PatiiTypography.cinzel(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: PatiiColors.goldLight,
+                        ),
                       ),
                     ),
-                    if (evaluation != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        child: Text(
-                          evaluation.labelKey.tr(),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
+                    if (evaluation != null) ...[
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 1.0),
+                          decoration: BoxDecoration(
+                            color: PatiiColors.success.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(6.0),
+                            border: Border.all(color: PatiiColors.success, width: 0.8),
+                          ),
+                          child: Text(
+                            evaluation.labelKey.tr(),
+                            overflow: TextOverflow.ellipsis,
+                            style: PatiiTypography.caption(
+                              color: PatiiColors.success,
+                              bold: true,
+                            ).copyWith(fontSize: 9),
                           ),
                         ),
-                      )
-                    else
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 4),
                       Text(
                         '${cards.length}/3',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: PatiiTypography.caption(
+                          color: PatiiColors.textMuted,
+                        ).copyWith(fontSize: 10),
                       ),
-                    if (cards.isNotEmpty && onClearSlot != null)
+                    ],
+                    if (cards.isNotEmpty && onClearSlot != null) ...[
+                      const SizedBox(width: 2),
                       Semantics(
                         button: true,
                         label: 'kitti.reset'.tr(),
-                        child: IconButton(
-                          iconSize: 18,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                          icon: Icon(Icons.close, color: colorScheme.outline),
-                          onPressed: () => onClearSlot!(slotIndex),
+                        child: GestureDetector(
+                          onTap: () => onClearSlot!(slotIndex),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: PatiiColors.textMuted,
+                          ),
                         ),
                       ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 8.0),
+                  const SizedBox(height: 4.0),
 
-                // Cards Row: 3 slots
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (cardIndex) {
-                    final hasCard = cardIndex < cards.length;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                      child: hasCard
-                          ? _buildFilledCard(cards[cardIndex], slotIndex)
-                          : _buildEmptyPlaceholder(colorScheme, slotIndex),
-                    );
-                  }),
-                ),
-              ],
+                  // 3 Card Slots
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (cardIndex) {
+                      final hasCard = cardIndex < cards.length;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                        child: hasCard
+                            ? _buildFilledCard(cards[cardIndex], slotIndex)
+                            : _buildEmptyPlaceholder(slotIndex),
+                      );
+                    }),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    }
 
   Widget _buildFilledCard(Card card, int slotIndex) {
-    return PlayingCardWidget(
-      card: card,
-      width: 52.0,
-      height: 74.0,
+    return GestureDetector(
       onTap: () => onCardTapInSlot(slotIndex, card),
+      child: PlayingCard.table(
+        card: card,
+        width: 36.0,
+        height: 52.0,
+      ),
     );
   }
 
-  Widget _buildEmptyPlaceholder(ColorScheme colorScheme, int slotIndex) {
+  Widget _buildEmptyPlaceholder(int slotIndex) {
     return Semantics(
       button: true,
       label: 'kitti.slot_hint'.tr(),
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => onSlotTap(slotIndex),
-        borderRadius: BorderRadius.circular(6.0),
         child: Container(
-          width: 52.0,
-          height: 74.0,
+          width: 36.0,
+          height: 52.0,
           decoration: BoxDecoration(
-            color: colorScheme.surface.withValues(alpha: 0.5),
+            color: PatiiColors.navy.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(6.0),
             border: Border.all(
-              color: colorScheme.outlineVariant,
+              color: PatiiColors.goldDark.withValues(alpha: 0.35),
               style: BorderStyle.solid,
             ),
           ),
-          child: Center(
+          child: const Center(
             child: Icon(
               Icons.add_rounded,
-              color: colorScheme.outlineVariant,
-              size: 24,
+              color: PatiiColors.goldDark,
+              size: 18,
             ),
           ),
         ),

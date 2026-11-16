@@ -3,7 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patii_engine/patii_engine.dart' as engine;
-import '../../table/widgets/seat_widget.dart';
+import '../../../../core/widgets/player_seat.dart';
+import '../../../../core/widgets/table_shell.dart';
 import 'kitti_action_bar.dart';
 import 'kitti_arrange_board.dart';
 import 'kitti_dialogs.dart';
@@ -11,6 +12,12 @@ import 'kitti_evaluator.dart';
 import 'kitti_models.dart';
 import 'kitti_reveal_board.dart';
 
+/// Casino-Style Kitti Table Screen (Landscape).
+/// Features:
+/// - Screen locked to landscape via TableShell
+/// - Elliptical 4-player seating: You (bottom-left), Bot 1 (West), Bot 2 (North), Bot 3 (East)
+/// - 3x3 Arrange Board in center felt with drag-and-drop slots and Auto Arrange button
+/// - Smooth reveal phase showing winning shows and Salami bonus
 class KittiTableScreen extends ConsumerStatefulWidget {
   const KittiTableScreen({super.key});
 
@@ -101,48 +108,41 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
       });
     });
 
-    _simulateBotArrangements(bot1Cards, bot2Cards, bot3Cards);
+    _simulateBots(1, bot1Cards, 8);
+    _simulateBots(2, bot2Cards, 12);
+    _simulateBots(3, bot3Cards, 16);
   }
 
-  void _simulateBotArrangements(
-    List<engine.Card> b1,
-    List<engine.Card> b2,
-    List<engine.Card> b3,
-  ) {
-    _botTimers.add(Timer(const Duration(seconds: 2), () {
-      if (!mounted || phase != KittiPhase.arranging) return;
-      setState(() {
-        players[1] = players[1].copyWith(
-          isReady: true,
-          arrangedHands: KittiEvaluator.bestArrangement(b1),
-        );
-      });
-    }));
+  List<engine.Card> _generateDeck() {
+    final suits = [engine.Suit.S, engine.Suit.H, engine.Suit.D, engine.Suit.C];
+    final deck = <engine.Card>[];
+    for (final s in suits) {
+      for (int r = 1; r <= 13; r++) {
+        deck.add(engine.Card(suit: s, rank: r, deck: 0, id: '$r${s.name}'));
+      }
+    }
+    deck.shuffle();
+    return deck;
+  }
 
-    _botTimers.add(Timer(const Duration(seconds: 3), () {
-      if (!mounted || phase != KittiPhase.arranging) return;
+  void _simulateBots(int seatIndex, List<engine.Card> cards, int delaySeconds) {
+    final timer = Timer(Duration(seconds: delaySeconds), () {
+      if (!mounted) return;
       setState(() {
-        players[2] = players[2].copyWith(
+        final arrangement = KittiEvaluator.bestArrangement(cards);
+        players[seatIndex] = players[seatIndex].copyWith(
           isReady: true,
-          arrangedHands: KittiEvaluator.bestArrangement(b2),
+          arrangedHands: arrangement,
         );
       });
-    }));
-
-    _botTimers.add(Timer(const Duration(seconds: 4), () {
-      if (!mounted || phase != KittiPhase.arranging) return;
-      setState(() {
-        players[3] = players[3].copyWith(
-          isReady: true,
-          arrangedHands: KittiEvaluator.bestArrangement(b3),
-        );
-      });
-    }));
+    });
+    _botTimers.add(timer);
   }
 
   void _handleTimeExpired() {
-    if (phase != KittiPhase.arranging) return;
-    _applyBestArrangement();
+    if (!_isAllSlotsFilled) {
+      _applyBestArrangement();
+    }
     _confirmArrangement();
   }
 
@@ -312,206 +312,127 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    return TableShell(
+      gameTitle: 'Kitti',
+      roundInfo: '${'table.round'.tr()} $currentDeal · ${'table.pot'.tr()}: $pot',
+      pot: pot,
+      onRulesTap: () => KittiDialogs.showRules(context),
+      onLeave: () => KittiDialogs.showLeaveConfirm(context),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tableWidth = constraints.maxWidth;
+          final tableHeight = constraints.maxHeight;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surfaceContainerLowest,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(theme, colorScheme),
-            _buildOpponentsBar(),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: phase == KittiPhase.arranging
-                    ? SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: KittiArrangeBoard(
-                            slots: mySlots,
-                            selectedCard: selectedCard,
-                            onCardTapInSlot: _onCardTapInSlot,
-                            onSlotTap: _onSlotTap,
-                            onClearSlot: _onClearSlot,
-                            onCardDropped: (slotIdx, card) {
-                              if (mySlots[slotIdx].length < 3) {
-                                setState(() {
-                                  mySlots[slotIdx].add(card);
-                                  unassignedCards.removeWhere((c) => c.id == card.id);
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      )
-                    : (roundSummary != null
-                        ? KittiRevealBoard(
-                            players: players,
-                            summary: roundSummary!,
-                            onNextDeal: () => _startNewDeal(),
-                          )
-                        : const SizedBox.shrink()),
-              ),
-            ),
-            if (phase == KittiPhase.arranging)
-              KittiActionBar(
-                unassignedCards: unassignedCards,
-                selectedCard: selectedCard,
-                isAllSlotsFilled: _isAllSlotsFilled,
-                onCardTap: _onUnassignedCardTap,
-                onBestArrangement: _applyBestArrangement,
-                onConfirmShow: _confirmArrangement,
-                onFold: _onFold,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(ThemeData theme, ColorScheme colorScheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Semantics(
-            button: true,
-            label: 'actions.leave'.tr(),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => KittiDialogs.showLeaveConfirm(context),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4.0),
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16.0),
-                border: Border.all(
-                  color: isCarryover ? colorScheme.primary : colorScheme.outlineVariant,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      '${'table.round'.tr()} $currentDeal · ${'table.pot'.tr()}: $pot',
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  if (isCarryover) ...[
-                    const SizedBox(width: 8.0),
-                    Icon(Icons.sync, size: 14, color: colorScheme.primary),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          return Stack(
             children: [
-              if (phase == KittiPhase.arranging)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                  decoration: BoxDecoration(
-                    color: _remainingSeconds <= 10
-                        ? colorScheme.errorContainer
-                        : colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12.0),
+              // 1. Top Opponent (Bot 2, North)
+              Positioned(
+                top: 8,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: PlayerSeat(
+                    displayName: 'Bot 2',
+                    isBot: true,
+                    infoPillText: players[2].isReady
+                        ? 'Ready'
+                        : (players[2].isFolded ? 'Folded' : '$_remainingSeconds s'),
                   ),
-                  child: Text(
-                    '$_remainingSeconds${'kitti.seconds_short'.tr()}',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: _remainingSeconds <= 10
-                          ? colorScheme.onErrorContainer
-                          : colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 4.0),
-              Semantics(
-                button: true,
-                label: 'kitti.rules_title'.tr(),
-                child: IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () => KittiDialogs.showRules(context),
                 ),
               ),
+
+              // 2. Left Opponent (Bot 1, West)
+              Positioned(
+                left: 12,
+                top: (tableHeight - 160) / 2,
+                child: PlayerSeat(
+                  displayName: 'Bot 1',
+                  isBot: true,
+                  infoPillText: players[1].isReady
+                      ? 'Ready'
+                      : (players[1].isFolded ? 'Folded' : '$_remainingSeconds s'),
+                ),
+              ),
+
+              // 3. Right Opponent (Bot 3, East)
+              Positioned(
+                right: 12,
+                top: (tableHeight - 160) / 2,
+                child: PlayerSeat(
+                  displayName: 'Bot 3',
+                  isBot: true,
+                  infoPillText: players[3].isReady
+                      ? 'Ready'
+                      : (players[3].isFolded ? 'Folded' : '$_remainingSeconds s'),
+                ),
+              ),
+
+              // 4. Center Area: Arrange Board OR Reveal Board
+              Positioned(
+                left: tableWidth < 700 ? 50 : 90,
+                right: tableWidth < 700 ? 50 : 90,
+                top: 48,
+                bottom: phase == KittiPhase.arranging ? 112 : 12,
+                child: Center(
+                  child: phase == KittiPhase.arranging
+                      ? KittiArrangeBoard(
+                          slots: mySlots,
+                          selectedCard: selectedCard,
+                          onCardTapInSlot: _onCardTapInSlot,
+                          onSlotTap: _onSlotTap,
+                          onClearSlot: _onClearSlot,
+                          onCardDropped: (slotIdx, card) {
+                            if (mySlots[slotIdx].length < 3) {
+                              setState(() {
+                                mySlots[slotIdx].add(card);
+                                unassignedCards.removeWhere((c) => c.id == card.id);
+                              });
+                            }
+                          },
+                        )
+                      : (roundSummary != null
+                          ? KittiRevealBoard(
+                              players: players,
+                              summary: roundSummary!,
+                              onNextDeal: () => _startNewDeal(),
+                            )
+                          : const SizedBox.shrink()),
+                ),
+              ),
+
+              // 5. You (Bottom Left PlayerSeat)
+              Positioned(
+                left: 16,
+                bottom: 8,
+                child: PlayerSeat(
+                  displayName: 'You',
+                  isBot: false,
+                  infoPillText: players[0].isFolded
+                      ? 'Folded'
+                      : '${unassignedCards.length} left',
+                ),
+              ),
+
+              // 6. Action Bar at Bottom Center (when arranging)
+              if (phase == KittiPhase.arranging)
+                Positioned(
+                  left: tableWidth < 700 ? 90 : 130,
+                  right: tableWidth < 700 ? 20 : 60,
+                  bottom: 0,
+                  child: KittiActionBar(
+                    unassignedCards: unassignedCards,
+                    selectedCard: selectedCard,
+                    isAllSlotsFilled: _isAllSlotsFilled,
+                    onCardTap: _onUnassignedCardTap,
+                    onBestArrangement: _applyBestArrangement,
+                    onConfirmShow: _confirmArrangement,
+                    onFold: _onFold,
+                  ),
+                ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
-  }
-
-  Widget _buildOpponentsBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Flexible(
-            child: SeatWidget(
-              displayName: players[1].displayName,
-              statusText: players[1].isFolded
-                  ? 'kitti.folded'.tr()
-                  : (players[1].isReady ? 'kitti.ready'.tr() : 'kitti.arranging'.tr()),
-              isBot: true,
-              isWinner: roundSummary?.winnerSeat == 1,
-            ),
-          ),
-          const SizedBox(width: 4.0),
-          Flexible(
-            child: SeatWidget(
-              displayName: players[2].displayName,
-              statusText: players[2].isFolded
-                  ? 'kitti.folded'.tr()
-                  : (players[2].isReady ? 'kitti.ready'.tr() : 'kitti.arranging'.tr()),
-              isBot: true,
-              isWinner: roundSummary?.winnerSeat == 2,
-            ),
-          ),
-          const SizedBox(width: 4.0),
-          Flexible(
-            child: SeatWidget(
-              displayName: players[3].displayName,
-              statusText: players[3].isFolded
-                  ? 'kitti.folded'.tr()
-                  : (players[3].isReady ? 'kitti.ready'.tr() : 'kitti.arranging'.tr()),
-              isBot: true,
-              isWinner: roundSummary?.winnerSeat == 3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<engine.Card> _generateDeck() {
-    final suits = [engine.Suit.S, engine.Suit.H, engine.Suit.D, engine.Suit.C];
-    final deck = <engine.Card>[];
-    for (final s in suits) {
-      for (int r = 1; r <= 13; r++) {
-        deck.add(engine.Card(
-          suit: s,
-          rank: r,
-          deck: 0,
-          id: '${s.name}$r',
-        ));
-      }
-    }
-    deck.shuffle();
-    return deck;
   }
 }

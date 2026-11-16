@@ -2,13 +2,24 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patii_engine/patii_engine.dart';
-import '../../table/widgets/playing_card_widget.dart';
-import '../../table/widgets/seat_widget.dart';
+import '../../../../core/widgets/buttons.dart';
+import '../../../../core/widgets/card_hand.dart';
+import '../../../../core/widgets/player_seat.dart';
+import '../../../../core/widgets/table_shell.dart';
+import '../../../../core/widgets/toast_banner.dart';
 import 'marriage_dialogs.dart';
-import 'marriage_meld_tray.dart';
 import 'marriage_models.dart';
-import 'marriage_table_center.dart';
+import 'widgets/marriage_center_area.dart';
+import 'widgets/marriage_meld_drawer.dart';
 
+/// Casino-Style Marriage Card Game Table Screen (Landscape).
+/// Features:
+/// - Screen orientation locked to Landscape via TableShell
+/// - Elliptical 4-player seating: You (bottom-left), Bot 1 (West), Bot 2 (North), Bot 3 (East)
+/// - Center Table Area: Stock pile, Discard pile, and Maal / Cut Joker card
+/// - Collapsible bottom drawer for Melds (3 Pure / 7 Dublees) that never covers hand
+/// - Overlapping 21-card hand fan that dynamically fits within screen bounds
+/// - Smooth tap/drag discard, auto-sort, and live Maal point calculator
 class MarriageTableScreen extends ConsumerStatefulWidget {
   const MarriageTableScreen({super.key});
 
@@ -77,6 +88,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
       turnPhase = 'discard';
       selectedCardId = drawn.id;
     });
+    ToastBanner.show(context, 'marriage.phase_discard'.tr(), icon: Icons.arrow_upward);
   }
 
   void _onDrawDiscard() {
@@ -88,6 +100,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
       turnPhase = 'discard';
       selectedCardId = drawn.id;
     });
+    ToastBanner.show(context, 'marriage.phase_discard'.tr(), icon: Icons.arrow_upward);
   }
 
   void _onDiscardCard(Card card) {
@@ -99,18 +112,23 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
       turnPhase = 'draw';
       currentTurnSeat = 1;
 
-      Future.delayed(const Duration(milliseconds: 700), () {
+      Future.delayed(const Duration(milliseconds: 600), () {
         if (!mounted) return;
         setState(() => currentTurnSeat = 2);
-        Future.delayed(const Duration(milliseconds: 700), () {
+        Future.delayed(const Duration(milliseconds: 600), () {
           if (!mounted) return;
           setState(() => currentTurnSeat = 3);
-          Future.delayed(const Duration(milliseconds: 700), () {
+          Future.delayed(const Duration(milliseconds: 600), () {
             if (!mounted) return;
             setState(() {
               currentTurnSeat = 0;
               turnPhase = 'draw';
             });
+            ToastBanner.show(
+              context,
+              'marriage.phase_draw'.tr(),
+              icon: Icons.touch_app,
+            );
           });
         });
       });
@@ -156,6 +174,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
         }
       }
     });
+    ToastBanner.show(context, 'Auto grouped pure sequences!', icon: Icons.auto_fix_high);
   }
 
   void _onClearTray() {
@@ -169,11 +188,10 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
 
   void _onSeeMaal() {
     setState(() => isMaalSeen = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('marriage.maal_seen_desc'.tr()),
-        duration: const Duration(seconds: 3),
-      ),
+    ToastBanner.show(
+      context,
+      'marriage.maal_seen_desc'.tr(),
+      icon: Icons.stars,
     );
   }
 
@@ -192,282 +210,186 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isMyTurn = currentTurnSeat == 0;
+    final canDraw = isMyTurn && turnPhase == 'draw';
+    final canDiscard = isMyTurn && turnPhase == 'discard';
 
-    return Scaffold(
-      backgroundColor: colorScheme.surfaceContainer,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  Semantics(
-                    button: true,
-                    label: 'marriage.leave'.tr(),
-                    child: IconButton(
-                      icon:
-                          Icon(Icons.arrow_back, color: colorScheme.onSurface),
-                      onPressed: () => showMarriageLeaveDialog(context),
-                    ),
-                  ),
-                  const Spacer(),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10.0, vertical: 6.0),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16.0),
-                      ),
-                      child: Text(
-                        'marriage.round_info'.tr(args: ['$currentRound', '800']),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8.0),
-                  // Maal Status Chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10.0, vertical: 6.0),
-                    decoration: BoxDecoration(
-                      color: isMaalSeen
-                          ? colorScheme.primaryContainer
-                          : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16.0),
-                      border: Border.all(
-                        color: isMaalSeen
-                            ? colorScheme.primary
-                            : colorScheme.outlineVariant,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isMaalSeen ? Icons.stars : Icons.visibility_off,
-                          size: 16,
-                          color: isMaalSeen
-                              ? colorScheme.onPrimaryContainer
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4.0),
-                        Text(
-                          isMaalSeen
-                              ? 'marriage.pts'.tr(args: ['$liveMaalPoints'])
-                              : 'marriage.phase_1_badge'.tr(),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: isMaalSeen
-                                ? colorScheme.onPrimaryContainer
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Semantics(
-                    button: true,
-                    label: 'marriage.game_rules'.tr(),
-                    child: IconButton(
-                      icon: Icon(Icons.help_outline,
-                          color: colorScheme.onSurface),
-                      onPressed: () => showMarriageRulesDialog(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return TableShell(
+      gameTitle: 'marriage.title'.tr(),
+      roundInfo: '${'table.round'.tr()} $currentRound · 800',
+      pot: 800,
+      onRulesTap: () => showMarriageRulesDialog(context),
+      onLeave: () => showMarriageLeaveDialog(context),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tableWidth = constraints.maxWidth;
+          final tableHeight = constraints.maxHeight;
 
-            // Main Table & Center Area
-            Expanded(
-              child: MarriageTableCenter(
-                currentTurnSeat: currentTurnSeat,
-                turnPhase: turnPhase,
-                isMaalSeen: isMaalSeen,
-                cutJoker: cutJoker,
-                stockPile: stockPile,
-                discardPile: discardPile,
-                onDrawStock: _onDrawStock,
-                onDrawDiscard: _onDrawDiscard,
-                onDiscardCard: _onDiscardCard,
-              ),
-            ),
-
-            // Meld Tray
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: MarriageMeldTray(
-                slots: meldSlots,
-                meldType: activeMeldType,
-                hasSeenMaal: isMaalSeen,
-                selectedCard: selectedCard,
-                onSeeMaal: _onSeeMaal,
-                onDeclare: _onDeclare,
-                onMeldTypeChanged: (type) {
-                  _onClearTray();
-                  setState(() => _resetMeldSlots(type));
-                },
-                onCardAdded: _onAddCardToSlot,
-                onCardRemoved: _onRemoveCardFromSlot,
-                onAutoGroup: _onAutoGroup,
-                onClearTray: _onClearTray,
-              ),
-            ),
-            const SizedBox(height: 8.0),
-
-            // Bottom Area: My Seat & 21-Card Hand
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16.0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: colorScheme.shadow.withValues(alpha: 0.08),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 1. Top Opponent (Bot 2, North)
+              Positioned(
+                top: 8,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: PlayerSeat(
+                    displayName: 'Bot 2',
+                    isCurrentTurn: currentTurnSeat == 2,
+                    infoPillText: '21 cards',
+                    avatarUrl: null,
+                    isBot: true,
                   ),
-                ],
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Hand controls row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      SeatWidget(
-                        displayName: 'You',
-                        isCurrentTurn: currentTurnSeat == 0,
-                        statusText: isMaalSeen
-                            ? 'marriage.pts'.tr(args: ['$liveMaalPoints'])
-                            : 'marriage.cards_in_hand'
-                                .tr(args: ['${myHand.length}']),
+
+              // 2. Left Opponent (Bot 1, West)
+              Positioned(
+                left: 12,
+                top: (tableHeight - 160) / 2,
+                child: PlayerSeat(
+                  displayName: 'Bot 1',
+                  isCurrentTurn: currentTurnSeat == 1,
+                  infoPillText: '21 cards',
+                  avatarUrl: null,
+                  isBot: true,
+                ),
+              ),
+
+              // 3. Right Opponent (Bot 3, East)
+              Positioned(
+                right: 12,
+                top: (tableHeight - 160) / 2,
+                child: PlayerSeat(
+                  displayName: 'Bot 3',
+                  isCurrentTurn: currentTurnSeat == 3,
+                  infoPillText: '21 cards',
+                  avatarUrl: null,
+                  isBot: true,
+                ),
+              ),
+
+              // 4. Center Area: Stock | Discard | Maal card
+              Positioned(
+                left: 0,
+                right: 0,
+                top: (tableHeight - 170) / 2,
+                child: Center(
+                  child: MarriageCenterArea(
+                    isMaalSeen: isMaalSeen,
+                    cutJoker: cutJoker,
+                    stockPile: stockPile,
+                    discardPile: discardPile,
+                    canDraw: canDraw,
+                    onDrawStock: _onDrawStock,
+                    onDrawDiscard: _onDrawDiscard,
+                  ),
+                ),
+              ),
+
+              // 5. You (Bottom Left PlayerSeat)
+              Positioned(
+                left: 16,
+                bottom: 8,
+                child: PlayerSeat(
+                  displayName: 'You',
+                  isCurrentTurn: isMyTurn,
+                  infoPillText: isMaalSeen
+                      ? 'marriage.pts'.tr(args: ['$liveMaalPoints'])
+                      : 'marriage.cards_in_hand'.tr(args: ['${myHand.length}']),
+                  isBot: false,
+                ),
+              ),
+
+              // 6. Action Buttons next to Hand (Right Side)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Sort Button
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      child: GhostButton(
+                        label: isSortedBySuit ? 'marriage.sort_suit'.tr() : 'marriage.sort_rank'.tr(),
+                        icon: Icons.sort,
+                        onPressed: _toggleSort,
                       ),
-                      // Instruction indicator
-                      Text(
-                        currentTurnSeat == 0
-                            ? (turnPhase == 'draw'
-                                ? 'marriage.phase_draw'.tr()
-                                : 'marriage.phase_discard'.tr())
-                            : 'table.waiting'.tr(),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: currentTurnSeat == 0
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                          fontWeight: currentTurnSeat == 0
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                    ),
+                    const SizedBox(height: 6),
+                    // Discard Button (when eligible)
+                    if (canDiscard && selectedCard != null)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                        child: DangerButton(
+                          label: 'marriage.discard'.tr(),
+                          icon: Icons.arrow_upward,
+                          onPressed: () => _onDiscardCard(selectedCard!),
                         ),
                       ),
-                      Row(
-                        children: [
-                          // Sort Button
-                          Semantics(
-                            button: true,
-                            label: isSortedBySuit
-                                ? 'marriage.sort_suit'.tr()
-                                : 'marriage.sort_rank'.tr(),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                  minWidth: 48, minHeight: 48),
-                              child: TextButton.icon(
-                                onPressed: _toggleSort,
-                                icon: const Icon(Icons.sort, size: 16),
-                                label: Text(
-                                  isSortedBySuit
-                                      ? 'marriage.sort_suit'.tr()
-                                      : 'marriage.sort_rank'.tr(),
-                                  style: theme.textTheme.labelSmall,
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Discard Button
-                          if (currentTurnSeat == 0 &&
-                              turnPhase == 'discard') ...[
-                            const SizedBox(width: 8.0),
-                            Semantics(
-                              button: true,
-                              label: 'marriage.discard'.tr(),
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                    minWidth: 48, minHeight: 48),
-                                child: FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: colorScheme.error,
-                                    foregroundColor: colorScheme.onError,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12.0),
-                                  ),
-                                  onPressed: selectedCard != null
-                                      ? () => _onDiscardCard(selectedCard!)
-                                      : null,
-                                  child: Text('marriage.discard'.tr()),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8.0),
-
-                  // 21-card hand view with auto-sort and drag/tap selection
-                  SizedBox(
-                    height: 90.0,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: myHand.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 4.0),
-                      itemBuilder: (context, index) {
-                        final card = myHand[index];
-                        final isSelected = selectedCardId == card.id;
-
-                        return Draggable<Card>(
-                          data: card,
-                          feedback: Material(
-                            color: Colors.transparent,
-                            child: PlayingCardWidget(card: card),
-                          ),
-                          childWhenDragging: Opacity(
-                            opacity: 0.3,
-                            child: PlayingCardWidget(card: card),
-                          ),
-                          child: PlayingCardWidget(
-                            card: card,
-                            isSelected: isSelected,
-                            isLegal: true,
-                            onTap: () {
-                              setState(() {
-                                selectedCardId = isSelected ? null : card.id;
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+
+              // 7. My 21-Card Hand (Centered at Bottom)
+              Positioned(
+                left: 100,
+                right: 100,
+                bottom: 4,
+                child: CardHand(
+                  cards: myHand,
+                  selectedCardId: selectedCardId,
+                  playableCardIds: canDiscard
+                      ? myHand.map((c) => c.id).toSet()
+                      : const {},
+                  wildOrMaalCardId: isMaalSeen ? cutJoker.id : null,
+                  cardWidth: tableWidth < 700 ? 46.0 : 54.0,
+                  cardHeight: tableWidth < 700 ? 68.0 : 80.0,
+                  maxArcDegrees: 8.0,
+                  onCardTap: (card) {
+                    setState(() {
+                      selectedCardId =
+                          selectedCardId == card.id ? null : card.id;
+                    });
+                  },
+                  onCardPlay: (card) {
+                    if (canDiscard) {
+                      _onDiscardCard(card);
+                    }
+                  },
+                ),
+              ),
+
+              // 8. Collapsible Meld Drawer (Floating above hand bar)
+              Positioned(
+                left: tableWidth < 700 ? 50 : 90,
+                right: tableWidth < 700 ? 50 : 90,
+                bottom: tableWidth < 700 ? 76 : 90,
+                child: Center(
+                  child: MarriageMeldDrawer(
+                    slots: meldSlots,
+                    meldType: activeMeldType,
+                    hasSeenMaal: isMaalSeen,
+                    selectedCard: selectedCard,
+                    onSeeMaal: _onSeeMaal,
+                    onDeclare: _onDeclare,
+                    onMeldTypeChanged: (type) {
+                      _onClearTray();
+                      setState(() => _resetMeldSlots(type));
+                    },
+                    onCardAdded: _onAddCardToSlot,
+                    onCardRemoved: _onRemoveCardFromSlot,
+                    onAutoGroup: _onAutoGroup,
+                    onClearTray: _onClearTray,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

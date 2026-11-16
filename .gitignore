@@ -42,6 +42,10 @@ apps/mobile/.dart_tool/
 Thumbs.db
 ~$*.docx
 
+# Agent / Tooling Cache
+.agents/
+apps/mobile/devtools_options.yaml
+
 # Docker / local infra data
 infra/data/
 postgres_data/

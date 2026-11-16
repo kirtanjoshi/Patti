@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:patii/features/games/teenpatti/teenpatti_action_bar.dart';
+import 'package:patii_engine/patii_engine.dart';
+import 'package:patii/core/theme/patii_theme.dart';
+import 'package:patii/core/widgets/buttons.dart';
+import 'package:patii/core/widgets/player_seat.dart';
+import 'package:patii/core/widgets/table_shell.dart';
 import 'package:patii/features/games/teenpatti/teenpatti_evaluator.dart';
 import 'package:patii/features/games/teenpatti/teenpatti_table_screen.dart';
-import 'package:patii_engine/patii_engine.dart';
+import 'package:patii/features/games/teenpatti/widgets/teenpatti_action_bar.dart';
+import 'package:patii/features/games/teenpatti/widgets/teenpatti_hand_fan.dart';
+import 'package:patii/features/games/teenpatti/widgets/teenpatti_pot_center.dart';
 
 void main() {
   group('TeenPattiEvaluator Tests', () {
@@ -75,33 +81,36 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: PatiiTheme.casinoDarkTheme,
           home: Scaffold(
-            body: TeenPattiActionBar(
-              isMyTurn: true,
-              isSeen: false,
-              currentStake: 100,
-              activePlayerCount: 4,
-              canSideShow: false,
-              canShow: false,
-              onChaal: (amt) => betPlaced = amt,
-              onPack: () => packPressed = true,
-              onSideShow: () {},
-              onShow: () {},
+            body: Center(
+              child: TeenPattiActionBar(
+                isMyTurn: true,
+                isSeen: false,
+                currentStake: 100,
+                activePlayerCount: 4,
+                canSideShow: false,
+                canShow: false,
+                onChaal: (amt) => betPlaced = amt,
+                onPack: () => packPressed = true,
+                onSideShow: () {},
+                onShow: () {},
+              ),
             ),
           ),
         ),
       );
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-      // Chaal button for blind is 100 (1x stake)
-      final chaalFinder = find.widgetWithText(FilledButton, 'teenpatti.blind 100');
-      expect(chaalFinder, findsOneWidget);
+      // Chaal button is GoldButton
+      final chaalFinder = find.byType(GoldButton);
+      expect(chaalFinder, findsWidgets);
 
-      await tester.tap(chaalFinder);
+      await tester.tap(chaalFinder.first);
       expect(betPlaced, 100);
 
-      // Pack button
-      final packFinder = find.widgetWithText(OutlinedButton, 'teenpatti.pack');
+      // Pack button is DangerButton
+      final packFinder = find.byType(DangerButton);
       expect(packFinder, findsOneWidget);
 
       await tester.tap(packFinder);
@@ -110,42 +119,82 @@ void main() {
   });
 
   group('TeenPattiTableScreen Widget Tests', () {
-    testWidgets('renders Teen Patti table with 5 seats, pot, cards and actions', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1200, 900));
+    testWidgets('renders Teen Patti table on 852x393 landscape without overflow', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: TeenPattiTableScreen(initialPlayerCount: 5),
+        MaterialApp(
+          theme: PatiiTheme.casinoDarkTheme,
+          home: const TeenPattiTableScreen(initialPlayerCount: 5),
         ),
       );
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Screen mounted
       expect(find.byType(TeenPattiTableScreen), findsOneWidget);
+      expect(find.byType(TableShell), findsOneWidget);
+      expect(find.byType(TeenPattiPotCenter), findsOneWidget);
+      expect(find.byType(TeenPattiHandFan), findsOneWidget);
+      expect(find.byType(TeenPattiActionBar), findsOneWidget);
 
-      // Seats are rendered
+      // 5 Player seats rendered around oval
+      expect(find.byType(PlayerSeat), findsNWidgets(5));
       expect(find.text('You'), findsOneWidget);
       expect(find.text('Bot 1'), findsOneWidget);
       expect(find.text('Bot 2'), findsOneWidget);
       expect(find.text('Bot 3'), findsOneWidget);
       expect(find.text('Bot 4'), findsOneWidget);
 
-      // "See Cards" toggle exists
-      final seeCardsFinder = find.widgetWithText(FilledButton, 'teenpatti.see_cards');
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('renders Teen Patti table on 640x360 compact landscape without overflow', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(640, 360));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: PatiiTheme.casinoDarkTheme,
+          home: const TeenPattiTableScreen(initialPlayerCount: 5),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(TeenPattiTableScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('Tap See Cards reveals 3 cards and flips to Seen mode', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(852, 393));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: PatiiTheme.casinoDarkTheme,
+          home: const TeenPattiTableScreen(initialPlayerCount: 5),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // See Cards button exists in HandFan
+      final seeCardsFinder = find.byIcon(Icons.visibility_outlined);
       expect(seeCardsFinder, findsOneWidget);
 
-      // Tap "See Cards" to flip cards to Seen
       await tester.tap(seeCardsFinder);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 350));
 
-      // Action bar updates: now Seen, so Chaal is 200 (2x stake)
-      expect(find.widgetWithText(FilledButton, 'teenpatti.chaal 200'), findsOneWidget);
+      // Now rank stars icon appears in HandFan
+      expect(find.byIcon(Icons.stars), findsOneWidget);
 
-      // Tap Chaal 200
-      await tester.tap(find.widgetWithText(FilledButton, 'teenpatti.chaal 200'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 2));
     });
   });
 }

@@ -2,25 +2,45 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patii_engine/patii_engine.dart' as engine;
-import '../../table/widgets/playing_card_widget.dart';
-import '../../table/widgets/seat_widget.dart';
+import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/spacing.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/widgets/card_hand.dart';
+import '../../../../core/widgets/player_seat.dart';
+import '../../../../core/widgets/table_shell.dart';
+import '../../../../core/widgets/toast_banner.dart';
+import 'widgets/callbreak_bid_sheet.dart';
+import 'widgets/callbreak_trick_area.dart';
+import 'widgets/opponent_seat_panel.dart';
 
+/// Redesigned Casino-Style Callbreak Table Screen (Landscape).
+/// Features:
+/// - Orientation locked to Landscape via TableShell
+/// - Elliptical 4-player seating: You (bottom-left), Bot 1 (West), Bot 2 (North), Bot 3 (East)
+/// - Center diamond trick area where cards sit toward the player who played them
+/// - Overlapping 13-card hand fan that never overflows or gets cut off
+/// - Single-row 1-8 bid selector floating above the hand with zero overlap
+/// - Realistic trick capture animations and live trick counting
 class CallbreakTableScreen extends ConsumerStatefulWidget {
   const CallbreakTableScreen({super.key});
 
   @override
-  ConsumerState<CallbreakTableScreen> createState() => _CallbreakTableScreenState();
+  ConsumerState<CallbreakTableScreen> createState() =>
+      _CallbreakTableScreenState();
 }
 
 class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
-  // State for Wave 2 playable vertical slice UI
   int currentRound = 1;
-  int currentTurnSeat = 0;
+  int currentTurnSeat = 0; // 0: You, 1: Bot 1, 2: Bot 2, 3: Bot 3
   String phase = 'bidding'; // 'bidding' | 'playing' | 'roundOver'
   int? myBid;
+  int myTricksWon = 0;
+  int bot1TricksWon = 0;
+  int bot2TricksWon = 1;
+  int bot3TricksWon = 0;
   String? selectedCardId;
 
-  // 13 dealt cards for player 0
+  // 13 dealt cards for player 0 (You)
   List<engine.Card> myHand = [
     const engine.Card(suit: engine.Suit.S, rank: 1, deck: 0, id: 'AS0'),
     const engine.Card(suit: engine.Suit.S, rank: 12, deck: 0, id: 'QS0'),
@@ -37,258 +57,300 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
     const engine.Card(suit: engine.Suit.C, rank: 2, deck: 0, id: '2C0'),
   ];
 
-  List<Map<String, dynamic>> playedTrick = [];
+  List<PlayedTrickCard> playedTrick = [];
 
-  void onSelectBid(int bid) {
+  void _onBidConfirmed(int bid) {
     setState(() {
       myBid = bid;
       phase = 'playing';
-      currentTurnSeat = 0; // My turn to lead trick 1
+      currentTurnSeat = 0; // Your turn to lead trick 1
     });
+    ToastBanner.show(
+      context,
+      'Bid $bid placed! Your turn to lead.',
+      icon: Icons.gavel,
+    );
   }
 
-  void onPlayCard(engine.Card card) {
+  void _onPlayCard(engine.Card card) {
+    if (phase != 'playing' || currentTurnSeat != 0) return;
+
     setState(() {
       myHand.removeWhere((c) => c.id == card.id);
-      playedTrick.add({'seat': 0, 'card': card});
+      selectedCardId = null;
+      playedTrick.add(PlayedTrickCard(seat: 0, card: card));
       currentTurnSeat = 1;
+    });
 
-      // Simulate bot answers
-      Future.delayed(const Duration(milliseconds: 600), () {
+    // Simulate bot responses in sequence
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      setState(() {
+        playedTrick.add(
+          const PlayedTrickCard(
+            seat: 1,
+            card: engine.Card(suit: engine.Suit.H, rank: 4, deck: 0, id: '4H0'),
+          ),
+        );
+        currentTurnSeat = 2;
+      });
+
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (!mounted) return;
         setState(() {
-          playedTrick.add({
-            'seat': 1,
-            'card': const engine.Card(suit: engine.Suit.H, rank: 4, deck: 0, id: '4H0'),
+          playedTrick.add(
+            const PlayedTrickCard(
+              seat: 2,
+              card:
+                  engine.Card(suit: engine.Suit.H, rank: 8, deck: 0, id: '8H0'),
+            ),
+          );
+          currentTurnSeat = 3;
+        });
+
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (!mounted) return;
+          setState(() {
+            playedTrick.add(
+              const PlayedTrickCard(
+                seat: 3,
+                card: engine.Card(
+                    suit: engine.Suit.S, rank: 2, deck: 0, id: '2S0'),
+              ),
+            );
           });
-          playedTrick.add({
-            'seat': 2,
-            'card': const engine.Card(suit: engine.Suit.H, rank: 8, deck: 0, id: '8H0'),
-          });
-          playedTrick.add({
-            'seat': 3,
-            'card': const engine.Card(suit: engine.Suit.S, rank: 2, deck: 0, id: '2S0'),
+
+          // Conclude trick after 800ms
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (!mounted) return;
+            _resolveTrick();
           });
         });
       });
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+  void _resolveTrick() {
+    // Determine winner (Spades trump or highest rank)
+    int winningSeat = 0;
+    engine.Card bestCard = playedTrick.first.card;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E3A2B), // Classic Nepali green felt
-      body: SafeArea(
-        child: Stack(
+    for (final pt in playedTrick) {
+      if (pt.card.suit == engine.Suit.S && bestCard.suit != engine.Suit.S) {
+        bestCard = pt.card;
+        winningSeat = pt.seat;
+      } else if (pt.card.suit == bestCard.suit && pt.card.rank > bestCard.rank) {
+        bestCard = pt.card;
+        winningSeat = pt.seat;
+      }
+    }
+
+    setState(() {
+      if (winningSeat == 0) {
+        myTricksWon++;
+      } else if (winningSeat == 1) {
+        bot1TricksWon++;
+      } else if (winningSeat == 2) {
+        bot2TricksWon++;
+      } else {
+        bot3TricksWon++;
+      }
+      playedTrick.clear();
+      currentTurnSeat = winningSeat;
+    });
+
+    final winnerName = winningSeat == 0 ? 'You' : 'Bot $winningSeat';
+    ToastBanner.show(
+      context,
+      '$winnerName won the trick!',
+      icon: Icons.emoji_events,
+    );
+  }
+
+  void _showRulesDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PatiiColors.navyElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: PatiiSpacing.rounded16,
+          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+        ),
+        title: Row(
           children: [
-            // Top Bar
-            Positioned(
-              top: 8.0,
-              left: 16.0,
-              right: 16.0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Semantics(
-                    button: true,
-                    label: 'callbreak.leave'.tr(),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => showLeaveConfirmDialog(context),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(16.0),
-                    ),
-                    child: Text(
-                      '${'table.round'.tr()} $currentRound / 5 · ${'table.pot'.tr()}: 400',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48.0),
-                ],
-              ),
-            ),
-
-            // Top Seat (Opposite, Seat 2)
-            Positioned(
-              top: 48.0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SeatWidget(
-                  displayName: 'Bot 2',
-                  bid: 3,
-                  tricksWon: 1,
-                  isBot: true,
-                  isCurrentTurn: currentTurnSeat == 2,
-                ),
-              ),
-            ),
-
-            // Left Seat (Seat 1)
-            Positioned(
-              left: 16.0,
-              top: 140.0,
-              child: SeatWidget(
-                displayName: 'Bot 1',
-                bid: 2,
-                tricksWon: 0,
-                isBot: true,
-                isCurrentTurn: currentTurnSeat == 1,
-              ),
-            ),
-
-            // Right Seat (Seat 3)
-            Positioned(
-              right: 16.0,
-              top: 140.0,
-              child: SeatWidget(
-                displayName: 'Bot 3',
-                bid: 4,
-                tricksWon: 2,
-                isBot: true,
-                isCurrentTurn: currentTurnSeat == 3,
-              ),
-            ),
-
-            // Center Trick Area
-            Center(
-              child: Container(
-                width: 220,
-                height: 160,
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: playedTrick.isEmpty
-                    ? Center(
-                        child: Text(
-                          phase == 'bidding'
-                              ? 'callbreak.select_bid'.tr()
-                              : 'table.your_turn'.tr(),
-                          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                        ),
-                      )
-                    : Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8.0,
-                        runSpacing: 8.0,
-                        children: playedTrick
-                            .map((pt) => PlayingCardWidget(card: pt['card'] as engine.Card))
-                            .toList(),
-                      ),
-              ),
-            ),
-
-            // Bidding Dialog / Controls Overlay
-            if (phase == 'bidding')
-              Positioned(
-                bottom: 120.0,
-                left: 32.0,
-                right: 32.0,
-                child: Card(
-                  color: colorScheme.surface,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'callbreak.select_bid'.tr(),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8.0),
-                        Wrap(
-                          spacing: 8.0,
-                          children: List.generate(8, (index) {
-                            final bidValue = index + 1;
-                            return OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(48, 48), // 48x48 tap target
-                              ),
-                              onPressed: () => onSelectBid(bidValue),
-                              child: Text('$bidValue'),
-                            );
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // Bottom Area: My Seat & Hand Cards
-            Positioned(
-              bottom: 12.0,
-              left: 16.0,
-              right: 16.0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SeatWidget(
-                    displayName: 'You',
-                    bid: myBid,
-                    tricksWon: 1,
-                    isBot: false,
-                    isCurrentTurn: currentTurnSeat == 0,
-                  ),
-                  const SizedBox(height: 8.0),
-                  SizedBox(
-                    height: 90.0,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: myHand.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 4.0),
-                      itemBuilder: (context, index) {
-                        final card = myHand[index];
-                        return PlayingCardWidget(
-                          card: card,
-                          isLegal: phase == 'playing' && currentTurnSeat == 0,
-                          isSelected: selectedCardId == card.id,
-                          onTap: () => onPlayCard(card),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+            const Icon(Icons.style, color: PatiiColors.gold),
+            const SizedBox(width: 8),
+            Text(
+              'Callbreak Rules',
+              style: PatiiTypography.cinzel(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: PatiiColors.goldLight,
               ),
             ),
           ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '• 4 players, 13 cards each, 5 rounds total.\n'
+              '• Spades (♠) are permanent trumps.\n'
+              '• Must follow lead suit if possible; otherwise must play a spade.\n'
+              '• Win at least as many tricks as your bid to score positive points.',
+              style: PatiiTypography.poppins(
+                fontSize: 13,
+                color: PatiiColors.textPrimary,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PatiiColors.gold,
+              foregroundColor: PatiiColors.navy,
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it'),
+          ),
+        ],
       ),
     );
   }
 
-  void showLeaveConfirmDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('callbreak.leave'.tr()),
-        content: Text('callbreak.leave_confirm'.tr()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('callbreak.stay'.tr()),
+  @override
+  Widget build(BuildContext context) {
+    final isMyTurn = phase == 'playing' && currentTurnSeat == 0;
+    final playableIds = isMyTurn
+        ? myHand.map((c) => c.id).toSet()
+        : const <String>{};
+
+    return TableShell(
+      gameTitle: 'Callbreak',
+      roundInfo: '${'table.round'.tr()} $currentRound / 5',
+      trumpSuit: 'Spades',
+      pot: 400,
+      onRulesTap: () => _showRulesDialog(context),
+      child: Stack(
+        children: [
+          // 1. Top Opponent (Seat 2, Bot 2, North)
+          Positioned(
+            top: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: OpponentSeatPanel(
+                displayName: 'Bot 2',
+                bid: 3,
+                tricksWon: bot2TricksWon,
+                cardCount: 13 - playedTrick.length,
+                isCurrentTurn: currentTurnSeat == 2,
+                isDealer: true,
+              ),
+            ),
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Navigator.pop(context);
-            },
-            child: Text('callbreak.leave'.tr()),
+
+          // 2. Left Opponent (Seat 1, Bot 1, West)
+          Positioned(
+            left: 14,
+            top: 40,
+            bottom: 70,
+            child: Center(
+              child: OpponentSeatPanel(
+                displayName: 'Bot 1',
+                bid: 2,
+                tricksWon: bot1TricksWon,
+                cardCount: 13 - playedTrick.length,
+                isCurrentTurn: currentTurnSeat == 1,
+              ),
+            ),
           ),
+
+          // 3. Right Opponent (Seat 3, Bot 3, East)
+          Positioned(
+            right: 14,
+            top: 40,
+            bottom: 70,
+            child: Center(
+              child: OpponentSeatPanel(
+                displayName: 'Bot 3',
+                bid: 4,
+                tricksWon: bot3TricksWon,
+                cardCount: 13 - playedTrick.length,
+                isCurrentTurn: currentTurnSeat == 3,
+              ),
+            ),
+          ),
+
+          // 4. Center Diamond Trick Area
+          Positioned.fill(
+            child: Center(
+              child: CallbreakTrickArea(
+                playedCards: playedTrick,
+                phase: phase,
+                currentTurnSeat: currentTurnSeat,
+              ),
+            ),
+          ),
+
+          // 5. You Seat (Seat 0, South) - Positioned bottom-left, clear of cards
+          Positioned(
+            left: 14,
+            bottom: 8,
+            child: PlayerSeat(
+              displayName: 'You',
+              isCurrentTurn: isMyTurn,
+              infoPillText: myBid != null
+                  ? 'Bid $myBid · Won $myTricksWon'
+                  : 'Tricks $myTricksWon',
+              remainingSeconds: isMyTurn ? 12 : 15,
+            ),
+          ),
+
+          // 6. 13-Card Hand Overlapping Fan (Bottom Center)
+          Positioned(
+            bottom: 4,
+            left: 110,
+            right: 40,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 96),
+                child: CardHand(
+                  cards: myHand,
+                  selectedCardId: selectedCardId,
+                  playableCardIds: playableIds,
+                  wildOrMaalCardId: 'AS0',
+                  cardWidth: 56,
+                  cardHeight: 82,
+                  onCardTap: (card) {
+                    if (isMyTurn) {
+                      setState(() {
+                        selectedCardId = card.id;
+                      });
+                    }
+                  },
+                  onCardPlay: _onPlayCard,
+                ),
+              ),
+            ),
+          ),
+
+          // 7. Single-Row Bidding Sheet (Bids 1 to 8) - Floats strictly above the hand
+          if (phase == 'bidding')
+            Positioned(
+              bottom: 104,
+              left: 40,
+              right: 40,
+              child: Center(
+                child: CallbreakBidSheet(
+                  initialBid: 2,
+                  onBidConfirmed: _onBidConfirmed,
+                ),
+              ),
+            ),
         ],
       ),
     );
