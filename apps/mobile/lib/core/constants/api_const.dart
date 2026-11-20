@@ -42,7 +42,10 @@ class ApiConst {
       '535204897241-8ee666l35silo6e464330nl5oirgb11g.apps.googleusercontent.com';
 
   static const String deepLinkScheme = 'patii';
-  static const String deepLinkDomain = 'patii.app';
+  static const String deepLinkDomain = 'patti-ntpv.onrender.com';
+  static String get inviteBaseUrl => baseUrl;
+  static String roomInviteUrl(String code) => '$baseUrl/r/$code';
+  static String friendInviteUrl(String code) => '$baseUrl/f/$code';
 
   // ==========================================
   // Authentication Endpoints

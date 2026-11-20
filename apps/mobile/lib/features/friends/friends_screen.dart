@@ -71,7 +71,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
 
   void _shareInviteLink(String friendCode) {
     HapticFeedback.lightImpact();
-    final link = 'https://patii.app/f/$friendCode';
+    final link = ApiConst.friendInviteUrl(friendCode);
     Share.share(
       'friends.share_text'.tr(args: [link, friendCode]),
       subject: 'Join me on Patii Card Games!',

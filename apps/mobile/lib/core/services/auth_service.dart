@@ -79,8 +79,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
           refreshToken: refreshToken,
           user: user,
         );
-        // Optionally refresh profile in background
-        _refreshUserProfile(token);
+        if (token == 'mock_guest_jwt_token') {
+          loginGuest(user.displayName);
+        } else {
+          _refreshUserProfile(token);
+        }
         return;
       }
     } catch (e) {
@@ -356,6 +359,82 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userKey);
     state = const AuthState();
+  }
+
+  static const String _dailyClaimDateKey = 'patii_daily_claim_date';
+  static const String _dailyStreakCountKey = 'patii_daily_streak_count';
+  static const List<int> dailyRewards = [500, 750, 1000, 1250, 1500, 2000, 3000];
+
+  Future<int> getDailyStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_dailyStreakCountKey) ?? 1;
+  }
+
+  Future<bool> isDailyRewardClaimedToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastDate = prefs.getString(_dailyClaimDateKey);
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    return lastDate == todayStr;
+  }
+
+  Future<int> claimDailyReward() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final lastDate = prefs.getString(_dailyClaimDateKey);
+
+    if (lastDate == todayStr) {
+      return 0; // Already claimed today
+    }
+
+    final yesterday = now.subtract(const Duration(days: 1));
+    final yesterdayStr = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+
+    int currentStreak = prefs.getInt(_dailyStreakCountKey) ?? 0;
+    int nextStreak;
+    if (lastDate == yesterdayStr) {
+      nextStreak = (currentStreak % 7) + 1;
+    } else {
+      nextStreak = 1; // Streak reset or first day
+    }
+
+    final reward = dailyRewards[nextStreak - 1];
+    await prefs.setString(_dailyClaimDateKey, todayStr);
+    await prefs.setInt(_dailyStreakCountKey, nextStreak);
+
+    final currentCoins = state.user?.coins ?? 10000;
+    final updatedUser = (state.user ??
+            const UserAccount(
+              userId: 'local_player',
+              displayName: 'Player',
+              friendCode: 'PT-NEW',
+              isGuest: true,
+              coins: 10000,
+            ))
+        .copyWith(coins: currentCoins + reward);
+
+    await prefs.setString(_userKey, jsonEncode(updatedUser.toJson()));
+    state = state.copyWith(user: updatedUser);
+
+    return reward;
+  }
+
+  Future<void> addCoins(int amount) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentCoins = state.user?.coins ?? 10000;
+    final updatedUser = (state.user ??
+            const UserAccount(
+              userId: 'local_player',
+              displayName: 'Player',
+              friendCode: 'PT-NEW',
+              isGuest: true,
+              coins: 10000,
+            ))
+        .copyWith(coins: currentCoins + amount);
+
+    await prefs.setString(_userKey, jsonEncode(updatedUser.toJson()));
+    state = state.copyWith(user: updatedUser);
   }
 }
 

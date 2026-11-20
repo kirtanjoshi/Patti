@@ -55,7 +55,9 @@ class DeepLinkService {
       } else if (uri.host == 'friend' || uri.pathSegments.contains('friend')) {
         friendCode = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : uri.host;
       }
-    } else if (uri.host.contains('patii.app') || uri.host.contains('localhost')) {
+    } else if (uri.host.contains('patii.app') ||
+        uri.host.contains('onrender.com') ||
+        uri.host.contains('localhost')) {
       if (uri.pathSegments.contains('r')) {
         final idx = uri.pathSegments.indexOf('r');
         if (idx + 1 < uri.pathSegments.length) {

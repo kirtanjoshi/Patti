@@ -104,6 +104,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  public async broadcastTableState(tableId: string): Promise<void> {
+    try {
+      const table = this.tableService.getTable(tableId);
+      const sockets = await this.server.in(`table:${tableId}`).fetchSockets();
+      for (const s of sockets) {
+        const sUserId = (s as any).data.user?.userId;
+        if (sUserId) {
+          const view = table.getViewFor(sUserId);
+          if (view) {
+            s.emit('table:state', {
+              tableId,
+              version: table.version,
+              view,
+            });
+          }
+        }
+      }
+    } catch {}
+  }
+
   @SubscribeMessage('room:create')
   handleRoomCreate(
     @ConnectedSocket() client: Socket,
@@ -233,7 +253,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         parsed.data.code,
         userId,
         (event, payload) => {
-          this.server.to(`table:${payload.tableId}`).emit(event, payload);
+          if (event === 'table:sync_request') {
+            this.broadcastTableState(payload.tableId as string);
+          } else {
+            this.server.to(`table:${payload.tableId}`).emit(event, payload);
+          }
         },
       );
       const room = this.roomsService.getRoom(parsed.data.code);
@@ -245,16 +269,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const sUserId = (s as any).data.user?.userId;
         if (sUserId) {
           this.socialService.setPresence(sUserId, 'in_table', room.gameId);
-          const view = table.getViewFor(sUserId);
-          if (view) {
-            s.emit('table:state', {
-              tableId: table.config.tableId,
-              version: table.version,
-              view,
-            });
-          }
         }
       }
+
+      await this.broadcastTableState(table.config.tableId);
 
       this.server.to(`room:${room.code}`).emit('room:started', {
         code: room.code,
@@ -338,16 +356,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       },
       (event, payload) => {
-        this.server.to(`table:${payload.tableId}`).emit(event, payload);
+        if (event === 'table:sync_request') {
+          this.broadcastTableState(payload.tableId as string);
+        } else {
+          this.server.to(`table:${payload.tableId}`).emit(event, payload);
+        }
       },
     );
   }
 
   @SubscribeMessage('table:move')
-  handleTableMove(
+  async handleTableMove(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: unknown,
-  ): void {
+  ): Promise<void> {
     const parsed = TableMoveSchema.safeParse(data);
     if (!parsed.success) {
       client.emit('error', { code: 'ILLEGAL_MOVE', message: 'Invalid move payload schema' });
@@ -362,6 +384,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         parsed.data.version,
         parsed.data.move as any,
       );
+      await this.broadcastTableState(parsed.data.tableId);
     } catch (err: any) {
       client.emit('error', {
         code: err.message === 'STALE_VERSION' ? 'STALE_VERSION' : 'ILLEGAL_MOVE',

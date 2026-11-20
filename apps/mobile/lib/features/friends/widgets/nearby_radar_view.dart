@@ -169,7 +169,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
   void _shareInviteLink() {
     final user = ref.read(authProvider).user;
     final code = user?.friendCode ?? 'PATII';
-    final shareUrl = 'https://patii.app/f/$code';
+    final shareUrl = ApiConst.friendInviteUrl(code);
     Share.share(
       '🃏 Play Callbreak & Marriage cards with me on Patii! Join my table: $shareUrl (Code: $code)',
       subject: 'Play Patii with me!',

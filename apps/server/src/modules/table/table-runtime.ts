@@ -132,6 +132,7 @@ export class TableRuntime {
 
     this.state = TableState.PLAYING;
     this.version++;
+    this.broadcast('table:sync_request', { tableId: this.config.tableId, version: this.version });
     this.promptCurrentTurn();
   }
 
@@ -201,6 +202,7 @@ export class TableRuntime {
       move,
       phase: this.engineState.phase ?? 'playing',
     });
+    this.broadcast('table:sync_request', { tableId: this.config.tableId, version: this.version });
 
     if (this.module.isGameOver(this.engineState)) {
       this.state = TableState.GAME_END;

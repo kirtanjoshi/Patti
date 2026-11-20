@@ -31,11 +31,19 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="patii" />
             </intent-filter>
-            <!-- Deep linking: App Links (https://patii.app/r/*, https://patii.app/f/*) -->
+            <!-- Deep linking: App Links (https://patii.app/r/*, https://patti-ntpv.onrender.com/r/*) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="patti-ntpv.onrender.com"
+                    android:pathPrefix="/r" />
+                <data
+                    android:scheme="https"
+                    android:host="patti-ntpv.onrender.com"
+                    android:pathPrefix="/f" />
                 <data
                     android:scheme="https"
                     android:host="patii.app"

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../core/constants/api_const.dart';
 import '../../core/models/user_model.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
@@ -56,11 +58,27 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
     _startSub = socket.roomStartedStream.listen((data) {
       if (!mounted) return;
       final gameId = data['gameId'] as String? ?? _currentRoom?.gameId ?? 'callbreak';
-      _navigateToGameTable(gameId);
+      final tableId = data['tableId'] as String?;
+      final myUserId = ref.read(authProvider).user?.userId;
+      final mySeat = _currentRoom?.participants.firstWhere(
+        (p) => p.userId == myUserId,
+        orElse: () => _currentRoom!.participants.first,
+      ).seat ?? 0;
+      _navigateToGameTable(
+        gameId,
+        tableId: tableId,
+        mySeat: mySeat,
+        participants: _currentRoom?.participants,
+      );
     });
   }
 
-  void _navigateToGameTable(String gameId) {
+  void _navigateToGameTable(
+    String gameId, {
+    String? tableId,
+    int mySeat = 0,
+    List<RoomParticipantModel>? participants,
+  }) {
     Widget targetScreen;
     switch (gameId) {
       case 'marriage':
@@ -86,7 +104,11 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
         break;
       case 'callbreak':
       default:
-        targetScreen = const CallbreakTableScreen();
+        targetScreen = CallbreakTableScreen(
+          tableId: tableId,
+          mySeat: mySeat,
+          participants: participants,
+        );
         break;
     }
 
@@ -137,7 +159,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
 
   void _shareRoom(String code) {
     HapticFeedback.lightImpact();
-    final link = 'https://patii.app/r/$code';
+    final link = ApiConst.roomInviteUrl(code);
     Share.share(
       'Join my private table on Patii Card Games! Tap to enter: $link (Room Code: $code)',
       subject: 'Patii Private Table Invite',

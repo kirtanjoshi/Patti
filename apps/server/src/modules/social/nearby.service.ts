@@ -176,21 +176,19 @@ export class NearbyService {
     const results: NearbyPlayerSummary[] = [];
     for (const candidate of candidateEntries) {
       const u = userMap.get(candidate.otherUserId);
-      if (!u) continue;
-
-      const rel = friendStatusMap.get(u.id) ?? { isFriend: false, hasPendingRequest: false };
+      const rel = friendStatusMap.get(candidate.otherUserId) ?? { isFriend: false, hasPendingRequest: false };
 
       results.push({
-        userId: u.id,
-        displayName: u.displayName,
-        friendCode: u.friendCode || '',
-        avatarId: u.avatarId,
-        avatarUrl: u.avatarUrl,
-        level: u.level,
-        rating: u.rating,
+        userId: candidate.otherUserId,
+        displayName: u?.displayName ?? 'Nearby Player',
+        friendCode: u?.friendCode || 'PT-NEARBY',
+        avatarId: u?.avatarId ?? 1,
+        avatarUrl: u?.avatarUrl,
+        level: u?.level ?? 1,
+        rating: u?.rating ?? 1200,
         distanceMeters: candidate.distance,
         distanceText: this.formatDistance(candidate.distance),
-        presence: this.socialService.getPresence(u.id),
+        presence: this.socialService.getPresence(candidate.otherUserId),
         isFriend: rel.isFriend,
         hasPendingRequest: rel.hasPendingRequest,
       });

@@ -249,16 +249,37 @@ export class RoomsService {
       room.maxSeats,
     );
 
+    // Add existing human & added bot participants
     room.participants.forEach((p) => {
       table.addPlayer(p.seat, p.userId, p.isBot);
     });
+
+    // If room is not full, fill remaining empty seats with bots so table can deal and start
+    for (let s = 0; s < room.maxSeats; s++) {
+      const existing = room.participants.find((p) => p.seat === s);
+      if (!existing) {
+        const botNum = room.participants.filter((p) => p.isBot).length + 1;
+        const botId = `bot_${Date.now()}_${s}`;
+        const botParticipant: RoomParticipant = {
+          seat: s,
+          userId: botId,
+          displayName: `Bot ${botNum}`,
+          avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=bot_${botNum}`,
+          isHost: false,
+          isBot: true,
+          botDifficulty: room.botDifficulty,
+        };
+        room.participants.push(botParticipant);
+        table.addPlayer(s, botId, true);
+      }
+    }
 
     room.tableId = tableId;
     return table;
   }
 
   public toRoomStatePayload(room: PrivateRoom): RoomStatePayload {
-    const baseUrl = process.env.INVITE_BASE_URL || 'https://patii.app';
+    const baseUrl = process.env.INVITE_BASE_URL || 'https://patti-ntpv.onrender.com';
     const participants: RoomParticipantPayload[] = room.participants.map((p) => ({
       seat: p.seat,
       userId: p.userId,
