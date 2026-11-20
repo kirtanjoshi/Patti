@@ -145,14 +145,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         // Fallback for offline or local dev without backend running
-        return _fallbackLocalGuest(displayName);
+        return await _fallbackLocalGuest(displayName);
       }
     } catch (e) {
       debugPrint('Guest login network failure: $e. Falling back to local guest.');
       final displayName = nickname?.trim().isNotEmpty == true
           ? nickname!.trim()
           : 'Player #${Random().nextInt(9000) + 1000}';
-      return _fallbackLocalGuest(displayName);
+      return await _fallbackLocalGuest(displayName);
     }
   }
 
