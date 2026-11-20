@@ -239,6 +239,7 @@ export class RoomsService {
     }
 
     const tableId = `tbl_room_${code}`;
+    const tableSeats = room.gameId === 'callbreak' ? 4 : room.maxSeats;
     const table = this.tableService.createTable(
       tableId,
       'private',
@@ -246,7 +247,7 @@ export class RoomsService {
       broadcaster ?? (() => {}),
       room.gameId,
       room.rules,
-      room.maxSeats,
+      tableSeats,
     );
 
     // Add existing human & added bot participants
@@ -255,7 +256,7 @@ export class RoomsService {
     });
 
     // If room is not full, fill remaining empty seats with bots so table can deal and start
-    for (let s = 0; s < room.maxSeats; s++) {
+    for (let s = 0; s < tableSeats; s++) {
       const existing = room.participants.find((p) => p.seat === s);
       if (!existing) {
         const botNum = room.participants.filter((p) => p.isBot).length + 1;

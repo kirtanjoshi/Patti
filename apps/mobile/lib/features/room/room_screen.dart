@@ -34,9 +34,23 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
   final TextEditingController _codeController = TextEditingController();
   String _selectedGame = 'callbreak';
   int _stake = 0;
+  int _seats = 2;
   RoomStateModel? _currentRoom;
   StreamSubscription? _roomSub;
   StreamSubscription? _startSub;
+
+  List<int> _getAllowedSeats(String gameId) {
+    switch (gameId) {
+      case 'callbreak':
+        return [2, 4];
+      case 'teenpatti':
+      case 'rummy':
+      case 'jokerrummy':
+        return [2, 3, 4, 5, 6];
+      default:
+        return [2, 3, 4, 5];
+    }
+  }
 
   @override
   void initState() {
@@ -133,7 +147,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
       gameId: _selectedGame,
       rules: {},
       stake: _stake,
-      seats: 4,
+      seats: _seats,
     );
   }
 
@@ -258,8 +272,44 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
               );
             }).toList(),
             onChanged: (val) {
-              if (val != null) setState(() => _selectedGame = val);
+              if (val != null) {
+                setState(() {
+                  _selectedGame = val;
+                  final allowed = _getAllowedSeats(val);
+                  if (!allowed.contains(_seats)) {
+                    _seats = allowed.first;
+                  }
+                });
+              }
             },
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Number of Players',
+            style: PatiiTypography.body(fontSize: 13, color: PatiiColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<int>(
+            segments: _getAllowedSeats(_selectedGame).map((s) {
+              return ButtonSegment<int>(
+                value: s,
+                label: Text(
+                  _selectedGame == 'callbreak' && s == 2
+                      ? '2 (1v1 + 2 Bots)'
+                      : '$s Players',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              );
+            }).toList(),
+            selected: {_seats},
+            onSelectionChanged: (set) => setState(() => _seats = set.first),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? PatiiColors.gold.withValues(alpha: 0.25)
+                    : PatiiColors.navySurface,
+              ),
+            ),
           ),
           const SizedBox(height: 18),
           Text(
