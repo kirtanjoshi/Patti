@@ -44,16 +44,21 @@ class CasinoChip extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: denomination.primaryColor,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 3.0,
             offset: const Offset(0, 1.5),
           ),
         ],
       ),
-      child: Center(
+      child: CustomPaint(
+        painter: _ChipEdgePainter(
+          stripe: denomination == ChipDenomination.c10
+              ? PatiiColors.chipBlue
+              : Colors.white.withValues(alpha: 0.85),
+        ),
+        child: Center(
         child: Container(
           width: size * 0.72,
           height: size * 0.72,
@@ -69,7 +74,7 @@ class CasinoChip extends StatelessWidget {
               denomination.value >= 1000
                   ? '${denomination.value ~/ 1000}k'
                   : '${denomination.value}',
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: size * 0.28,
                 fontWeight: FontWeight.w900,
                 color: denomination.textColor,
@@ -77,9 +82,34 @@ class CasinoChip extends StatelessWidget {
             ),
           ),
         ),
+        ),
       ),
     );
   }
+}
+
+/// Six edge stripes, the visual signature of a casino chip.
+class _ChipEdgePainter extends CustomPainter {
+  final Color stripe;
+
+  const _ChipEdgePainter({required this.stripe});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    final paint = Paint()
+      ..color = stripe
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = r * 0.22;
+    final rect = Rect.fromCircle(center: c, radius: r * 0.89);
+    for (var i = 0; i < 6; i++) {
+      canvas.drawArc(rect, i * 3.14159 / 3, 0.32, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChipEdgePainter old) => old.stripe != stripe;
 }
 
 /// Casino Chip Stack

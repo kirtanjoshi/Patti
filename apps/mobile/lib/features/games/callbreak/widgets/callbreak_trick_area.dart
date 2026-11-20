@@ -17,15 +17,11 @@ class PlayedTrickCard {
   });
 }
 
-/// Callbreak Center Trick Area
-/// Arranges up to 4 played cards in a diamond layout, where each card sits
-/// slightly toward the player who played it:
-/// - Seat 0 (South / You): sits towards bottom
-/// - Seat 1 (West / Left): sits towards left
-/// - Seat 2 (North / Top): sits towards top
-/// - Seat 3 (East / Right): sits towards right
+/// Callbreak centre trick area.
 ///
-/// Features smooth dealing arrival and collection animation toward the trick winner.
+/// Each card flies in from the direction of the player who played it and
+/// rests slightly toward them. When [winningSeat] is set, the whole trick
+/// sweeps toward the winner and fades, so the result is felt, not just read.
 class CallbreakTrickArea extends StatelessWidget {
   final List<PlayedTrickCard> playedCards;
   final String phase;
@@ -40,118 +36,91 @@ class CallbreakTrickArea extends StatelessWidget {
     this.winningSeat,
   });
 
-  Offset _getCardOffset(int seat) {
-    switch (seat) {
-      case 0: // South (You)
-        return const Offset(0, 20);
-      case 1: // West (Left)
-        return const Offset(-30, 0);
-      case 2: // North (Top)
-        return const Offset(0, -20);
-      case 3: // East (Right)
-        return const Offset(30, 0);
-      default:
-        return Offset.zero;
-    }
-  }
+  /// Unit direction from the table centre toward each seat.
+  static Offset _dir(int seat) => switch (seat) {
+        0 => const Offset(0, 1),
+        1 => const Offset(-1, 0),
+        2 => const Offset(0, -1),
+        3 => const Offset(1, 0),
+        _ => Offset.zero,
+      };
 
-  double _getCardRotation(int seat) {
-    switch (seat) {
-      case 0:
-        return 0.0;
-      case 1:
-        return -0.08;
-      case 2:
-        return 0.05;
-      case 3:
-        return 0.08;
-      default:
-        return 0.0;
-    }
-  }
+  static Offset _rest(int seat) => Offset(_dir(seat).dx * 34, _dir(seat).dy * 22);
+
+  static double _tilt(int seat) => switch (seat) {
+        1 => -0.10,
+        2 => 0.05,
+        3 => 0.10,
+        _ => -0.03,
+      };
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: 190,
-        height: 150,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // Center Felt Diamond Subtle Watermark
-            Container(
-              width: 140,
-              height: 110,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: PatiiColors.gold.withValues(alpha: 0.12),
-                  width: 1.0,
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final hint = phase == 'bidding'
+        ? 'callbreak.bid'.tr()
+        : currentTurnSeat == 0
+            ? 'table.your_turn'.tr()
+            : 'table.waiting'.tr();
+
+    return SizedBox(
+      width: 200,
+      height: 160,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // During bidding the bid panel already says what to do.
+          if (playedCards.isEmpty && phase != 'bidding')
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: Text(
+                hint,
+                key: ValueKey(hint),
+                style: PatiiTypography.eyebrow(
+                  fontSize: 11,
+                  color: currentTurnSeat == 0 && phase != 'bidding'
+                      ? PatiiColors.goldLight
+                      : Colors.white.withValues(alpha: 0.45),
                 ),
-                color: Colors.black.withValues(alpha: 0.10),
               ),
             ),
-
-            // Empty State Hint
-            if (playedCards.isEmpty)
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0,
-                    vertical: 4.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: PatiiColors.navySurface.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: PatiiColors.gold.withValues(alpha: 0.2),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Text(
-                    phase == 'bidding'
-                        ? 'callbreak.bid'.tr()
-                        : currentTurnSeat == 0
-                            ? 'table.your_turn'.tr()
-                            : 'table.waiting'.tr(),
-                    style: PatiiTypography.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: PatiiColors.goldLight.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ),
-              ),
-
-            // Played Cards in Diamond Layout
-            ...playedCards.map((played) {
-              final offset = _getCardOffset(played.seat);
-              final rotation = _getCardRotation(played.seat);
-
-              return Transform.translate(
-                offset: offset,
-                child: Transform.rotate(
-                  angle: rotation,
-                  child: PlayingCard.table(
-                    card: played.card,
-                    width: 48,
-                    height: 68,
-                  )
-                      .animate()
-                      .scale(
-                        begin: const Offset(0.7, 0.7),
-                        end: const Offset(1.0, 1.0),
-                        duration: 180.ms,
-                        curve: Curves.easeOutBack,
-                      )
-                      .fadeIn(duration: 120.ms),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: winningSeat == null ? 0 : 1),
+            duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 520),
+            curve: Curves.easeInCubic,
+            builder: (context, t, _) {
+              final sweep = winningSeat == null ? Offset.zero : _dir(winningSeat!) * 170 * t;
+              return Opacity(
+                opacity: (1 - t * 0.9).clamp(0.0, 1.0),
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: playedCards.map((played) {
+                    Widget card = PlayingCard.table(card: played.card, width: 50, height: 70);
+                    if (!reduceMotion) {
+                      final from = _dir(played.seat) * 140;
+                      card = card
+                          .animate(key: ValueKey(played.card.id))
+                          .move(begin: from, end: Offset.zero, duration: 280.ms, curve: Curves.easeOutCubic)
+                          // rotate() is in turns: ~15-20 degrees of spin-in.
+                          .rotate(begin: _tilt(played.seat) * 0.5, end: 0, duration: 280.ms)
+                          .fadeIn(duration: 120.ms);
+                    }
+                    return Transform.translate(
+                      key: ValueKey(played.card.id),
+                      offset: Offset.lerp(_rest(played.seat), sweep, t)!,
+                      child: Transform.scale(
+                        scale: 1 - 0.4 * t,
+                        child: Transform.rotate(angle: _tilt(played.seat), child: card),
+                      ),
+                    );
+                  }).toList(),
                 ),
               );
-            }),
-          ],
-        ),
+            },
+          ),
+        ],
       ),
     );
   }

@@ -31,53 +31,48 @@ class TeenPattiHandFan extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Hand rank badge (when Seen) OR "See Cards" Gold CTA (when Blind)
-        if (isSeen)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 3.0),
-            margin: const EdgeInsets.only(bottom: 4.0),
-            decoration: BoxDecoration(
-              gradient: PatiiColors.goldButtonGradient,
-              borderRadius: BorderRadius.circular(12.0),
-              boxShadow: [
-                BoxShadow(
-                  color: PatiiColors.goldDark.withValues(alpha: 0.4),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.stars,
-                  size: 14.0,
-                  color: PatiiColors.navy,
-                ),
-                const SizedBox(width: 5.0),
-                Text(
-                  handRank,
-                  style: PatiiTypography.cinzel(
-                    fontSize: 12.0,
-                    fontWeight: FontWeight.bold,
-                    color: PatiiColors.navy,
-                    letterSpacing: 0.5,
+        // Seen: hand-rank tag. Blind: a quiet "See cards" control (tapping the
+        // cards works too). Gold is reserved for the betting action.
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: isSeen
+              ? Container(
+                  key: const ValueKey('rank'),
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3.0),
+                  margin: const EdgeInsets.only(bottom: 6.0),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.stars, size: 13, color: PatiiColors.gold),
+                      const SizedBox(width: 5),
+                      Text(
+                        handRank,
+                        style: PatiiTypography.display(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: PatiiColors.goldLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Padding(
+                  key: const ValueKey('see'),
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: GhostButton(
+                    label: 'teenpatti.see_cards'.tr(),
+                    icon: Icons.visibility_outlined,
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    onPressed: onToggleSeen,
                   ),
                 ),
-              ],
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4.0),
-            child: GoldButton(
-              label: 'teenpatti.see_cards'.tr(),
-              icon: Icons.visibility_outlined,
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-              onPressed: onToggleSeen,
-            ),
-          ),
+        ),
 
         // 3 Cards Fan with 3D Flip animation
         TweenAnimationBuilder<double>(
@@ -96,10 +91,10 @@ class TeenPattiHandFan extends StatelessWidget {
                 children: List.generate(cards.length, (index) {
                   final card = cards[index];
                   // Card fan slight rotation (-6 deg, 0 deg, +6 deg)
-                  final fanAngle = (index - 1) * 0.10;
+                  final fanAngle = (index - 1) * 0.12;
 
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    padding: EdgeInsets.only(top: index == 1 ? 0 : 6, left: 1, right: 1),
                     child: Transform(
                       alignment: Alignment.center,
                       transform: Matrix4.identity()
@@ -113,16 +108,16 @@ class TeenPattiHandFan extends StatelessWidget {
                               child: PlayingCard.table(
                                 card: card,
                                 isFaceDown: false,
-                                width: 50.0,
-                                height: 72.0,
+                                width: 60.0,
+                                height: 84.0,
                                 onTap: onToggleSeen,
                               ),
                             )
                           : PlayingCard.table(
                               card: card,
                               isFaceDown: true,
-                              width: 50.0,
-                              height: 72.0,
+                              width: 60.0,
+                              height: 84.0,
                               onTap: onToggleSeen,
                             ),
                     ),

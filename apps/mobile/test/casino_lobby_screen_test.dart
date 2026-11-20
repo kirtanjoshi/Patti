@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:patii/core/theme/patii_theme.dart';
 import 'package:patii/features/lobby/casino_lobby_screen.dart';
 import 'package:patii/features/lobby/widgets/daily_bonus_banner.dart';
 import 'package:patii/features/lobby/widgets/game_card_tile.dart';
@@ -14,9 +14,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: PatiiTheme.casinoDarkTheme,
-          home: const CasinoLobbyScreen(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: CasinoLobbyScreen(),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
@@ -38,9 +39,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: PatiiTheme.casinoDarkTheme,
-          home: const CasinoLobbyScreen(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: CasinoLobbyScreen(),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
@@ -57,9 +59,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: PatiiTheme.casinoDarkTheme,
-          home: const CasinoLobbyScreen(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: CasinoLobbyScreen(),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
@@ -76,9 +79,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: PatiiTheme.casinoDarkTheme,
-          home: const CasinoLobbyScreen(),
+        const ProviderScope(
+          child: MaterialApp(
+            home: CasinoLobbyScreen(),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));

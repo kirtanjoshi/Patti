@@ -8,3 +8,4 @@ export 'buttons.dart';
 export 'table_felt.dart';
 export 'glass_sheet.dart';
 export 'toast_banner.dart';
+export 'suit_icon.dart';

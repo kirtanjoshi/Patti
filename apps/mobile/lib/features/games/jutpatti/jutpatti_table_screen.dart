@@ -121,7 +121,7 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
             const SizedBox(width: 8),
             Text(
               'JUTPATTI WIN!',
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: PatiiColors.goldLight,
@@ -132,7 +132,7 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
         content: Text(
           'All your cards are paired into Jodis!\n\n'
           '🎉 You won the round and 300 coins!',
-          style: PatiiTypography.poppins(fontSize: 14, color: PatiiColors.textPrimary),
+          style: PatiiTypography.body(fontSize: 14, color: PatiiColors.textPrimary),
         ),
         actions: [
           GoldButton(
@@ -155,11 +155,11 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Text(
           'Jutpatti Rules',
-          style: PatiiTypography.cinzel(
+          style: PatiiTypography.display(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: PatiiColors.goldLight,
@@ -170,7 +170,7 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
           '• Form pairs ("Jodi") of cards with the same rank.\n'
           '• Draw 1 card from Stock or Discard, then discard 1.\n'
           '• First player to pair all cards declares and wins!',
-          style: PatiiTypography.poppins(
+          style: PatiiTypography.body(
             fontSize: 13,
             color: PatiiColors.textPrimary,
             height: 1.5,
@@ -179,7 +179,7 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Got it', style: PatiiTypography.cinzel(color: PatiiColors.gold)),
+            child: Text('Got it', style: PatiiTypography.display(color: PatiiColors.gold)),
           ),
         ],
       ),
@@ -317,7 +317,7 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
                       ),
                       child: Text(
                         'Pairs: $pairsCount / ${myHand.length ~/ 2}',
-                        style: PatiiTypography.cinzel(
+                        style: PatiiTypography.display(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: PatiiColors.goldLight,

@@ -1,14 +1,19 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/services.dart';
+import 'coin_counter.dart';
+import 'package:patii_engine/patii_engine.dart' as engine;
 import '../theme/colors.dart';
-import '../theme/spacing.dart';
 import '../theme/typography.dart';
+import 'buttons.dart';
+import 'suit_icon.dart';
 import 'table_felt.dart';
 
-/// Shared Landscape Casino Table Shell
-/// Automatically locks orientation to landscape on entry and restores portrait on exit.
-/// Provides the outer table rail, green felt, and the top HUD bar with round info and pot.
+/// Shared landscape table shell.
+///
+/// Locks landscape while mounted. The HUD lives in the two top corners
+/// (leave + title on the left, trump/pot/rules on the right) so the
+/// top-centre stays free for the opposite player's seat.
 class TableShell extends StatefulWidget {
   final Widget child;
   final String gameTitle;
@@ -39,16 +44,16 @@ class _TableShellState extends State<TableShell> {
   @override
   void initState() {
     super.initState();
-    // Lock table to landscape
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
   void dispose() {
-    // Restore portrait orientation when leaving the table
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -56,246 +61,249 @@ class _TableShellState extends State<TableShell> {
     super.dispose();
   }
 
-  void _showLeaveConfirmDialog(BuildContext context) {
+  void _leave(BuildContext context) {
     if (widget.onLeave != null) {
       widget.onLeave!();
       return;
     }
-
     showDialog(
       context: context,
+      barrierColor: PatiiColors.scrim,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: PatiiColors.navyElevated,
-        shape: RoundedRectangleBorder(
-          borderRadius: PatiiSpacing.rounded16,
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
-        ),
-        title: Text(
-          'callbreak.leave'.tr(),
-          style: PatiiTypography.cinzel(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: PatiiColors.goldLight,
-          ),
-        ),
-        content: Text(
-          'callbreak.leave_confirm'.tr(),
-          style: PatiiTypography.poppins(
-            fontSize: 14,
-            color: PatiiColors.textSecondary,
-          ),
-        ),
+        icon: const Icon(Icons.logout_rounded, color: PatiiColors.crimsonLight),
+        title: Text('callbreak.leave'.tr(), textAlign: TextAlign.center),
+        content: Text('callbreak.leave_confirm'.tr(), textAlign: TextAlign.center),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
-          TextButton(
+          GhostButton(
+            label: 'callbreak.stay'.tr(),
+            height: 44,
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'callbreak.stay'.tr(),
-              style: PatiiTypography.poppins(
-                fontSize: 14,
-                color: PatiiColors.textMuted,
-              ),
-            ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: PatiiColors.crimson,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
+          DangerButton(
+            label: 'callbreak.leave'.tr(),
+            height: 44,
             onPressed: () {
               Navigator.pop(dialogContext);
               Navigator.pop(context);
             },
-            child: Text(
-              'callbreak.leave'.tr(),
-              style: PatiiTypography.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
+  engine.Suit? get _trump => switch (widget.trumpSuit?.toLowerCase()) {
+        'spades' || 's' || '♠' => engine.Suit.S,
+        'hearts' || 'h' || '♥' => engine.Suit.H,
+        'diamonds' || 'd' || '♦' => engine.Suit.D,
+        'clubs' || 'c' || '♣' => engine.Suit.C,
+        _ => null,
+      };
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: PatiiColors.navy,
-      body: SafeArea(
-        child: TableFelt(
+    final trump = _trump;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leave(context);
+      },
+      child: Scaffold(
+        backgroundColor: PatiiColors.navy,
+        body: TableFelt(
           shape: widget.feltShape,
-          child: Stack(
-            children: [
-              // Main Table Game Content
-              Positioned.fill(child: widget.child),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Positioned.fill(child: widget.child),
 
-              // Top HUD Bar
-              Positioned(
-                top: 6.0,
-                left: 12.0,
-                right: 12.0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Back / Leave button (guaranteed 48x48 min touch target)
-                    Semantics(
-                      button: true,
-                      label: 'callbreak.leave'.tr(),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: PatiiColors.navySurface.withValues(alpha: 0.8),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: PatiiColors.gold.withValues(alpha: 0.4),
-                            width: 1.0,
-                          ),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          iconSize: 20,
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: PatiiColors.goldLight,
-                          ),
-                          onPressed: () => _showLeaveConfirmDialog(context),
-                        ),
+                // Top-left: leave + title
+                Positioned(
+                  top: 8,
+                  left: 10,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      HudIconButton(
+                        icon: Icons.arrow_back_rounded,
+                        semanticLabel: 'callbreak.leave'.tr(),
+                        onPressed: () => _leave(context),
                       ),
-                    ),
-
-                    // Center Glass Info Pill: Title, Round, Trump, Pot
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14.0,
-                          vertical: 4.0,
-                        ),
-                        decoration: BoxDecoration(
-                          color: PatiiColors.navySurface.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(20.0),
-                          border: Border.all(
-                            color: PatiiColors.goldDark.withValues(alpha: 0.5),
-                            width: 1.0,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.4),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                      const SizedBox(width: 10),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.gameTitle,
+                            style: PatiiTypography.display(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1.1,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              widget.gameTitle,
-                              style: PatiiTypography.cinzel(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: PatiiColors.goldLight,
+                          ),
+                          if (widget.roundInfo != null)
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 160),
+                              child: Text(
+                                widget.roundInfo!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: PatiiTypography.body(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: PatiiColors.textSecondary,
+                                ),
                               ),
                             ),
-                            if (widget.roundInfo != null) ...[
-                              const SizedBox(width: 6),
-                              const Text(
-                                '·',
-                                style: TextStyle(color: PatiiColors.goldDark),
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  widget.roundInfo!,
-                                  style: PatiiTypography.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: PatiiColors.textPrimary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                            if (widget.trumpSuit != null) ...[
-                              const SizedBox(width: 6),
-                              const Text(
-                                '·',
-                                style: TextStyle(color: PatiiColors.goldDark),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '♠ ${widget.trumpSuit}',
-                                style: PatiiTypography.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: PatiiColors.goldLight,
-                                ),
-                              ),
-                            ],
-                            if (widget.pot != null) ...[
-                              const SizedBox(width: 6),
-                              const Text(
-                                '·',
-                                style: TextStyle(color: PatiiColors.goldDark),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(
-                                Icons.monetization_on,
-                                size: 14,
-                                color: PatiiColors.gold,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${widget.pot}',
-                                style: PatiiTypography.cinzel(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: PatiiColors.goldLight,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                        ],
                       ),
-                    ),
-
-                    // Right Rules / Info Button (36x36 pill)
-                    Semantics(
-                      button: true,
-                      label: 'Game Rules',
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: PatiiColors.navySurface.withValues(alpha: 0.8),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: PatiiColors.gold.withValues(alpha: 0.4),
-                            width: 1.0,
-                          ),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          iconSize: 20,
-                          icon: const Icon(
-                            Icons.help_outline,
-                            color: PatiiColors.goldLight,
-                          ),
-                          onPressed: widget.onRulesTap,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+
+                // Top-right: trump, pot, rules
+                Positioned(
+                  top: 8,
+                  right: 10,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.trumpSuit != null)
+                        HudChip(
+                          semanticLabel: 'Trump ${widget.trumpSuit}',
+                          leading: trump != null
+                              ? Container(
+                                  width: 18,
+                                  height: 18,
+                                  alignment: Alignment.center,
+                                  decoration: const BoxDecoration(
+                                    color: PatiiColors.cardFace,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: SuitIcon(
+                                    suit: trump,
+                                    size: 11,
+                                    color: trump == engine.Suit.H || trump == engine.Suit.D
+                                        ? PatiiColors.suitRed
+                                        : PatiiColors.suitBlack,
+                                  ),
+                                )
+                              : null,
+                          label: 'TRUMP',
+                          value: trump == null ? widget.trumpSuit : null,
+                        ),
+                      if (widget.pot != null) ...[
+                        const SizedBox(width: 6),
+                        HudChip(
+                          semanticLabel: 'Pot ${widget.pot}',
+                          leading: const CoinGlyph(size: 16),
+                          value: CoinCounter.formatCoins(widget.pot!),
+                        ),
+                      ],
+                      const SizedBox(width: 6),
+                      HudIconButton(
+                        icon: Icons.question_mark_rounded,
+                        semanticLabel: 'Game Rules',
+                        onPressed: widget.onRulesTap,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small translucent capsule used in the table HUD.
+class HudChip extends StatelessWidget {
+  final Widget? leading;
+  final String? label;
+  final String? value;
+  final String semanticLabel;
+
+  const HudChip({
+    super.key,
+    this.leading,
+    this.label,
+    this.value,
+    required this.semanticLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semanticLabel,
+      child: ExcludeSemantics(
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: PatiiColors.hairline),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (leading != null) leading!,
+              if (label != null) ...[
+                const SizedBox(width: 6),
+                Text(label!, style: PatiiTypography.eyebrow(fontSize: 9.5, color: PatiiColors.textSecondary)),
+              ],
+              if (value != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  value!,
+                  style: PatiiTypography.display(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: PatiiColors.goldLight,
+                  ),
+                ),
+              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Round translucent icon button for HUDs (48dp touch target, 36dp visual).
+class HudIconButton extends StatelessWidget {
+  final IconData icon;
+  final String semanticLabel;
+  final VoidCallback? onPressed;
+
+  const HudIconButton({
+    super.key,
+    required this.icon,
+    required this.semanticLabel,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Pressable(
+        onPressed: onPressed,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            shape: BoxShape.circle,
+            border: Border.all(color: PatiiColors.hairline),
+          ),
+          child: Icon(icon, size: 19, color: PatiiColors.textPrimary),
         ),
       ),
     );

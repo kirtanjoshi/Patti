@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patii/features/dev/gallery_screen.dart';
 import 'package:patii/features/games/callbreak/callbreak_table_screen.dart';
@@ -29,7 +30,7 @@ void main() {
         await tester.binding.setSurfaceSize(size);
         addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        await tester.pumpWidget(const MaterialApp(home: CasinoLobbyScreen()));
+        await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: CasinoLobbyScreen())));
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.byType(CasinoLobbyScreen), findsOneWidget);

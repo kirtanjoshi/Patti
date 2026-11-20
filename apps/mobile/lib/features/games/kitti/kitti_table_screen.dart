@@ -372,7 +372,7 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
                 left: tableWidth < 700 ? 50 : 90,
                 right: tableWidth < 700 ? 50 : 90,
                 top: 48,
-                bottom: phase == KittiPhase.arranging ? 112 : 12,
+                bottom: phase == KittiPhase.arranging ? 128 : 12,
                 child: Center(
                   child: phase == KittiPhase.arranging
                       ? KittiArrangeBoard(
@@ -418,7 +418,7 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
                 Positioned(
                   left: tableWidth < 700 ? 90 : 130,
                   right: tableWidth < 700 ? 20 : 60,
-                  bottom: 0,
+                  bottom: 8,
                   child: KittiActionBar(
                     unassignedCards: unassignedCards,
                     selectedCard: selectedCard,

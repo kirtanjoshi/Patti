@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { TableRuntime, TableConfig, TableEventBroadcaster } from './table-runtime.js';
-import { CallbreakMove, DEFAULT_CALLBREAK_RULES } from '@patii/game-engine';
+import { GameId } from '@patii/protocol';
 import { WalletService } from '../wallet/wallet.service.js';
 
 @Injectable()
@@ -14,14 +14,17 @@ export class TableService {
     tier = 'beginner',
     stake = BigInt(100),
     broadcaster: TableEventBroadcaster,
+    gameId: GameId = 'callbreak',
+    rules?: Record<string, unknown>,
+    seatsCount = 4,
   ): TableRuntime {
     const config: TableConfig = {
       tableId,
-      gameId: 'callbreak',
+      gameId,
       tier,
       stake,
-      rules: DEFAULT_CALLBREAK_RULES,
-      seatsCount: 4,
+      rules,
+      seatsCount,
     };
 
     const table = new TableRuntime(config, broadcaster);
@@ -37,7 +40,7 @@ export class TableService {
     return table;
   }
 
-  applyMove(tableId: string, playerId: string, version: number, move: CallbreakMove): void {
+  applyMove(tableId: string, playerId: string, version: number, move: any): void {
     const table = this.getTable(tableId);
     table.applyPlayerMove(playerId, version, move);
   }

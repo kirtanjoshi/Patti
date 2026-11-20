@@ -1,62 +1,50 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
-/// CustomPainter for the traditional Nepali Dhaka geometric pattern
-/// Used on card backs, casino table trims, and luxury accents.
+/// Traditional Nepali Dhaka lattice, drawn as fine line-work.
+/// Used on card backs and as a faint texture accent. Kept deliberately thin:
+/// at small sizes a filled pattern turns into noise.
 class DhakaPatternPainter extends CustomPainter {
   final Color primaryColor;
   final Color secondaryColor;
+  final double step;
 
   const DhakaPatternPainter({
     this.primaryColor = PatiiColors.gold,
     this.secondaryColor = PatiiColors.crimson,
+    this.step = 10.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final goldPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.85)
+    final line = Paint()
+      ..color = primaryColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeWidth = 0.6;
+    final dot = Paint()..color = secondaryColor;
 
-    final fillPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.15)
-      ..style = PaintingStyle.fill;
-
-    final crimsonPaint = Paint()
-      ..color = secondaryColor.withValues(alpha: 0.4)
-      ..style = PaintingStyle.fill;
-
-    const step = 14.0;
-
+    final h = step / 2;
     for (double y = 0; y < size.height + step; y += step) {
       for (double x = 0; x < size.width + step; x += step) {
-        final cx = x;
-        final cy = y;
-
-        // Diamond path
         final diamond = Path()
-          ..moveTo(cx, cy - step / 2)
-          ..lineTo(cx + step / 2, cy)
-          ..lineTo(cx, cy + step / 2)
-          ..lineTo(cx - step / 2, cy)
+          ..moveTo(x, y - h)
+          ..lineTo(x + h, y)
+          ..lineTo(x, y + h)
+          ..lineTo(x - h, y)
           ..close();
-
-        // Alternating fill
-        if (((x / step).floor() + (y / step).floor()) % 2 == 0) {
-          canvas.drawPath(diamond, fillPaint);
-        } else {
-          canvas.drawPath(diamond, crimsonPaint);
+        canvas.drawPath(diamond, line);
+        if (secondaryColor.a > 0) {
+          final q = h * 0.28;
+          canvas.drawPath(
+            Path()
+              ..moveTo(x, y - q)
+              ..lineTo(x + q, y)
+              ..lineTo(x, y + q)
+              ..lineTo(x - q, y)
+              ..close(),
+            dot,
+          );
         }
-
-        canvas.drawPath(diamond, goldPaint);
-
-        // Center dot
-        canvas.drawCircle(
-          Offset(cx, cy),
-          0.8,
-          Paint()..color = primaryColor,
-        );
       }
     }
   }
@@ -64,5 +52,6 @@ class DhakaPatternPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant DhakaPatternPainter oldDelegate) =>
       primaryColor != oldDelegate.primaryColor ||
-      secondaryColor != oldDelegate.secondaryColor;
+      secondaryColor != oldDelegate.secondaryColor ||
+      step != oldDelegate.step;
 }

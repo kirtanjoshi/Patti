@@ -2,118 +2,126 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'colors.dart';
 
-/// Patii Casino Typography using GoogleFonts (Cinzel, Poppins, Mukta)
+/// Patii typography.
+///
+/// - display(): Sora. Titles, numbers, coins, pot, scores. Tabular figures so
+///   counters don't jitter while animating.
+/// - body(): Mukta. UI text in both Latin and Devanagari (PRD 10.4).
+/// Both families ship in assets/fonts, so nothing is fetched at runtime.
 abstract class PatiiTypography {
-  // Display font for Casino Titles, Pots, Big Numbers
-  static TextStyle cinzel({
+  static List<String> _devanagariFallback(FontWeight w) =>
+      [GoogleFonts.mukta(fontWeight: w).fontFamily!];
+
+  static TextStyle display({
     double fontSize = 20,
     FontWeight fontWeight = FontWeight.w700,
     Color color = PatiiColors.textPrimary,
     double? letterSpacing,
+    double? height,
   }) {
-    return GoogleFonts.cinzel(
+    return GoogleFonts.sora(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
-      letterSpacing: letterSpacing,
+      letterSpacing: letterSpacing ?? (fontSize >= 18 ? -0.3 : 0),
+      height: height,
       fontFeatures: const [FontFeature.tabularFigures()],
-    );
+    ).copyWith(fontFamilyFallback: _devanagariFallback(fontWeight));
   }
 
-  // Body and UI font
-  static TextStyle poppins({
+  static TextStyle body({
     double fontSize = 14,
     FontWeight fontWeight = FontWeight.w400,
     Color color = PatiiColors.textPrimary,
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.poppins(
-      fontSize: fontSize,
-      fontWeight: fontWeight,
-      color: color,
-      letterSpacing: letterSpacing,
-      height: height,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-  }
-
-  // Devanagari / Nepali text font
-  static TextStyle mukta({
-    double fontSize = 14,
-    FontWeight fontWeight = FontWeight.w500,
-    Color color = PatiiColors.textPrimary,
-    double? letterSpacing,
-  }) {
     return GoogleFonts.mukta(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
       letterSpacing: letterSpacing,
+      height: height ?? 1.25,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
 
+  static TextStyle mukta({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w500,
+    Color color = PatiiColors.textPrimary,
+    double? letterSpacing,
+  }) =>
+      body(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+      );
+
+  /// Small uppercase-ish label: section eyebrows, chip labels.
+  static TextStyle eyebrow({
+    double fontSize = 10.5,
+    Color color = PatiiColors.textMuted,
+  }) =>
+      display(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w600,
+        color: color,
+        letterSpacing: 1.2,
+      );
+
   static TextStyle caption({
-    double fontSize = 11,
+    double fontSize = 11.5,
     FontWeight fontWeight = FontWeight.w400,
     bool bold = false,
     Color color = PatiiColors.textMuted,
   }) {
-    return poppins(
+    return body(
       fontSize: fontSize,
       fontWeight: bold ? FontWeight.w700 : fontWeight,
       color: color,
     );
   }
 
-  // Pre-configured text styles
-  static final TextStyle potDisplay = cinzel(
-    fontSize: 28,
+  static final TextStyle potDisplay = display(
+    fontSize: 26,
     fontWeight: FontWeight.w800,
     color: PatiiColors.goldLight,
-    letterSpacing: 1.2,
   );
 
-  static final TextStyle titleLarge = cinzel(
-    fontSize: 22,
+  static final TextStyle titleLarge = display(
+    fontSize: 20,
     fontWeight: FontWeight.w700,
-    color: PatiiColors.textPrimary,
-    letterSpacing: 0.8,
   );
 
-  static final TextStyle titleMedium = cinzel(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: PatiiColors.goldLight,
+  static final TextStyle titleMedium = display(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
   );
 
-  static final TextStyle bodyLarge = poppins(
+  static final TextStyle bodyLarge = body(
     fontSize: 16,
     fontWeight: FontWeight.w500,
-    color: PatiiColors.textPrimary,
   );
 
-  static final TextStyle bodyMedium = poppins(
+  static final TextStyle bodyMedium = body(
     fontSize: 14,
-    fontWeight: FontWeight.w400,
     color: PatiiColors.textSecondary,
   );
 
-  static final TextStyle bodySmall = poppins(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
+  static final TextStyle bodySmall = body(
+    fontSize: 12.5,
     color: PatiiColors.textMuted,
   );
 
-  static final TextStyle buttonLabel = poppins(
-    fontSize: 15,
+  static final TextStyle buttonLabel = display(
+    fontSize: 14,
     fontWeight: FontWeight.w700,
-    color: PatiiColors.navy,
-    letterSpacing: 0.5,
+    color: const Color(0xFF241A05),
   );
 
-  static final TextStyle cardRank = poppins(
+  static final TextStyle cardRank = display(
     fontSize: 14,
     fontWeight: FontWeight.w800,
     color: PatiiColors.suitBlack,

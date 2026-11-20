@@ -23,5 +23,7 @@ abstract class PatiiSpacing {
   static final BorderRadius rounded8 = BorderRadius.circular(8.0);
   static final BorderRadius rounded12 = BorderRadius.circular(12.0);
   static final BorderRadius rounded16 = BorderRadius.circular(16.0);
+  static final BorderRadius rounded20 = BorderRadius.circular(20.0);
+  static final BorderRadius rounded24 = BorderRadius.circular(24.0);
   static final BorderRadius roundedFull = BorderRadius.circular(999.0);
 }

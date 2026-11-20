@@ -1,8 +1,8 @@
 # Patii — Project Progress & Tracking
 
-Last Updated: 2026-11-16
-Current Phase: **All Waves 1–6 Completed & Verified**
-Current Status: **Production Ready (All 8 Games, Server Runtime, Mobile Table UIs, Admin Console, Offline Dart Engine, Hard ISMCTS Bots, Anti-Cheat, & Load Tests Complete)**
+Last Updated: 2026-11-20
+Current Phase: **All Waves 1–8 Completed & Verified**
+Current Status: **Production Ready (All 8 Games, Server Runtime, Mobile Table UIs, Admin Console, Offline Dart Engine, Hard ISMCTS Bots, Anti-Cheat, Google/Guest Auth, Deep Linking & Real-Time Social/Rooms Complete)**
 
 ---
 
@@ -63,6 +63,15 @@ Current Status: **Production Ready (All 8 Games, Server Runtime, Mobile Table UI
   - Audio & Haptics: `AudioService` with 6 procedural sound effects (`shuffle`, `deal`, `card_snap`, `chip`, `win_jingle`, `your_turn`) and haptic impact.
   - Multi-Screen Zero-Overflow Audit: 28 audit tests verified on 360x640, 393x852, 600x960, and 1024x600 tablet viewports.
   - Verification: 62/62 Flutter tests passing, 0 analysis warnings, all files under 500 lines.
+- [x] **Wave 8 — Social, Deep Linking, Google & Guest Auth, & Real-Time Rooms (PRD Section 14)**
+  - Database Schema: Added `friendCode`, `avatarUrl`, `email`, and `referredById` to `model User` in Prisma.
+  - Protocol Contracts: Added `room:*` and `social:*` Zod event schemas and generated Dart protocol models.
+  - Auth Service: Full "Play as Guest" (unique 6-char friendCode, 10k bonus coins) + "Continue with Google" + seamless Guest-to-Google account linking (preserving wallet coins, friends, and stats).
+  - Deep Linking & Invites: Custom scheme `patii://room/*` and `patii://friend/*`, Universal Links `https://patii.app/r/*` and `https://patii.app/f/*`, smart HTML redirect landing pages with OpenGraph preview cards and assetlinks/apple-app-site-association.
+  - Friends & Presence: Live online presence tracking, viral invite link auto-connect, manual friend code add, pending requests, and 1-tap in-app table invites.
+  - Room & Table Gateway: Socket.IO gateway wired with room lifecycle events and multi-game `TableRuntime` dynamically supporting all 8 card games.
+  - Mobile UI: Welcome `AuthScreen`, `GoogleAuthSheet`, `FriendsScreen` on Bottom Nav Tab 1, and live `RoomScreen` lobby.
+  - Verification: 21/21 server tests passing, 65/65 Flutter tests passing, 14/14 Turborepo tasks green.
 
 ---
 

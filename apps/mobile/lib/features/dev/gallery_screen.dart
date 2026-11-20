@@ -371,7 +371,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             children: [
               Text(
                 'CASINO GREEN TABLE FELT',
-                style: PatiiTypography.cinzel(
+                style: PatiiTypography.display(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: PatiiColors.goldLight,
@@ -426,7 +426,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         child: Center(
                           child: Text(
                             '$bid',
-                            style: PatiiTypography.cinzel(
+                            style: PatiiTypography.display(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: PatiiColors.goldLight,

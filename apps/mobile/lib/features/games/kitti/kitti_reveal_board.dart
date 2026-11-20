@@ -104,7 +104,7 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                       ),
                       child: Text(
                         _showLabel(index),
-                        style: PatiiTypography.cinzel(
+                        style: PatiiTypography.display(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: isSelected ? PatiiColors.navy : PatiiColors.textPrimary,
@@ -137,7 +137,7 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                       : (winningPlayer != null
                           ? 'kitti.show_winner'.tr(args: [winningPlayer.displayName])
                           : ''),
-                  style: PatiiTypography.cinzel(
+                  style: PatiiTypography.display(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: PatiiColors.goldLight,
@@ -179,7 +179,7 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                         children: [
                           Text(
                             player.displayName,
-                            style: PatiiTypography.poppins(
+                            style: PatiiTypography.body(
                               fontSize: 12,
                               fontWeight: isThisWinner ? FontWeight.bold : FontWeight.w500,
                               color: isThisWinner ? PatiiColors.goldLight : PatiiColors.textPrimary,
@@ -262,7 +262,7 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
               children: [
                 Text(
                   title,
-                  style: PatiiTypography.cinzel(
+                  style: PatiiTypography.display(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: color,

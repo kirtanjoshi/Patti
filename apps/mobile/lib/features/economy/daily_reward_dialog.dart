@@ -1,6 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
+import '../../core/widgets/buttons.dart';
+import '../../core/widgets/coin_counter.dart';
 
+/// 7-day streak reward. Claimed days are checked, today glows gold, day 7 is
+/// the big chest so the streak has a visible goal.
 class DailyRewardDialog extends StatelessWidget {
   const DailyRewardDialog({super.key});
 
@@ -8,110 +15,131 @@ class DailyRewardDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    const currentStreakDay = 3; // e.g. Day 3
+    const currentStreakDay = 3;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0), // 8-pt grid
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'economy.daily_reward'.tr(),
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8.0),
-            Text(
-              '${'economy.streak'.tr()}: $currentStreakDay ${'economy.day'.tr()}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24.0),
+    Widget dayTile(int index, {bool wide = false}) {
+      final day = index + 1;
+      final isClaimed = day < currentStreakDay;
+      final isToday = day == currentStreakDay;
 
-            // 7-Day Streak Grid
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              alignment: WrapAlignment.center,
-              children: List.generate(7, (index) {
-                final day = index + 1;
-                final reward = dailyRewards[index];
-                final isClaimed = day < currentStreakDay;
-                final isToday = day == currentStreakDay;
-
-                return Container(
-                  width: 64.0,
-                  padding: const EdgeInsets.all(8.0),
-                  decoration: BoxDecoration(
-                    color: isToday
-                        ? colorScheme.primaryContainer
-                        : isClaimed
-                            ? colorScheme.surfaceContainerHighest
-                            : colorScheme.surface,
-                    border: Border.all(
-                      color: isToday ? colorScheme.primary : colorScheme.outlineVariant,
-                      width: isToday ? 2.0 : 1.0,
-                    ),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${'economy.day'.tr()} $day',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4.0),
-                      Text(
-                        '$reward',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isToday ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4.0),
-                      Icon(
-                        isClaimed
-                            ? Icons.check_circle
-                            : isToday
-                                ? Icons.stars
-                                : Icons.lock,
-                        size: 16.0,
-                        color: isToday ? colorScheme.primary : colorScheme.outline,
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ),
-
-            const SizedBox(height: 24.0),
-            Semantics(
-              button: true,
-              label: 'economy.claim'.tr(),
-              child: SizedBox(
-                height: 48.0, // min 48px tap target
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('economy.claim'.tr()),
+      Widget tile = Container(
+        height: wide ? 64 : 84,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: isToday ? PatiiColors.goldButtonGradient : null,
+          color: isToday ? null : Colors.white.withValues(alpha: isClaimed ? 0.03 : 0.06),
+          border: Border.all(color: isToday ? Colors.transparent : PatiiColors.hairline),
+          boxShadow: isToday
+              ? [BoxShadow(color: PatiiColors.gold.withValues(alpha: 0.4), blurRadius: 16)]
+              : null,
+        ),
+        child: Opacity(
+          opacity: isClaimed ? 0.55 : 1,
+          child: Flex(
+            direction: wide ? Axis.horizontal : Axis.vertical,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${'economy.day'.tr()} $day',
+                style: PatiiTypography.body(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isToday ? const Color(0xFF3A2A06) : PatiiColors.textSecondary,
                 ),
               ),
-            ),
-          ],
+              SizedBox(width: wide ? 12 : 0, height: wide ? 0 : 4),
+              isClaimed
+                  ? const Icon(Icons.check_circle_rounded, size: 22, color: PatiiColors.success)
+                  : wide
+                      ? const Icon(Icons.inventory_2_rounded, size: 26, color: PatiiColors.gold)
+                      : const CoinGlyph(size: 22),
+              SizedBox(width: wide ? 12 : 0, height: wide ? 0 : 4),
+              Text(
+                CoinCounter.formatCoins(dailyRewards[index]),
+                style: PatiiTypography.display(
+                  fontSize: wide ? 16 : 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: isToday ? const Color(0xFF241A05) : PatiiColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (isToday && !reduceMotion) {
+        tile = tile
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .scaleXY(begin: 1, end: 1.05, duration: 900.ms, curve: Curves.easeInOut);
+      }
+      return tile;
+    }
+
+    return Dialog(
+      backgroundColor: PatiiColors.navyElevated,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: PatiiColors.goldButtonGradient,
+                    boxShadow: [BoxShadow(color: PatiiColors.gold.withValues(alpha: 0.45), blurRadius: 24)],
+                  ),
+                  child: const Icon(Icons.redeem_rounded, size: 28, color: Color(0xFF241A05)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'economy.daily_reward'.tr(),
+                textAlign: TextAlign.center,
+                style: PatiiTypography.display(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${'economy.streak'.tr()}: $currentStreakDay ${'economy.day'.tr()}',
+                textAlign: TextAlign.center,
+                style: PatiiTypography.body(fontSize: 13.5, fontWeight: FontWeight.w600, color: PatiiColors.goldLight),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  for (var i = 0; i < 3; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(child: dayTile(i)),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (var i = 3; i < 6; i++) ...[
+                    if (i > 3) const SizedBox(width: 8),
+                    Expanded(child: dayTile(i)),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              dayTile(6, wide: true),
+              const SizedBox(height: 20),
+              GoldButton(
+                label: 'economy.claim'.tr(),
+                icon: Icons.redeem_rounded,
+                height: 50,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,7 +2,7 @@ name: patii
 description: "Patii — Multiplayer Nepali card games in one place."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -20,6 +20,11 @@ dependencies:
   audioplayers: ^6.1.1
   confetti: ^0.8.0
   flutter_svg: ^2.0.17
+  http: ^1.2.2
+  shared_preferences: ^2.3.5
+  share_plus: ^10.1.4
+  app_links: ^6.3.3
+  google_sign_in: ^6.2.2
 
   # Local workspace Dart packages
   patii_engine:
@@ -37,3 +42,4 @@ flutter:
   assets:
     - assets/translations/
     - assets/audio/
+    - assets/fonts/

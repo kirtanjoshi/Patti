@@ -1,25 +1,28 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { GameId } from '@patii/protocol';
+import { GameId, RoomParticipantPayload, RoomStatePayload } from '@patii/protocol';
 import { TableService } from '../table/table.service.js';
-import { TableRuntime } from '../table/table-runtime.js';
+import { TableEventBroadcaster, TableRuntime } from '../table/table-runtime.js';
 
 export interface RoomParticipant {
-  readonly seat: number;
-  readonly userId: string;
-  readonly isHost: boolean;
-  readonly isBot: boolean;
+  seat: number;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  isHost: boolean;
+  isBot: boolean;
+  botDifficulty?: 'easy' | 'medium' | 'hard';
 }
 
 export interface PrivateRoom {
   readonly code: string;
   readonly gameId: GameId;
-  readonly hostUserId: string;
-  readonly rules: Record<string, unknown>;
+  hostUserId: string;
+  rules: Record<string, unknown>;
   readonly stake: number;
   readonly maxSeats: number;
   readonly botDifficulty: 'easy' | 'medium' | 'hard';
   readonly turnTimerSeconds: number;
-  readonly participants: RoomParticipant[];
+  participants: RoomParticipant[];
   tableId: string | null;
   readonly createdAt: number;
 }
@@ -37,7 +40,7 @@ export class RoomsService {
     if (room.hostUserId !== requesterUserId) {
       throw new BadRequestException('Only room host can update rules.');
     }
-    (room as { rules: Record<string, unknown> }).rules = newRules;
+    room.rules = newRules;
     return room;
   }
 
@@ -58,6 +61,8 @@ export class RoomsService {
     maxSeats = 4,
     botDifficulty: 'easy' | 'medium' | 'hard' = 'medium',
     turnTimerSeconds = 15,
+    hostDisplayName = 'Host',
+    hostAvatarUrl?: string | null,
   ): PrivateRoom {
     let code = this.generateRoomCode();
     while (this.activeRooms.has(code)) {
@@ -73,7 +78,16 @@ export class RoomsService {
       maxSeats,
       botDifficulty,
       turnTimerSeconds,
-      participants: [{ seat: 0, userId: hostUserId, isHost: true, isBot: false }],
+      participants: [
+        {
+          seat: 0,
+          userId: hostUserId,
+          displayName: hostDisplayName,
+          avatarUrl: hostAvatarUrl ?? null,
+          isHost: true,
+          isBot: false,
+        },
+      ],
       tableId: null,
       createdAt: Date.now(),
     };
@@ -90,8 +104,18 @@ export class RoomsService {
     return room;
   }
 
-  public joinRoom(code: string, userId: string): PrivateRoom {
+  public joinRoom(
+    code: string,
+    userId: string,
+    displayName = 'Player',
+    avatarUrl?: string | null,
+  ): PrivateRoom {
     const room = this.getRoom(code);
+    const existing = room.participants.find((p) => p.userId === userId);
+    if (existing) {
+      return room;
+    }
+
     if (room.participants.length >= room.maxSeats) {
       throw new BadRequestException('Room is already full.');
     }
@@ -100,6 +124,8 @@ export class RoomsService {
     room.participants.push({
       seat: nextSeat,
       userId,
+      displayName,
+      avatarUrl: avatarUrl ?? null,
       isHost: false,
       isBot: false,
     });
@@ -107,7 +133,69 @@ export class RoomsService {
     return room;
   }
 
-  public addBot(code: string, requesterUserId: string, seat?: number): PrivateRoom {
+  public leaveRoom(code: string, userId: string): PrivateRoom | null {
+    const room = this.getRoom(code);
+    const idx = room.participants.findIndex((p) => p.userId === userId);
+    if (idx === -1) {
+      return room;
+    }
+
+    const wasHost = room.participants[idx]!.isHost;
+    room.participants.splice(idx, 1);
+
+    // Re-index seats
+    room.participants.forEach((p, i) => {
+      p.seat = i;
+    });
+
+    if (room.participants.length === 0) {
+      this.activeRooms.delete(code.toUpperCase());
+      return null;
+    }
+
+    if (wasHost) {
+      const nextHuman = room.participants.find((p) => !p.isBot);
+      if (nextHuman) {
+        nextHuman.isHost = true;
+        room.hostUserId = nextHuman.userId;
+      } else {
+        this.activeRooms.delete(code.toUpperCase());
+        return null;
+      }
+    }
+
+    return room;
+  }
+
+  public kickPlayer(code: string, requesterUserId: string, seat: number): PrivateRoom {
+    const room = this.getRoom(code);
+    if (room.hostUserId !== requesterUserId) {
+      throw new BadRequestException('Only the host can kick players.');
+    }
+
+    const targetIdx = room.participants.findIndex((p) => p.seat === seat);
+    if (targetIdx === -1) {
+      throw new NotFoundException(`Player at seat ${seat} not found.`);
+    }
+
+    if (room.participants[targetIdx]!.userId === requesterUserId) {
+      throw new BadRequestException('Host cannot kick themselves.');
+    }
+
+    room.participants.splice(targetIdx, 1);
+    room.participants.forEach((p, i) => {
+      p.seat = i;
+    });
+
+    return room;
+  }
+
+  public addBot(
+    code: string,
+    requesterUserId: string,
+    seat?: number,
+    difficulty: 'easy' | 'medium' | 'hard' = 'medium',
+  ): PrivateRoom {
     const room = this.getRoom(code);
     if (room.hostUserId !== requesterUserId) {
       throw new BadRequestException('Only the host can add bots.');
@@ -117,18 +205,27 @@ export class RoomsService {
     }
 
     const targetSeat = seat ?? room.participants.length;
+    const botNum = room.participants.filter((p) => p.isBot).length + 1;
     const botId = `bot_${Date.now()}_${targetSeat}`;
+
     room.participants.push({
       seat: targetSeat,
       userId: botId,
+      displayName: `Bot ${botNum} (${difficulty.toUpperCase()})`,
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=bot_${botNum}`,
       isHost: false,
       isBot: true,
+      botDifficulty: difficulty,
     });
 
     return room;
   }
 
-  public startRoom(code: string, requesterUserId: string): TableRuntime {
+  public startRoom(
+    code: string,
+    requesterUserId: string,
+    broadcaster?: TableEventBroadcaster,
+  ): TableRuntime {
     const room = this.getRoom(code);
     if (room.hostUserId !== requesterUserId) {
       throw new BadRequestException('Only the host can start the room.');
@@ -146,7 +243,10 @@ export class RoomsService {
       tableId,
       'private',
       BigInt(room.stake),
-      () => {},
+      broadcaster ?? (() => {}),
+      room.gameId,
+      room.rules,
+      room.maxSeats,
     );
 
     room.participants.forEach((p) => {
@@ -155,5 +255,32 @@ export class RoomsService {
 
     room.tableId = tableId;
     return table;
+  }
+
+  public toRoomStatePayload(room: PrivateRoom): RoomStatePayload {
+    const baseUrl = process.env.INVITE_BASE_URL || 'https://patii.app';
+    const participants: RoomParticipantPayload[] = room.participants.map((p) => ({
+      seat: p.seat,
+      userId: p.userId,
+      displayName: p.displayName,
+      avatarUrl: p.avatarUrl,
+      isHost: p.isHost,
+      isBot: p.isBot,
+      botDifficulty: p.botDifficulty,
+    }));
+
+    return {
+      code: room.code,
+      gameId: room.gameId,
+      hostUserId: room.hostUserId,
+      rules: room.rules,
+      stake: room.stake,
+      maxSeats: room.maxSeats,
+      botDifficulty: room.botDifficulty,
+      turnTimerSeconds: room.turnTimerSeconds,
+      inviteUrl: `${baseUrl}/r/${room.code}`,
+      deepLinkUrl: `patii://room/${room.code}`,
+      participants,
+    };
   }
 }

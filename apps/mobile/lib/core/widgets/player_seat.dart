@@ -4,8 +4,10 @@ import '../services/audio_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 
-/// Casino Player Seat Widget
-/// 52px circular avatar, turn timer ring, dealer chip, bot badge, glass info pill.
+/// Player seat: avatar with a live turn-countdown ring, name, and one info pill.
+///
+/// The ring drains in real time from [remainingSeconds] and turns crimson in
+/// the last third, so "whose turn and how long" reads at a glance.
 class PlayerSeat extends StatefulWidget {
   final String displayName;
   final String? avatarUrl;
@@ -17,6 +19,7 @@ class PlayerSeat extends StatefulWidget {
   final int totalTurnSeconds;
   final int remainingSeconds;
   final VoidCallback? onTap;
+  final double avatarSize;
 
   const PlayerSeat({
     super.key,
@@ -30,31 +33,38 @@ class PlayerSeat extends StatefulWidget {
     this.totalTurnSeconds = 15,
     this.remainingSeconds = 15,
     this.onTap,
+    this.avatarSize = 46,
   });
 
   @override
   State<PlayerSeat> createState() => _PlayerSeatState();
 }
 
-class _PlayerSeatState extends State<PlayerSeat>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
+class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
+  late final AnimationController _countdown;
+  late final AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _pulseAnimation = Tween<double>(begin: 4.0, end: 14.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    _countdown = AnimationController(vsync: this, value: 1.0);
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    if (widget.isCurrentTurn) _startTurn();
+  }
 
-    if (widget.isCurrentTurn) {
-      _pulseController.repeat(reverse: true);
-    }
+  void _startTurn() {
+    final total = math.max(1, widget.totalTurnSeconds);
+    final remaining = widget.remainingSeconds.clamp(0, total);
+    _countdown.value = remaining / total;
+    _countdown.animateTo(0, duration: Duration(seconds: remaining));
+    _pulse.repeat(reverse: true);
+  }
+
+  void _stopTurn() {
+    _countdown.stop();
+    _countdown.value = 1.0;
+    _pulse.stop();
+    _pulse.value = 0;
   }
 
   @override
@@ -62,226 +72,239 @@ class _PlayerSeatState extends State<PlayerSeat>
     super.didUpdateWidget(oldWidget);
     if (widget.isCurrentTurn != oldWidget.isCurrentTurn) {
       if (widget.isCurrentTurn) {
-        _pulseController.repeat(reverse: true);
-        if (!widget.isBot) {
-          AudioService.instance.playYourTurnChime();
-        }
+        _startTurn();
+        if (!widget.isBot) AudioService.instance.playYourTurnChime();
       } else {
-        _pulseController.stop();
-        _pulseController.reset();
+        _stopTurn();
       }
     }
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _countdown.dispose();
+    _pulse.dispose();
     super.dispose();
+  }
+
+  /// Stable per-player colour so seats are distinguishable without photos.
+  static Color avatarColor(String name) {
+    const palette = [
+      Color(0xFF4F7CFF),
+      Color(0xFF8B5CF6),
+      Color(0xFF14B8A6),
+      Color(0xFFF97316),
+      Color(0xFFEC4899),
+      Color(0xFF22C55E),
+      Color(0xFFE5484D),
+    ];
+    final h = name.codeUnits.fold<int>(7, (a, c) => (a * 31 + c) & 0x7fffffff);
+    return palette[h % palette.length];
   }
 
   @override
   Widget build(BuildContext context) {
-    final disableAnimations = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final isUrgent = widget.remainingSeconds <= 5;
-    final timerColor = isUrgent ? PatiiColors.crimson : PatiiColors.gold;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final size = widget.avatarSize;
+    final ring = size + 10;
+    final base = avatarColor(widget.displayName);
+    final active = widget.isCurrentTurn;
 
     return Semantics(
-      label: '${widget.displayName}${widget.isBot ? ", Bot" : ""}${widget.isCurrentTurn ? ", Turn active" : ""}',
+      label: '${widget.displayName}${widget.isBot ? ", Bot" : ""}'
+          '${active ? ", Turn active" : ""}${widget.isFolded ? ", Folded" : ""}',
       button: widget.onTap != null,
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Circular Avatar with Turn Timer Ring & Dealer / Bot Chips
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                // Pulsing Gold Glow on Turn
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    final blur = disableAnimations || !widget.isCurrentTurn
-                        ? 6.0
-                        : _pulseAnimation.value;
-                    return Container(
-                      width: 62.0,
-                      height: 62.0,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          if (widget.isCurrentTurn)
-                            BoxShadow(
-                              color: timerColor.withValues(alpha: 0.7),
-                              blurRadius: blur,
-                              spreadRadius: 2.0,
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
-                // Timer Arc Ring
-                CustomPaint(
-                  size: const Size(60, 60),
-                  painter: _TurnTimerPainter(
-                    progress: widget.totalTurnSeconds > 0
-                        ? widget.remainingSeconds / widget.totalTurnSeconds
-                        : 0.0,
-                    isActive: widget.isCurrentTurn,
-                    color: timerColor,
-                  ),
-                ),
-
-                // 52px Circular Avatar
-                Container(
-                  width: 52.0,
-                  height: 52.0,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: PatiiColors.navyElevated,
-                    border: Border.all(
-                      color: widget.isCurrentTurn ? timerColor : Colors.white.withValues(alpha: 0.2),
-                      width: 2.0,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: widget.isFolded
-                        ? Container(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            child: const Center(
-                              child: Icon(Icons.close, color: PatiiColors.danger, size: 24),
-                            ),
-                          )
-                        : (widget.avatarUrl != null
-                            ? Image.network(widget.avatarUrl!, fit: BoxFit.cover)
-                            : Center(
-                                child: Text(
-                                  widget.displayName.isNotEmpty
-                                      ? widget.displayName[0].toUpperCase()
-                                      : 'P',
-                                  style: PatiiTypography.cinzel(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: PatiiColors.goldLight,
-                                  ),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 250),
+          opacity: widget.isFolded ? 0.5 : 1.0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: ring,
+                height: ring,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    // Ring + glow, repainted by the countdown controller only.
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_countdown, _pulse]),
+                      builder: (context, _) {
+                        final p = _countdown.value;
+                        final color = p < 0.34
+                            ? Color.lerp(PatiiColors.crimsonLight, PatiiColors.gold, p / 0.34)!
+                            : PatiiColors.gold;
+                        final glow = reduceMotion ? 0.5 : _pulse.value;
+                        return Container(
+                          width: ring,
+                          height: ring,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              if (active)
+                                BoxShadow(
+                                  color: color.withValues(alpha: 0.25 + 0.25 * glow),
+                                  blurRadius: 10 + 8 * glow,
+                                  spreadRadius: 1,
                                 ),
-                              )),
-                  ),
-                ),
+                            ],
+                          ),
+                          child: CustomPaint(
+                            painter: _TurnTimerPainter(
+                              progress: p,
+                              isActive: active,
+                              color: color,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
 
-                // Dealer "D" Chip (Top-Left)
-                if (widget.isDealer)
-                  Positioned(
-                    top: -4,
-                    left: -4,
-                    child: Container(
-                      width: 20,
-                      height: 20,
+                    // Avatar
+                    Container(
+                      width: size,
+                      height: size,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: PatiiColors.goldButtonGradient,
-                        border: Border.all(color: PatiiColors.navy, width: 1.5),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color.lerp(base, Colors.white, 0.15)!,
+                            Color.lerp(base, Colors.black, 0.45)!,
+                          ],
+                        ),
+                        border: Border.all(
+                          color: active ? Colors.transparent : Colors.white.withValues(alpha: 0.18),
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            blurRadius: 2,
+                            color: Colors.black.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          'D',
-                          style: PatiiTypography.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: PatiiColors.navy,
+                      child: ClipOval(
+                        child: widget.avatarUrl != null
+                            ? Image.network(widget.avatarUrl!, fit: BoxFit.cover)
+                            : widget.isBot
+                                ? Icon(Icons.smart_toy_rounded, size: size * 0.5, color: Colors.white)
+                                : Center(
+                                child: Text(
+                                  widget.displayName.isNotEmpty
+                                      ? widget.displayName.characters.first.toUpperCase()
+                                      : 'P',
+                                  style: PatiiTypography.display(
+                                    fontSize: size * 0.42,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    if (widget.isFolded)
+                      Container(
+                        width: size,
+                        height: size,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black.withValues(alpha: 0.55),
+                        ),
+                        child: const Icon(Icons.close_rounded, color: PatiiColors.danger, size: 22),
+                      ),
+
+                    if (widget.isDealer)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: _CornerChip(
+                          color: Colors.white,
+                          child: Text(
+                            'D',
+                            style: PatiiTypography.display(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: PatiiColors.navy,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
 
-                // Bot Badge (Top-Right)
-                if (widget.isBot)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: PatiiColors.navyElevated,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.5), width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.smart_toy, size: 9, color: PatiiColors.goldLight),
-                          const SizedBox(width: 2),
-                          Text(
-                            'BOT',
-                            style: PatiiTypography.poppins(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                              color: PatiiColors.goldLight,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 4.0),
-
-            // Player Name
-            SizedBox(
-              width: 80,
-              child: Text(
-                widget.displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: PatiiTypography.poppins(
-                  fontSize: 12,
-                  fontWeight: widget.isCurrentTurn ? FontWeight.w700 : FontWeight.w500,
-                  color: widget.isCurrentTurn ? PatiiColors.goldLight : PatiiColors.textPrimary,
+                  ],
                 ),
               ),
-            ),
-
-            // Glass Info Pill (Never a rectangle panel!)
-            if (widget.infoPillText != null) ...[
-              const SizedBox(height: 2.0),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
-                decoration: BoxDecoration(
-                  color: PatiiColors.navySurface.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(
-                    color: widget.isCurrentTurn
-                        ? PatiiColors.gold.withValues(alpha: 0.4)
-                        : Colors.white.withValues(alpha: 0.1),
-                    width: 0.8,
-                  ),
-                ),
+              const SizedBox(height: 2),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 92),
                 child: Text(
-                  widget.infoPillText!,
-                  style: PatiiTypography.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: widget.isFolded ? PatiiColors.danger : PatiiColors.textSecondary,
+                  widget.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: PatiiTypography.body(
+                    fontSize: 12.5,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                    color: active ? PatiiColors.goldLight : PatiiColors.textPrimary,
+                    height: 1.15,
                   ),
                 ),
               ),
+              if (widget.infoPillText != null) ...[
+                const SizedBox(height: 2),
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 110),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.38),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: PatiiColors.hairline, width: 0.8),
+                  ),
+                  child: Text(
+                    widget.infoPillText!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: PatiiTypography.body(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: widget.isFolded ? PatiiColors.danger : PatiiColors.textSecondary,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _CornerChip extends StatelessWidget {
+  final Color color;
+  final Widget child;
+
+  const _CornerChip({required this.color, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(color: PatiiColors.navy, width: 1.5),
+      ),
+      child: child,
     );
   }
 }
@@ -300,37 +323,31 @@ class _TurnTimerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (!isActive) return;
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - 1.5;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - 4) / 2;
-
-    // Background track
-    final trackPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Active sweep
-    final sweepPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 3.0;
-
-    final sweepAngle = 2 * math.pi * progress.clamp(0.0, 1.0);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2,
-      sweepAngle,
+      2 * math.pi * progress.clamp(0.0, 1.0),
       false,
-      sweepPaint,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 3,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _TurnTimerPainter oldDelegate) =>
-      progress != oldDelegate.progress ||
-      isActive != oldDelegate.isActive ||
-      color != oldDelegate.color;
+  bool shouldRepaint(covariant _TurnTimerPainter old) =>
+      progress != old.progress || isActive != old.isActive || color != old.color;
 }

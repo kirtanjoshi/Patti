@@ -31,14 +31,12 @@ class KittiActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       decoration: BoxDecoration(
-        color: PatiiColors.navySurface.withValues(alpha: 0.90),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.10),
-          width: 1.0,
-        ),
+        color: PatiiColors.navyElevated.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: PatiiColors.hairline),
+        boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 6))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

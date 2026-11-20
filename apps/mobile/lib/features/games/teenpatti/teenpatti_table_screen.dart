@@ -188,11 +188,11 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: PatiiSpacing.rounded16,
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Text(
           'teenpatti.sideshow'.tr(),
-          style: PatiiTypography.cinzel(
+          style: PatiiTypography.display(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: PatiiColors.goldLight,
@@ -200,7 +200,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         ),
         content: Text(
           '${'teenpatti.sideshow_request'.tr()} -> ${prevPlayer.name}',
-          style: PatiiTypography.poppins(
+          style: PatiiTypography.body(
             fontSize: 14,
             color: PatiiColors.textPrimary,
           ),
@@ -333,11 +333,11 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: PatiiSpacing.rounded16,
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Text(
           winner.isMe ? 'teenpatti.you_won'.tr() : 'teenpatti.winner'.tr(),
-          style: PatiiTypography.cinzel(
+          style: PatiiTypography.display(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: PatiiColors.goldLight,
@@ -351,7 +351,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
             const SizedBox(height: 12),
             Text(
               'teenpatti.player_won'.tr(args: [winner.name]),
-              style: PatiiTypography.poppins(
+              style: PatiiTypography.body(
                 fontSize: 15,
                 color: PatiiColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -361,7 +361,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
             const SizedBox(height: 6),
             Text(
               '+$_pot chips',
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: PatiiColors.goldLight,
@@ -388,7 +388,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
               },
               child: Text(
                 'teenpatti.next_deal'.tr(),
-                style: PatiiTypography.poppins(
+                style: PatiiTypography.body(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: PatiiColors.navy,
@@ -408,7 +408,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: PatiiSpacing.rounded16,
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Row(
           children: [
@@ -416,7 +416,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
             const SizedBox(width: 8),
             Text(
               'teenpatti.rules_title'.tr(),
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: PatiiColors.goldLight,
@@ -427,7 +427,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         content: SingleChildScrollView(
           child: Text(
             'teenpatti.rules_summary'.tr(),
-            style: PatiiTypography.poppins(
+            style: PatiiTypography.body(
               fontSize: 13,
               color: PatiiColors.textPrimary,
               height: 1.5,
@@ -455,20 +455,24 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         _activePlayers.length > 2 &&
         _players[prevSeat].isSeen;
 
+    // Pot lives on the table (the hero), so the HUD doesn't repeat it.
     return TableShell(
       gameTitle: 'Teen Patti',
-      roundInfo: '${'table.round'.tr()} $_roundNumber',
-      pot: _pot,
+      roundInfo: '${'table.round'.tr()} $_roundNumber · ${'teenpatti.stake'.tr()} $_currentStake',
       feltShape: TableFeltShape.oval,
       onRulesTap: _showRulesDialog,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final h = constraints.maxHeight;
           return Stack(
+            clipBehavior: Clip.none,
             children: [
-              // 1. Center Pot & Stakes Display with Chip Stacks
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24.0),
+              // 1. Pot: centre of the table, slightly above middle
+              Positioned(
+                left: 0,
+                right: 0,
+                top: h * 0.36,
+                child: Center(
                   child: TeenPattiPotCenter(
                     pot: _pot,
                     currentStake: _currentStake,
@@ -477,7 +481,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
                 ),
               ),
 
-              // 2. Evenly distributed Seats around the Oval Rail
+              // 2. Opponents on an arc (left -> top -> right) + my seat
               TeenPattiSeatLayer(
                 players: _players,
                 currentTurnSeat: _currentTurnSeat,
@@ -486,26 +490,24 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
                 constraints: constraints,
               ),
 
-              // 3. User 3-Card Hand Fan (Bottom Center)
+              // 3. My 3 cards, right of my seat, bleeding off the bottom
               Positioned(
-                left: 0,
-                right: 0,
-                bottom: 48,
-                child: Center(
-                  child: TeenPattiHandFan(
-                    cards: _myState.hand,
-                    isSeen: _myState.isSeen,
-                    onToggleSeen: _onToggleSeen,
-                  ),
+                left: 92,
+                bottom: -14,
+                child: TeenPattiHandFan(
+                  cards: _myState.hand,
+                  isSeen: _myState.isSeen,
+                  onToggleSeen: _onToggleSeen,
                 ),
               ),
 
-              // 4. Bottom Casino Action Bar
+              // 4. Actions in the right thumb zone
               Positioned(
-                left: 0,
-                right: 0,
-                bottom: 2,
-                child: Center(
+                right: 12,
+                bottom: 10,
+                left: 300,
+                child: Align(
+                  alignment: Alignment.bottomRight,
                   child: TeenPattiActionBar(
                     isMyTurn: _currentTurnSeat == 0 &&
                         !_myState.isPacked &&

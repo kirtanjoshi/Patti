@@ -1,11 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:patii_engine/patii_engine.dart' as engine;
 import '../../../core/theme/colors.dart';
-import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/playing_card.dart';
 
-/// Data model representing a playable game option in the casino lobby.
+/// Data model representing a playable game option in the lobby.
 class GameOption {
   final String id;
   final String titleKey;
@@ -24,10 +26,29 @@ class GameOption {
     required this.fannedCardRanks,
     required this.onTap,
   });
+
+  Color get accent => PatiiColors.gameAccent[id] ?? PatiiColors.gold;
+
+  /// The tile's motif as real cards, so the lobby previews the actual deck.
+  List<engine.Card> get motifCards => List.generate(3, (i) {
+        final s = i < fannedCardSuits.length ? fannedCardSuits[i] : '♠';
+        final r = i < fannedCardRanks.length ? fannedCardRanks[i] : 'A';
+        final suit = switch (s) {
+          '♥' => engine.Suit.H,
+          '♦' => engine.Suit.D,
+          '♣' => engine.Suit.C,
+          '★' => engine.Suit.X,
+          _ => engine.Suit.S,
+        };
+        final rank = suit == engine.Suit.X
+            ? 0
+            : switch (r) { 'A' => 1, 'J' => 11, 'Q' => 12, 'K' => 13, _ => int.tryParse(r) ?? 1 };
+        return engine.Card(suit: suit, rank: rank, deck: 0, id: '$id-$i');
+      });
 }
 
-/// An illustrated casino game tile with a 3-card fanned motif, Cinzel title,
-/// online player count pill, and periodic shimmer sweep.
+/// Lobby game tile: per-game accent glow, a fan of real mini cards, title,
+/// one-line description and live player count. Enters with a short stagger.
 class GameCardTile extends StatelessWidget {
   final GameOption option;
   final int animationDelayMs;
@@ -41,306 +62,152 @@ class GameCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formattedOnline = NumberFormat('#,###').format(option.onlineCount);
+    final accent = option.accent;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final cards = option.motifCards;
 
-    return Semantics(
+    Widget tile = Semantics(
       button: true,
       label: '${option.titleKey.tr()}, $formattedOnline online',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: option.onTap,
-          borderRadius: PatiiSpacing.rounded12,
-          splashColor: PatiiColors.gold.withValues(alpha: 0.2),
-          highlightColor: PatiiColors.goldLight.withValues(alpha: 0.1),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: PatiiSpacing.rounded12,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  PatiiColors.navyElevated,
-                  PatiiColors.navySurface,
-                ],
-              ),
-              border: Border.all(
-                color: PatiiColors.gold.withValues(alpha: 0.22),
-                width: 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+      excludeSemantics: true,
+      child: Pressable(
+        onPressed: option.onTap,
+        pressedScale: 0.96,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: PatiiColors.navySurface,
+            border: Border.all(color: PatiiColors.hairline),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                // Accent glow from the top
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0, -1.1),
+                        radius: 1.1,
+                        colors: [accent.withValues(alpha: 0.38), accent.withValues(alpha: 0.0)],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: SizedBox(
+                            width: 96,
+                            height: 64,
+                            child: Stack(
+                              alignment: Alignment.bottomCenter,
+                              clipBehavior: Clip.none,
+                              children: [
+                                for (var i = 0; i < 3; i++)
+                                  Positioned(
+                                    left: 12.0 + i * 22,
+                                    bottom: i == 1 ? 6 : 0,
+                                    child: Transform.rotate(
+                                      angle: (i - 1) * 0.22,
+                                      alignment: Alignment.bottomCenter,
+                                      child: PlayingCard(card: cards[i], width: 38, height: 54),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              option.titleKey.tr(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: PatiiTypography.display(fontSize: 15.5, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          if (option.badgeKey != null) ...[
+                            const SizedBox(width: 6),
+                            _Badge(text: option.badgeKey!.tr(), hot: option.badgeKey == 'lobby.hot'),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'lobby.meta.${option.id}'.tr(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: PatiiColors.success,
+                              boxShadow: [
+                                BoxShadow(color: PatiiColors.success.withValues(alpha: 0.6), blurRadius: 4),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              'lobby.online_count'.tr(args: [formattedOnline]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: PatiiTypography.body(fontSize: 11.5, color: PatiiColors.textMuted),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: PatiiSpacing.rounded12,
-              child: Stack(
-                children: [
-                  // Subtle felt-tinted corner glow
-                  Positioned(
-                    top: -24,
-                    right: -24,
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: PatiiColors.feltGreen.withValues(alpha: 0.15),
-                      ),
-                    ),
-                  ),
-
-                  // Content Layout
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: PatiiSpacing.s8,
-                      vertical: PatiiSpacing.s8,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Top row: Illustrated Fanned Cards Motif
-                        Expanded(
-                          child: Center(
-                            child: _FannedCardsMotif(
-                              suits: option.fannedCardSuits,
-                              ranks: option.fannedCardRanks,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: PatiiSpacing.s4),
-
-                        // Title in Cinzel font
-                        Text(
-                          option.titleKey.tr(),
-                          style: PatiiTypography.cinzel(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                            color: PatiiColors.textPrimary,
-                            letterSpacing: 0.5,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-
-                        // Online players count pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: PatiiColors.navy.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: PatiiColors.goldDark.withValues(alpha: 0.35),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: PatiiColors.success,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  'lobby.online_count'.tr(args: [formattedOnline]),
-                                  style: PatiiTypography.poppins(
-                                    fontSize: 10.5,
-                                    color: PatiiColors.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Optional Hot/Popular Badge at Top Right
-                  if (option.badgeKey != null)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: option.badgeKey == 'lobby.hot'
-                                ? [PatiiColors.crimson, const Color(0xFFE5484D)]
-                                : [PatiiColors.goldLight, PatiiColors.goldDark],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (option.badgeKey == 'lobby.hot'
-                                      ? PatiiColors.crimson
-                                      : PatiiColors.gold)
-                                  .withValues(alpha: 0.4),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          option.badgeKey!.tr(),
-                          style: PatiiTypography.poppins(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.bold,
-                            color: option.badgeKey == 'lobby.hot'
-                                ? Colors.white
-                                : PatiiColors.navy,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
           ),
         ),
-      ),
-    )
-        // Periodic subtle shine sweep animation
-        .animate(
-          onPlay: (controller) => controller.repeat(
-            period: const Duration(seconds: 4),
-          ),
-          delay: Duration(milliseconds: animationDelayMs),
-        )
-        .shimmer(
-          duration: const Duration(milliseconds: 1100),
-          color: PatiiColors.gold.withValues(alpha: 0.12),
-        );
-  }
-}
-
-/// Mini 3-card fanned illustration for game tiles
-class _FannedCardsMotif extends StatelessWidget {
-  final List<String> suits;
-  final List<String> ranks;
-
-  const _FannedCardsMotif({
-    required this.suits,
-    required this.ranks,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      height: 48,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          // Left card (-16 deg)
-          Positioned(
-            left: 6,
-            child: Transform.rotate(
-              angle: -0.26,
-              child: _MiniCard(
-                rank: ranks.isNotEmpty ? ranks[0] : 'A',
-                suit: suits.isNotEmpty ? suits[0] : '♠',
-              ),
-            ),
-          ),
-          // Right card (+16 deg)
-          Positioned(
-            right: 6,
-            child: Transform.rotate(
-              angle: 0.26,
-              child: _MiniCard(
-                rank: ranks.length > 2 ? ranks[2] : 'K',
-                suit: suits.length > 2 ? suits[2] : '♦',
-              ),
-            ),
-          ),
-          // Center card (0 deg, elevated)
-          Positioned(
-            top: 2,
-            child: _MiniCard(
-              rank: ranks.length > 1 ? ranks[1] : 'Q',
-              suit: suits.length > 1 ? suits[1] : '♥',
-            ),
-          ),
-        ],
       ),
     );
+
+    if (!reduceMotion) {
+      tile = tile
+          .animate()
+          .fadeIn(delay: Duration(milliseconds: 120 + animationDelayMs), duration: 320.ms)
+          .moveY(begin: 18, end: 0, duration: 420.ms, curve: Curves.easeOutCubic);
+    }
+    return tile;
   }
 }
 
-class _MiniCard extends StatelessWidget {
-  final String rank;
-  final String suit;
+class _Badge extends StatelessWidget {
+  final String text;
+  final bool hot;
 
-  const _MiniCard({required this.rank, required this.suit});
-
-  bool get _isRed => suit == '♥' || suit == '♦';
+  const _Badge({required this.text, required this.hot});
 
   @override
   Widget build(BuildContext context) {
-    final color = _isRed ? PatiiColors.suitRed : PatiiColors.suitBlack;
-
     return Container(
-      width: 26,
-      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
       decoration: BoxDecoration(
-        color: PatiiColors.cardFace,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: Colors.black.withValues(alpha: 0.18),
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: hot ? PatiiColors.crimson : Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            rank,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: color,
-              height: 1.0,
-            ),
-          ),
-          Text(
-            suit,
-            style: TextStyle(
-              fontSize: 11,
-              color: color,
-              height: 1.0,
-            ),
-          ),
-        ],
-      ),
+      child: Text(text, style: PatiiTypography.eyebrow(fontSize: 8, color: Colors.white)),
     );
   }
 }

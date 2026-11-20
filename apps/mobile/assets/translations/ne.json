@@ -18,7 +18,7 @@
     "nav_leaderboard": "वरियता",
     "nav_profile": "प्रोफाइल",
     "game_coming_soon": "{} चाँडै आउँदैछ!",
-    "all_games": "क्यासिनो खेलहरू",
+    "all_games": "सबै खेलहरू",
     "vip_level": "भीआईपी {}",
     "games": {
       "callbreak": "कल ब्रेक",
@@ -29,6 +29,23 @@
       "jutpatti": "जुटपत्ती",
       "rummy": "नेपाली रम्मी",
       "jokerrummy": "जोकर रम्मी"
+    },
+    "featured": "छिटो खेल",
+    "play_now": "अहिले खेल्नुहोस्",
+    "private_room_sub": "साथीहरूसँग खेल्नुहोस्",
+    "games_count": "{} खेलहरू",
+    "playing_now": "{} जना खेल्दै",
+    "level_short": "तह {}",
+    "join_code": "कोडबाट जोडिनुहोस्",
+    "meta": {
+      "callbreak": "४ खेलाडी · हात",
+      "marriage": "२–५ खेलाडी · मेल",
+      "teenpatti": "३ पत्ती · दाउ र झुक्याउ",
+      "kitti": "९ पत्ती · ३ शो",
+      "dhumbal": "सबैभन्दा कम जित्छ",
+      "jutpatti": "सबै जोडी मिलाउनुहोस्",
+      "rummy": "१० पत्ती · क्रम",
+      "jokerrummy": "१३ पत्ती · जोकर"
     }
   },
   "actions": {
@@ -218,5 +235,44 @@
     "turn_label": "{}को पालो",
     "chips_in_pot": "पटमा {} चिप्स",
     "toss_chips": "चिप्स दाउ लगाउनुहोस्"
+  },
+  "auth": {
+    "welcome_title": "नेपाली तास खेलहरू",
+    "welcome_subtitle": "साथी र परिवारसँग ८ क्लासिक खेलहरू खेल्नुहोस्",
+    "continue_google": "गुगलबाट अगाडि बढ्नुहोस्",
+    "play_guest": "गेस्टको रूपमा खेल्नुहोस्",
+    "guest_prompt_title": "उपनाम छान्नुहोस्",
+    "guest_prompt_hint": "आफ्नो नाम राख्नुहोस्",
+    "guest_badge": "गेस्ट खाता",
+    "google_verified": "गुगल खाता",
+    "link_google": "गुगल खाता जोड्नुहोस्",
+    "link_google_desc": "आफ्ना सिक्का र साथीहरू सुरक्षित राख्नुहोस्",
+    "sign_out": "लगआउट",
+    "my_friend_code": "मेरो साथी कोड",
+    "code_copied": "साथी कोड क्लिपबोर्डमा कपी भयो!",
+    "connecting": "जोडिँदैछ...",
+    "error_login": "लगइन हुन सकेन। कृपया पुन: प्रयास गर्नुहोस्।"
+  },
+  "friends": {
+    "title": "साथीहरू",
+    "share_link_title": "साथी तथा परिवारलाई बोलाउनुहोस्",
+    "share_link_subtitle": "१ ट्यापमा जोडिन आफ्नो लिङ्क सेयर गर्नुहोस्!",
+    "share_link_button": "निमन्त्रणा लिङ्क सेयर गर्नुहोस्",
+    "share_text": "पत्ती तास खेलमा मसँग खेल्नुहोस्! लिङ्क: {} (साथी कोड: {})",
+    "add_friend": "साथी थप्नुहोस्",
+    "enter_friend_code": "साथी कोड राख्नुहोस् (जस्तै PT-7X8K)",
+    "send_request": "अनुरोध पठाउनुहोस्",
+    "pending_requests": "बाँकी अनुरोधहरू",
+    "online_friends": "अनलाइन साथीहरू ({})",
+    "offline_friends": "अफलाइन साथीहरू ({})",
+    "invite_to_play": "बोलाउनुहोस्",
+    "status_online": "अनलाइन",
+    "status_in_game": "{} खेल्दै",
+    "status_offline": "अफलाइन",
+    "accept": "स्वीकार गर्नुहोस्",
+    "decline": "अस्वीकार गर्नुहोस्",
+    "no_friends": "अहिलेसम्म कुनै साथी थपिएका छैनन्। लिङ्क सेयर गर्नुहोस्!",
+    "request_sent": "साथी अनुरोध पठाइयो!",
+    "request_accepted": "साथी अनुरोध स्वीकार गरियो!"
   }
 }

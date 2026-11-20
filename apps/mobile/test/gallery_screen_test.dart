@@ -80,7 +80,7 @@ void main() {
 
       expect(find.text('Sita'), findsOneWidget);
       expect(find.text('D'), findsOneWidget);
-      expect(find.text('BOT'), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy_rounded), findsOneWidget); // bot avatar replaces the 'BOT' text badge
       expect(find.text('Bid 3 · Won 2'), findsOneWidget);
     });
 

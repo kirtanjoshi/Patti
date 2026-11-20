@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Card;
+import 'package:patii_engine/patii_engine.dart' as engine;
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
-import '../../../../core/widgets/dhaka_pattern_painter.dart';
 import '../../../../core/widgets/player_seat.dart';
+import '../../../../core/widgets/playing_card.dart';
 
-/// Opponent Seat Widget for Callbreak table.
-/// Combines the 52px circular PlayerSeat (avatar, turn-ring, bot badge, dealer chip, bid/tricks pill)
-/// with a mini Dhaka card-back badge indicating remaining cards in hand.
+/// Opponent seat for Callbreak: the shared PlayerSeat plus a small fanned
+/// stack of card backs showing how many cards they still hold.
 class OpponentSeatPanel extends StatelessWidget {
   final String displayName;
   final int? bid;
@@ -15,6 +15,9 @@ class OpponentSeatPanel extends StatelessWidget {
   final bool isCurrentTurn;
   final bool isDealer;
   final bool isBot;
+
+  /// Put the card stack on the inner (left) side, for the east seat.
+  final bool stackOnLeft;
 
   const OpponentSeatPanel({
     super.key,
@@ -25,88 +28,70 @@ class OpponentSeatPanel extends StatelessWidget {
     this.isCurrentTurn = false,
     this.isDealer = false,
     this.isBot = true,
+    this.stackOnLeft = false,
   });
+
+  static const _back = engine.Card(suit: engine.Suit.S, rank: 2, deck: 0, id: 'back');
 
   @override
   Widget build(BuildContext context) {
-    final infoText = bid != null ? 'Bid $bid · Won $tricksWon' : 'Won $tricksWon';
+    final infoText = bid != null ? '$tricksWon / $bid tricks' : '$tricksWon tricks';
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
       children: [
-        Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // Circular 52px PlayerSeat
-            PlayerSeat(
-              displayName: displayName,
-              isCurrentTurn: isCurrentTurn,
-              isDealer: isDealer,
-              isBot: isBot,
-              infoPillText: infoText,
-              remainingSeconds: isCurrentTurn ? 12 : 15,
-            ),
-
-            // Mini Dhaka Card-Back with Remaining Cards Badge
-            Positioned(
-              top: 0,
-              right: -14,
-              child: Container(
-                width: 22,
+        PlayerSeat(
+          displayName: displayName,
+          isCurrentTurn: isCurrentTurn,
+          isDealer: isDealer,
+          isBot: isBot,
+          infoPillText: infoText,
+          remainingSeconds: isCurrentTurn ? 12 : 15,
+        ),
+        if (cardCount > 0)
+          Positioned(
+            top: 6,
+            right: stackOnLeft ? null : -22,
+            left: stackOnLeft ? -22 : null,
+            child: Semantics(
+              label: '$cardCount cards',
+              child: SizedBox(
+                width: 30,
                 height: 30,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(
-                    color: PatiiColors.gold.withValues(alpha: 0.8),
-                    width: 0.8,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 4,
-                      offset: const Offset(1, 1),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2.5),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Dhaka pattern
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: DhakaPatternPainter(
-                            primaryColor: PatiiColors.gold,
-                            secondaryColor: PatiiColors.crimson,
-                          ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (var i = 0; i < 3; i++)
+                      Positioned(
+                        left: i * 4.0,
+                        top: i * -1.0,
+                        child: Transform.rotate(
+                          angle: (i - 1) * 0.12,
+                          child: const PlayingCard(card: _back, isFaceDown: true, width: 18, height: 26),
                         ),
                       ),
-                      // Card count pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                    Positioned(
+                      right: -2,
+                      bottom: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
                         decoration: BoxDecoration(
-                          color: PatiiColors.navy.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(2),
+                          color: PatiiColors.navy,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: PatiiColors.hairlineStrong, width: 0.8),
                         ),
                         child: Text(
                           '$cardCount',
-                          style: PatiiTypography.cinzel(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: PatiiColors.goldLight,
-                          ),
+                          style: PatiiTypography.display(fontSize: 9.5, fontWeight: FontWeight.w700),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
       ],
     );
   }

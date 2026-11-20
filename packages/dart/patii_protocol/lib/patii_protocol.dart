@@ -124,6 +124,256 @@ class RoomJoinPayload {
       RoomJoinPayload(code: json['code'] as String);
 }
 
+class RoomInviteFriendPayload {
+  final String code;
+  final String targetUserId;
+
+  const RoomInviteFriendPayload({required this.code, required this.targetUserId});
+
+  Map<String, dynamic> toJson() => {'code': code, 'targetUserId': targetUserId};
+
+  factory RoomInviteFriendPayload.fromJson(Map<String, dynamic> json) =>
+      RoomInviteFriendPayload(
+        code: json['code'] as String,
+        targetUserId: json['targetUserId'] as String,
+      );
+}
+
+class RoomParticipantPayload {
+  final int seat;
+  final String userId;
+  final String displayName;
+  final String? avatarUrl;
+  final bool isHost;
+  final bool isBot;
+  final BotDifficulty? botDifficulty;
+
+  const RoomParticipantPayload({
+    required this.seat,
+    required this.userId,
+    required this.displayName,
+    this.avatarUrl,
+    required this.isHost,
+    required this.isBot,
+    this.botDifficulty,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'seat': seat,
+        'userId': userId,
+        'displayName': displayName,
+        if (avatarUrl != null) 'avatarUrl': avatarUrl,
+        'isHost': isHost,
+        'isBot': isBot,
+        if (botDifficulty != null) 'botDifficulty': botDifficulty!.name,
+      };
+
+  factory RoomParticipantPayload.fromJson(Map<String, dynamic> json) =>
+      RoomParticipantPayload(
+        seat: json['seat'] as int,
+        userId: json['userId'] as String,
+        displayName: json['displayName'] as String? ?? 'Player',
+        avatarUrl: json['avatarUrl'] as String?,
+        isHost: json['isHost'] as bool? ?? false,
+        isBot: json['isBot'] as bool? ?? false,
+        botDifficulty: json['botDifficulty'] != null
+            ? BotDifficulty.values.byName(json['botDifficulty'] as String)
+            : null,
+      );
+}
+
+class RoomStatePayload {
+  final String code;
+  final GameId gameId;
+  final String hostUserId;
+  final Map<String, dynamic> rules;
+  final int stake;
+  final int maxSeats;
+  final BotDifficulty botDifficulty;
+  final int turnTimerSeconds;
+  final String? inviteUrl;
+  final String? deepLinkUrl;
+  final List<RoomParticipantPayload> participants;
+
+  const RoomStatePayload({
+    required this.code,
+    required this.gameId,
+    required this.hostUserId,
+    required this.rules,
+    required this.stake,
+    required this.maxSeats,
+    required this.botDifficulty,
+    required this.turnTimerSeconds,
+    this.inviteUrl,
+    this.deepLinkUrl,
+    required this.participants,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'gameId': gameId.name,
+        'hostUserId': hostUserId,
+        'rules': rules,
+        'stake': stake,
+        'maxSeats': maxSeats,
+        'botDifficulty': botDifficulty.name,
+        'turnTimerSeconds': turnTimerSeconds,
+        if (inviteUrl != null) 'inviteUrl': inviteUrl,
+        if (deepLinkUrl != null) 'deepLinkUrl': deepLinkUrl,
+        'participants': participants.map((p) => p.toJson()).toList(),
+      };
+
+  factory RoomStatePayload.fromJson(Map<String, dynamic> json) =>
+      RoomStatePayload(
+        code: json['code'] as String,
+        gameId: GameId.values.byName(json['gameId'] as String),
+        hostUserId: json['hostUserId'] as String,
+        rules: Map<String, dynamic>.from(json['rules'] as Map),
+        stake: json['stake'] as int? ?? 0,
+        maxSeats: json['maxSeats'] as int? ?? 4,
+        botDifficulty: BotDifficulty.values.byName(json['botDifficulty'] as String? ?? 'medium'),
+        turnTimerSeconds: json['turnTimerSeconds'] as int? ?? 15,
+        inviteUrl: json['inviteUrl'] as String?,
+        deepLinkUrl: json['deepLinkUrl'] as String?,
+        participants: (json['participants'] as List<dynamic>? ?? [])
+            .map((p) => RoomParticipantPayload.fromJson(Map<String, dynamic>.from(p as Map)))
+            .toList(),
+      );
+}
+
+class RoomStartedPayload {
+  final String code;
+  final String tableId;
+  final GameId gameId;
+
+  const RoomStartedPayload({
+    required this.code,
+    required this.tableId,
+    required this.gameId,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'tableId': tableId,
+        'gameId': gameId.name,
+      };
+
+  factory RoomStartedPayload.fromJson(Map<String, dynamic> json) =>
+      RoomStartedPayload(
+        code: json['code'] as String,
+        tableId: json['tableId'] as String,
+        gameId: GameId.values.byName(json['gameId'] as String),
+      );
+}
+
+enum SocialPresenceStatus {
+  online,
+  in_room,
+  in_table,
+  offline,
+}
+
+class SocialRoomInvitePayload {
+  final String code;
+  final GameId gameId;
+  final int stake;
+  final String hostUserId;
+  final String hostName;
+  final String? hostAvatarUrl;
+
+  const SocialRoomInvitePayload({
+    required this.code,
+    required this.gameId,
+    required this.stake,
+    required this.hostUserId,
+    required this.hostName,
+    this.hostAvatarUrl,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'gameId': gameId.name,
+        'stake': stake,
+        'hostUserId': hostUserId,
+        'hostName': hostName,
+        if (hostAvatarUrl != null) 'hostAvatarUrl': hostAvatarUrl,
+      };
+
+  factory SocialRoomInvitePayload.fromJson(Map<String, dynamic> json) =>
+      SocialRoomInvitePayload(
+        code: json['code'] as String,
+        gameId: GameId.values.byName(json['gameId'] as String),
+        stake: json['stake'] as int? ?? 0,
+        hostUserId: json['hostUserId'] as String,
+        hostName: json['hostName'] as String,
+        hostAvatarUrl: json['hostAvatarUrl'] as String?,
+      );
+}
+
+class SocialPresenceUpdatePayload {
+  final String userId;
+  final SocialPresenceStatus status;
+  final GameId? gameId;
+
+  const SocialPresenceUpdatePayload({
+    required this.userId,
+    required this.status,
+    this.gameId,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'userId': userId,
+        'status': status.name,
+        if (gameId != null) 'gameId': gameId!.name,
+      };
+
+  factory SocialPresenceUpdatePayload.fromJson(Map<String, dynamic> json) =>
+      SocialPresenceUpdatePayload(
+        userId: json['userId'] as String,
+        status: SocialPresenceStatus.values.byName(json['status'] as String),
+        gameId: json['gameId'] != null ? GameId.values.byName(json['gameId'] as String) : null,
+      );
+}
+
+enum SocialFriendEventType {
+  request_received,
+  request_accepted,
+  friend_removed,
+}
+
+class SocialFriendEventPayload {
+  final SocialFriendEventType type;
+  final String userId;
+  final String displayName;
+  final String? avatarUrl;
+  final String? friendCode;
+
+  const SocialFriendEventPayload({
+    required this.type,
+    required this.userId,
+    required this.displayName,
+    this.avatarUrl,
+    this.friendCode,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'type': type.name,
+        'userId': userId,
+        'displayName': displayName,
+        if (avatarUrl != null) 'avatarUrl': avatarUrl,
+        if (friendCode != null) 'friendCode': friendCode,
+      };
+
+  factory SocialFriendEventPayload.fromJson(Map<String, dynamic> json) =>
+      SocialFriendEventPayload(
+        type: SocialFriendEventType.values.byName(json['type'] as String),
+        userId: json['userId'] as String,
+        displayName: json['displayName'] as String? ?? 'Player',
+        avatarUrl: json['avatarUrl'] as String?,
+        friendCode: json['friendCode'] as String?,
+      );
+}
+
 class TableMovePayload {
   final String tableId;
   final int version;

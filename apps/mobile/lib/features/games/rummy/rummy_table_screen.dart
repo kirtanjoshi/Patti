@@ -148,7 +148,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
             const SizedBox(width: 8),
             Text(
               'RUMMY SHOW!',
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: PatiiColors.goldLight,
@@ -159,7 +159,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
         content: Text(
           'Valid declaration with Pure Sequence, Sequences & Sets!\n\n'
           '🎉 YOU WIN 600 COINS!',
-          style: PatiiTypography.poppins(fontSize: 14, color: PatiiColors.textPrimary),
+          style: PatiiTypography.body(fontSize: 14, color: PatiiColors.textPrimary),
         ),
         actions: [
           GoldButton(
@@ -182,11 +182,11 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Text(
           widget.isJokerVariant ? 'Joker Rummy Rules' : 'Classic Rummy Rules',
-          style: PatiiTypography.cinzel(
+          style: PatiiTypography.display(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: PatiiColors.goldLight,
@@ -197,7 +197,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
           '• Must make at least 1 Pure Sequence (no joker).\n'
           '${widget.isJokerVariant ? "• The cut Joker can substitute any card in impure sequences & sets.\n" : ""}'
           '• Arrange all cards into valid sequences & sets to Declare.',
-          style: PatiiTypography.poppins(
+          style: PatiiTypography.body(
             fontSize: 13,
             color: PatiiColors.textPrimary,
             height: 1.5,
@@ -206,7 +206,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Got it', style: PatiiTypography.cinzel(color: PatiiColors.gold)),
+            child: Text('Got it', style: PatiiTypography.display(color: PatiiColors.gold)),
           ),
         ],
       ),
@@ -365,13 +365,13 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
               Positioned(
                 left: 110,
                 right: tableWidth < 700 ? 120 : 160,
-                bottom: 8,
+                bottom: -12,
                 child: CardHand(
                   cards: myHand,
                   selectedCardId: selectedCardId,
                   wildOrMaalCardId: widget.isJokerVariant ? cutJoker.id : null,
-                  cardWidth: 50,
-                  cardHeight: 74,
+                  cardWidth: 54,
+                  cardHeight: 78,
                   maxArcDegrees: 8,
                   onCardTap: (card) {
                     setState(() {

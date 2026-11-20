@@ -23,7 +23,7 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = borderRadius ?? PatiiSpacing.rounded12;
+    final radius = borderRadius ?? PatiiSpacing.rounded16;
 
     return ClipRRect(
       borderRadius: radius,
@@ -32,11 +32,11 @@ class GlassPanel extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: customBgColor ?? PatiiColors.navySurface.withValues(alpha: 0.85),
+            color: customBgColor ?? PatiiColors.navyElevated.withValues(alpha: 0.82),
             borderRadius: radius,
             border: customBorder ??
                 Border.all(
-                  color: Colors.white.withValues(alpha: 0.10), // 1px white at 10%
+                  color: PatiiColors.hairline,
                   width: 1.0,
                 ),
           ),
@@ -71,7 +71,7 @@ class GlassSheet extends StatelessWidget {
         color: PatiiColors.navySurface.withValues(alpha: 0.90),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
         border: Border.all(
-          color: PatiiColors.gold.withValues(alpha: 0.35),
+          color: PatiiColors.hairlineStrong,
           width: 1.2,
         ),
         boxShadow: [

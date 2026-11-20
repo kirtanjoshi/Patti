@@ -2,18 +2,21 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart' as engine;
 import '../theme/colors.dart';
-import '../theme/spacing.dart';
 import '../theme/typography.dart';
 import 'dhaka_pattern_painter.dart';
+import 'suit_icon.dart';
 
 enum CardSizeVariant {
-  hand,  // 64 x 92
+  hand, // 64 x 90
   table, // 52 x 74
-  mini,  // 40 x 58
+  mini, // 40 x 56
 }
 
-/// Premium Casino Playing Card Widget
-/// Meets exact specs from PRD Section 10 & redesign instructions.
+/// Patii playing card.
+///
+/// Readability first: a large corner index (rank over suit) is what players
+/// actually scan in an overlapping fan, so it gets the most weight. Pips are
+/// vector shapes, court cards get a tinted frame with a large letter.
 class PlayingCard extends StatelessWidget {
   final engine.Card card;
   final bool isFaceDown;
@@ -50,79 +53,71 @@ class PlayingCard extends StatelessWidget {
     this.onTap,
   }) : sizeVariant = CardSizeVariant.table;
 
-  double get resolvedWidth {
-    if (width != null) return width!;
-    switch (sizeVariant) {
-      case CardSizeVariant.hand:
-        return 64.0;
-      case CardSizeVariant.table:
-        return 52.0;
-      case CardSizeVariant.mini:
-        return 40.0;
-    }
-  }
+  double get resolvedWidth =>
+      width ??
+      switch (sizeVariant) {
+        CardSizeVariant.hand => 64.0,
+        CardSizeVariant.table => 52.0,
+        CardSizeVariant.mini => 40.0,
+      };
 
-  double get resolvedHeight {
-    if (height != null) return height!;
-    switch (sizeVariant) {
-      case CardSizeVariant.hand:
-        return 92.0;
-      case CardSizeVariant.table:
-        return 74.0;
-      case CardSizeVariant.mini:
-        return 58.0;
-    }
-  }
+  double get resolvedHeight =>
+      height ??
+      switch (sizeVariant) {
+        CardSizeVariant.hand => 90.0,
+        CardSizeVariant.table => 74.0,
+        CardSizeVariant.mini => 56.0,
+      };
 
-  bool get isRed =>
-      card.suit == engine.Suit.H || card.suit == engine.Suit.D;
+  bool get isJoker => card.rank == 0 || card.suit == engine.Suit.X;
 
-  Color get suitColor => isRed ? PatiiColors.suitRed : PatiiColors.suitBlack;
+  bool get isRed => card.suit == engine.Suit.H || card.suit == engine.Suit.D;
 
-  String get rankLabel {
-    switch (card.rank) {
-      case 1:
-        return 'A';
-      case 11:
-        return 'J';
-      case 12:
-        return 'Q';
-      case 13:
-        return 'K';
-      case 0:
-        return 'JOKER';
-      default:
-        return '${card.rank}';
-    }
-  }
+  Color get suitColor => isJoker
+      ? PatiiColors.crimson
+      : (isRed ? PatiiColors.suitRed : PatiiColors.suitBlack);
 
-  String get suitSymbol {
-    switch (card.suit) {
-      case engine.Suit.S:
-        return '♠';
-      case engine.Suit.H:
-        return '♥';
-      case engine.Suit.D:
-        return '♦';
-      case engine.Suit.C:
-        return '♣';
-      case engine.Suit.X:
-        return '★';
-    }
-  }
+  String get rankLabel => switch (card.rank) {
+        0 => 'JOKER',
+        1 || 14 => 'A', // some engines use 14 for a high ace
+        11 => 'J',
+        12 => 'Q',
+        13 => 'K',
+        _ => '${card.rank}',
+      };
 
-  bool get isCourtCard =>
-      card.rank == 11 || card.rank == 12 || card.rank == 13;
+  String get suitSymbol => switch (card.suit) {
+        engine.Suit.S => '♠',
+        engine.Suit.H => '♥',
+        engine.Suit.D => '♦',
+        engine.Suit.C => '♣',
+        engine.Suit.X => '★',
+      };
+
+  bool get isCourtCard => card.rank >= 11 && card.rank <= 13;
+
+  bool get isAce => card.rank == 1 || card.rank == 14;
+
+  String get _suitName => switch (card.suit) {
+        engine.Suit.S => 'Spades',
+        engine.Suit.H => 'Hearts',
+        engine.Suit.D => 'Diamonds',
+        engine.Suit.C => 'Clubs',
+        engine.Suit.X => 'Joker',
+      };
 
   @override
   Widget build(BuildContext context) {
     final w = resolvedWidth;
     final h = resolvedHeight;
+    final radius = BorderRadius.circular((w * 0.11).clamp(4.0, 9.0));
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
-    // Accessibility Semantics
     final semanticsLabel = isFaceDown
         ? 'Face-down card'
-        : '$rankLabel of ${card.suit.name}${badgeText != null ? ', $badgeText' : ''}';
+        : isJoker
+            ? 'Joker${badgeText != null ? ', $badgeText' : ''}'
+            : '$rankLabel of $_suitName${badgeText != null ? ', $badgeText' : ''}';
 
     return Semantics(
       label: semanticsLabel,
@@ -131,90 +126,59 @@ class PlayingCard extends StatelessWidget {
       child: GestureDetector(
         onTap: isPlayable ? onTap : null,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          transform: Matrix4.translationValues(
-            0,
-            isSelected ? -16.0 : 0.0,
-            0,
-          ),
+          duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          transform: Matrix4.translationValues(0, isSelected ? -h * 0.2 : 0.0, 0),
           width: w,
           height: h,
           decoration: BoxDecoration(
-            borderRadius: PatiiSpacing.rounded8,
+            borderRadius: radius,
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: PatiiColors.gold.withValues(alpha: 0.65),
-                  blurRadius: 14.0,
-                  spreadRadius: 2.0,
-                  offset: const Offset(0, 4),
+                  color: PatiiColors.gold.withValues(alpha: 0.55),
+                  blurRadius: 16,
+                  spreadRadius: 1,
                 )
-              else
+              else ...[
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 6.0,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withValues(alpha: 0.28),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
                 ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ],
           ),
           child: ClipRRect(
-            borderRadius: PatiiSpacing.rounded8,
+            borderRadius: radius,
             child: Stack(
               children: [
-                // Card Surface (Face or Back)
                 Positioned.fill(
-                  child: isFaceDown ? _buildCardBack(w, h) : _buildCardFace(w, h),
+                  child: isFaceDown ? _CardBack(width: w) : _buildFace(w, h, radius),
                 ),
-
-                // Not Playable State: 40% darken overlay (not grey, keeps vibrancy)
                 if (!isPlayable && !isFaceDown)
                   Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.40),
-                    ),
+                    child: ColoredBox(color: const Color(0xFF0A1020).withValues(alpha: 0.42)),
                   ),
-
-                // Selected Outline
                 if (isSelected)
                   Positioned.fill(
-                    child: Container(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        borderRadius: PatiiSpacing.rounded8,
-                        border: Border.all(
-                          color: PatiiColors.goldLight,
-                          width: 2.0,
-                        ),
+                        borderRadius: radius,
+                        border: Border.all(color: PatiiColors.gold, width: 2),
                       ),
                     ),
                   ),
-
-                // Wild / Maal / Trick Badge
                 if (badgeText != null)
                   Positioned(
-                    top: 2,
-                    right: 2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        gradient: PatiiColors.goldButtonGradient,
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            blurRadius: 3,
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        badgeText!,
-                        style: PatiiTypography.poppins(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: PatiiColors.navy,
-                        ),
-                      ),
-                    ),
+                    top: 3,
+                    right: 3,
+                    child: _Badge(text: badgeText!, cardWidth: w),
                   ),
               ],
             ),
@@ -224,148 +188,208 @@ class PlayingCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCardBack(double w, double h) {
-    return Container(
+  Widget _buildFace(double w, double h, BorderRadius radius) {
+    final idx = (w * 0.27).clamp(10.0, 19.0);
+    final idxSuit = (w * 0.19).clamp(7.0, 13.0);
+    final pad = (w * 0.07).clamp(2.5, 5.0);
+    final showMirror = h >= 64;
+
+    Widget index() => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              isJoker ? '★' : rankLabel,
+              style: PatiiTypography.display(
+                fontSize: rankLabel.length > 1 && !isJoker ? idx * 0.88 : idx,
+                fontWeight: FontWeight.w800,
+                color: suitColor,
+                height: 1.0,
+                letterSpacing: rankLabel.length > 1 ? -1.0 : 0,
+              ),
+            ),
+            SizedBox(height: idx * 0.08),
+            if (!isJoker) SuitIcon(suit: card.suit, size: idxSuit, color: suitColor),
+          ],
+        );
+
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: PatiiColors.navy,
-        border: Border.all(color: PatiiColors.gold, width: 1.5),
-        borderRadius: PatiiSpacing.rounded8,
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [PatiiColors.cardFace, Color(0xFFF2EFE6)],
+        ),
+        borderRadius: radius,
+        border: Border.all(color: PatiiColors.cardBorder, width: 0.8),
+      ),
+      child: Stack(
+        children: [
+          Positioned(top: pad, left: pad, child: index()),
+          if (showMirror)
+            Positioned(
+              bottom: pad,
+              right: pad,
+              child: Transform.rotate(angle: math.pi, child: index()),
+            ),
+          Positioned.fill(
+            left: w * 0.24,
+            right: w * 0.12,
+            top: h * 0.2,
+            bottom: h * 0.12,
+            child: Center(child: _centerArt(w, h)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _centerArt(double w, double h) {
+    if (isJoker) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SuitIcon(suit: engine.Suit.X, size: w * 0.4, color: PatiiColors.crimson),
+          if (h >= 64)
+            Text(
+              'JOKER',
+              style: PatiiTypography.display(
+                fontSize: (w * 0.13).clamp(6.0, 10.0),
+                fontWeight: FontWeight.w800,
+                color: PatiiColors.suitBlack,
+                letterSpacing: 1,
+              ),
+            ),
+        ],
+      );
+    }
+    if (isCourtCard) {
+      return Container(
+        width: w * 0.56,
+        height: h * 0.6,
+        decoration: BoxDecoration(
+          color: suitColor.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(w * 0.06),
+          border: Border.all(color: suitColor.withValues(alpha: 0.28), width: 0.8),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              rankLabel,
+              style: PatiiTypography.display(
+                fontSize: w * 0.36,
+                fontWeight: FontWeight.w800,
+                color: suitColor,
+                height: 1.0,
+              ),
+            ),
+            SizedBox(height: h * 0.03),
+            SuitIcon(suit: card.suit, size: w * 0.16, color: suitColor),
+          ],
+        ),
+      );
+    }
+    return SuitIcon(
+      suit: card.suit,
+      size: w * (isAce ? 0.5 : 0.38),
+      color: suitColor,
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String text;
+  final double cardWidth;
+
+  const _Badge({required this.text, required this.cardWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: PatiiColors.crimson,
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 3),
+        ],
+      ),
+      child: Text(
+        text,
+        style: PatiiTypography.display(
+          fontSize: (cardWidth * 0.12).clamp(6.5, 8.5),
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// Crimson card back: fine dhaka lattice + a "प" (Patii) medallion.
+class _CardBack extends StatelessWidget {
+  final double width;
+
+  const _CardBack({required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = (width * 0.07).clamp(2.0, 4.0);
+    final medallion = width * 0.42;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          radius: 0.9,
+          colors: [PatiiColors.cardBack, PatiiColors.cardBackDeep],
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(3.0),
-        child: Container(
+        padding: EdgeInsets.all(inset),
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border.all(color: PatiiColors.goldDark, width: 0.75),
-            borderRadius: BorderRadius.circular(5.0),
+            borderRadius: BorderRadius.circular(width * 0.07),
+            border: Border.all(color: PatiiColors.goldLight.withValues(alpha: 0.45), width: 0.8),
           ),
-          child: CustomPaint(
-            painter: const DhakaPatternPainter(),
-            child: const SizedBox.expand(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCardFace(double w, double h) {
-    final scale = w / 64.0;
-    final cornerFontSize = (12.0 * scale).clamp(9.0, 14.0);
-    final suitFontSize = (10.0 * scale).clamp(8.0, 13.0);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: PatiiColors.cardFace,
-        border: Border.all(color: PatiiColors.cardBorder, width: 0.8),
-        borderRadius: PatiiSpacing.rounded8,
-      ),
-      child: Stack(
-        children: [
-          // Top-Left Rank & Pip
-          Positioned(
-            top: 3 * scale,
-            left: 4 * scale,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(width * 0.07),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Text(
-                  rankLabel,
-                  style: PatiiTypography.cardRank.copyWith(
-                    color: suitColor,
-                    fontSize: cornerFontSize,
-                    height: 1.0,
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: DhakaPatternPainter(
+                      primaryColor: PatiiColors.goldLight.withValues(alpha: 0.16),
+                      secondaryColor: PatiiColors.goldLight.withValues(alpha: 0.10),
+                      step: (width * 0.16).clamp(6.0, 11.0),
+                    ),
                   ),
                 ),
-                Text(
-                  suitSymbol,
-                  style: TextStyle(
-                    color: suitColor,
-                    fontSize: suitFontSize,
-                    height: 1.0,
+                if (width >= 30)
+                  Container(
+                    width: medallion,
+                    height: medallion,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: PatiiColors.cardBackDeep,
+                      border: Border.all(color: PatiiColors.goldLight.withValues(alpha: 0.7), width: 1),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'प',
+                      style: PatiiTypography.body(
+                        fontSize: medallion * 0.56,
+                        fontWeight: FontWeight.w700,
+                        color: PatiiColors.goldLight,
+                        height: 1.1,
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
-
-          // Center Card Artwork / Pip
-          Center(
-            child: isCourtCard
-                ? _buildCourtPanel(scale)
-                : Text(
-                    suitSymbol,
-                    style: TextStyle(
-                      color: suitColor,
-                      fontSize: (26.0 * scale).clamp(16.0, 32.0),
-                    ),
-                  ),
-          ),
-
-          // Bottom-Right Inverted Rank & Pip
-          Positioned(
-            bottom: 3 * scale,
-            right: 4 * scale,
-            child: Transform.rotate(
-              angle: math.pi,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    rankLabel,
-                    style: PatiiTypography.cardRank.copyWith(
-                      color: suitColor,
-                      fontSize: cornerFontSize,
-                      height: 1.0,
-                    ),
-                  ),
-                  Text(
-                    suitSymbol,
-                    style: TextStyle(
-                      color: suitColor,
-                      fontSize: suitFontSize,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCourtPanel(double scale) {
-    return Container(
-      width: 28 * scale,
-      height: 38 * scale,
-      decoration: BoxDecoration(
-        color: PatiiColors.cardCourtBg,
-        borderRadius: BorderRadius.circular(4 * scale),
-        border: Border.all(color: PatiiColors.goldDark, width: 0.8),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            rankLabel,
-            style: PatiiTypography.cinzel(
-              fontSize: 20 * scale,
-              fontWeight: FontWeight.w900,
-              color: suitColor,
-            ),
-          ),
-          Positioned(
-            bottom: 2 * scale,
-            right: 2 * scale,
-            child: Text(
-              suitSymbol,
-              style: TextStyle(
-                color: suitColor,
-                fontSize: 10 * scale,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

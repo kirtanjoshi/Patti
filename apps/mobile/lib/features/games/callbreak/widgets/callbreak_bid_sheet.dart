@@ -52,7 +52,7 @@ class _CallbreakBidSheetState extends State<CallbreakBidSheet> {
               const SizedBox(width: 6),
               Text(
                 'callbreak.select_bid'.tr(),
-                style: PatiiTypography.cinzel(
+                style: PatiiTypography.display(
                   fontSize: 13.5,
                   fontWeight: FontWeight.bold,
                   color: PatiiColors.goldLight,
@@ -118,7 +118,7 @@ class _CallbreakBidSheetState extends State<CallbreakBidSheet> {
                         child: Center(
                           child: Text(
                             '$bidValue',
-                            style: PatiiTypography.cinzel(
+                            style: PatiiTypography.display(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: isSelected

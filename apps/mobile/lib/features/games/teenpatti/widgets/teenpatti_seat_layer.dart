@@ -26,7 +26,11 @@ class TeenPattiPlayerState {
   });
 }
 
-/// Widget that builds all seat positions distributed evenly around the oval felt.
+/// Seats for the Teen Patti table.
+///
+/// "You" sit bottom-left next to your cards. Opponents are spread clockwise
+/// on an arc from the left side, over the top, to the right side, so the
+/// bottom band stays free for your hand and the action bar.
 class TeenPattiSeatLayer extends StatelessWidget {
   final List<TeenPattiPlayerState> players;
   final int currentTurnSeat;
@@ -43,66 +47,72 @@ class TeenPattiSeatLayer extends StatelessWidget {
     required this.constraints,
   });
 
+  static const _seatW = 96.0;
+  static const _seatH = 92.0;
+
+  String _status(TeenPattiPlayerState p) {
+    final raw = p.isPacked
+        ? 'teenpatti.packed'.tr()
+        : '${p.isSeen ? 'teenpatti.seen'.tr() : 'teenpatti.blind'.tr()} · ${p.totalBet}';
+    return winnerSeats.contains(p.seat) ? '🏆 $raw' : raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final w = constraints.maxWidth;
     final h = constraints.maxHeight;
     final cx = w / 2;
-    final cy = h / 2 - 14; // slight vertical bias upwards to clear bottom hand
+    final cy = h * 0.5;
     final rx = w * 0.40;
-    final ry = h * 0.36;
+    final ry = h * 0.40;
 
-    final maxLeft = math.max(8.0, w - 80.0);
-    final maxTop = math.max(8.0, h - 80.0);
+    final opponents = players.where((p) => !p.isMe).toList();
+    final n = opponents.length;
+    // Clockwise from left (~170deg) over the top (270deg) to right (~370deg).
+    const start = 165.0, end = 375.0;
 
     return Stack(
-      children: List.generate(players.length, (i) {
-        final player = players[i];
-        // Distribute seats around oval: Seat 0 at bottom center (angle = pi/2)
-        final angle = (math.pi / 2) + (i * 2 * math.pi / players.length);
-        final x = cx - rx * math.cos(angle - (math.pi / 2));
-        final y = cy + ry * math.sin(angle - (math.pi / 2));
-
-        // Info text for seat pill
-        final isWinner = winnerSeats.contains(player.seat);
-        final rawStatus = player.isPacked
-            ? 'teenpatti.packed'.tr()
-            : player.isSeen
-                ? '${'teenpatti.seen'.tr()} · ${player.totalBet}'
-                : '${'teenpatti.blind'.tr()} · ${player.totalBet}';
-        final infoText = isWinner ? '🏆 $rawStatus' : rawStatus;
-
-        // Seat 0 (You) is handled cleanly near bottom center
-        if (player.isMe) {
-          return Positioned(
-            left: (cx - 36).clamp(8.0, maxLeft),
-            bottom: 74,
-            child: PlayerSeat(
-              displayName: player.name,
-              isCurrentTurn: currentTurnSeat == 0 && !isGameOver,
-              isDealer: false,
-              isBot: false,
-              isFolded: player.isPacked,
-              infoPillText: infoText,
-              remainingSeconds: currentTurnSeat == 0 ? 12 : 15,
+      children: [
+        for (final p in players.where((p) => p.isMe))
+          Positioned(
+            left: 4,
+            bottom: 6,
+            child: SizedBox(
+              width: _seatW,
+              child: PlayerSeat(
+                displayName: p.name,
+                isCurrentTurn: currentTurnSeat == p.seat && !isGameOver,
+                isFolded: p.isPacked,
+                infoPillText: _status(p),
+                remainingSeconds: 12,
+              ),
             ),
-          );
-        }
-
-        return Positioned(
-          left: (x - 36).clamp(8.0, maxLeft),
-          top: (y - 36).clamp(8.0, maxTop),
-          child: PlayerSeat(
-            displayName: player.name,
-            isCurrentTurn: currentTurnSeat == player.seat && !isGameOver,
-            isDealer: player.seat == 1,
-            isBot: player.isBot,
-            isFolded: player.isPacked,
-            infoPillText: infoText,
-            remainingSeconds: currentTurnSeat == player.seat ? 10 : 15,
           ),
-        );
-      }),
+        for (var i = 0; i < n; i++)
+          () {
+            final p = opponents[i];
+            final t = n == 1 ? 0.5 : i / (n - 1);
+            final a = (start + (end - start) * t) * math.pi / 180;
+            final x = (cx + rx * math.cos(a) - _seatW / 2).clamp(4.0, math.max(4.0, w - _seatW - 4)).toDouble();
+            final y = (cy + ry * math.sin(a) - _seatH / 2).clamp(28.0, math.max(28.0, h - _seatH - 70)).toDouble();
+            return Positioned(
+              left: x,
+              top: y,
+              child: SizedBox(
+                width: _seatW,
+                child: PlayerSeat(
+                  displayName: p.name,
+                  isCurrentTurn: currentTurnSeat == p.seat && !isGameOver,
+                  isDealer: p.seat == 1,
+                  isBot: p.isBot,
+                  isFolded: p.isPacked,
+                  infoPillText: _status(p),
+                  remainingSeconds: 10,
+                ),
+              ),
+            );
+          }(),
+      ],
     );
   }
 }

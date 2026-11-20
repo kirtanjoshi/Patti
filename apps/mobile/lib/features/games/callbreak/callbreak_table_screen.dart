@@ -37,6 +37,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
   int myTricksWon = 0;
   int bot1TricksWon = 0;
   int bot2TricksWon = 1;
+  int? trickWinner;
   int bot3TricksWon = 0;
   String? selectedCardId;
 
@@ -145,26 +146,32 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
       }
     }
 
-    setState(() {
-      if (winningSeat == 0) {
-        myTricksWon++;
-      } else if (winningSeat == 1) {
-        bot1TricksWon++;
-      } else if (winningSeat == 2) {
-        bot2TricksWon++;
-      } else {
-        bot3TricksWon++;
-      }
-      playedTrick.clear();
-      currentTurnSeat = winningSeat;
-    });
-
+    // Show the sweep toward the winner, then score and clear.
+    setState(() => trickWinner = winningSeat);
     final winnerName = winningSeat == 0 ? 'You' : 'Bot $winningSeat';
     ToastBanner.show(
       context,
       '$winnerName won the trick!',
       icon: Icons.emoji_events,
     );
+
+    Future.delayed(const Duration(milliseconds: 650), () {
+      if (!mounted) return;
+      setState(() {
+        if (winningSeat == 0) {
+          myTricksWon++;
+        } else if (winningSeat == 1) {
+          bot1TricksWon++;
+        } else if (winningSeat == 2) {
+          bot2TricksWon++;
+        } else {
+          bot3TricksWon++;
+        }
+        playedTrick.clear();
+        trickWinner = null;
+        currentTurnSeat = winningSeat;
+      });
+    });
   }
 
   void _showRulesDialog(BuildContext context) {
@@ -174,7 +181,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: PatiiSpacing.rounded16,
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Row(
           children: [
@@ -182,7 +189,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
             const SizedBox(width: 8),
             Text(
               'Callbreak Rules',
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: PatiiColors.goldLight,
@@ -199,7 +206,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
               '• Spades (♠) are permanent trumps.\n'
               '• Must follow lead suit if possible; otherwise must play a spade.\n'
               '• Win at least as many tricks as your bid to score positive points.',
-              style: PatiiTypography.poppins(
+              style: PatiiTypography.body(
                 fontSize: 13,
                 color: PatiiColors.textPrimary,
                 height: 1.5,
@@ -277,6 +284,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
             child: Center(
               child: OpponentSeatPanel(
                 displayName: 'Bot 3',
+                stackOnLeft: true,
                 bid: 4,
                 tricksWon: bot3TricksWon,
                 cardCount: 13 - playedTrick.length,
@@ -292,6 +300,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
                 playedCards: playedTrick,
                 phase: phase,
                 currentTurnSeat: currentTurnSeat,
+                winningSeat: trickWinner,
               ),
             ),
           ),
@@ -304,27 +313,26 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
               displayName: 'You',
               isCurrentTurn: isMyTurn,
               infoPillText: myBid != null
-                  ? 'Bid $myBid · Won $myTricksWon'
-                  : 'Tricks $myTricksWon',
+                  ? '$myTricksWon / $myBid tricks'
+                  : '$myTricksWon tricks',
               remainingSeconds: isMyTurn ? 12 : 15,
             ),
           ),
 
           // 6. 13-Card Hand Overlapping Fan (Bottom Center)
           Positioned(
-            bottom: 4,
-            left: 110,
-            right: 40,
+            bottom: -16,
+            left: 104,
+            right: 24,
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 96),
+                constraints: const BoxConstraints(maxHeight: 118),
                 child: CardHand(
                   cards: myHand,
                   selectedCardId: selectedCardId,
                   playableCardIds: playableIds,
-                  wildOrMaalCardId: 'AS0',
-                  cardWidth: 56,
-                  cardHeight: 82,
+                  cardWidth: 60,
+                  cardHeight: 86,
                   onCardTap: (card) {
                     if (isMyTurn) {
                       setState(() {

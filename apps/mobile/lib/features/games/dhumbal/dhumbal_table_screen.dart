@@ -133,7 +133,7 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
             const SizedBox(width: 8),
             Text(
               'JHYAP! Showdown',
-              style: PatiiTypography.cinzel(
+              style: PatiiTypography.display(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: PatiiColors.goldLight,
@@ -152,7 +152,7 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
               '• Bot 2: 12 pts\n'
               '• Bot 3: 15 pts\n\n'
               '🎉 YOU WIN THE POT OF 400 COINS!',
-              style: PatiiTypography.poppins(
+              style: PatiiTypography.body(
                 fontSize: 14,
                 color: PatiiColors.textPrimary,
                 height: 1.5,
@@ -201,11 +201,11 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
         backgroundColor: PatiiColors.navyElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: PatiiColors.goldDark, width: 1.2),
+          side: const BorderSide(color: PatiiColors.hairline),
         ),
         title: Text(
           'Dhumbal (Jhyap) Rules',
-          style: PatiiTypography.cinzel(
+          style: PatiiTypography.display(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: PatiiColors.goldLight,
@@ -217,7 +217,7 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
           '• Throw 1 or more same-rank cards (or same-suit runs), then draw 1.\n'
           '• When your total is 5 or less, press "JHYAP!" to reveal hands.\n'
           '• Lowest total wins the pot!',
-          style: PatiiTypography.poppins(
+          style: PatiiTypography.body(
             fontSize: 13,
             color: PatiiColors.textPrimary,
             height: 1.5,
@@ -226,7 +226,7 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Got it', style: PatiiTypography.cinzel(color: PatiiColors.gold)),
+            child: Text('Got it', style: PatiiTypography.display(color: PatiiColors.gold)),
           ),
         ],
       ),
@@ -390,7 +390,7 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
                       ),
                       child: Text(
                         'Hand Total: $handTotal ${canCallJhyap ? "· JHYAP READY!" : ""}',
-                        style: PatiiTypography.cinzel(
+                        style: PatiiTypography.display(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: canCallJhyap ? PatiiColors.goldLight : PatiiColors.textPrimary,

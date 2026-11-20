@@ -61,22 +61,26 @@ enum TxKind {
 }
 
 model User {
-  id          String         @id @default(cuid())
-  displayName String
-  avatarId    Int            @default(0)
-  language    String         @default("en") // "en" | "ne"
-  country     String?
-  xp          Int            @default(0)
-  level       Int            @default(1)
-  rating      Int            @default(1200)
-  status      UserStatus     @default(ACTIVE)
-  createdAt   DateTime       @default(now())
-  lastSeenAt  DateTime?
-  identities  AuthIdentity[]
-  wallet      WalletAccount?
-  devices     Device[]
-  stats       GameStat[]
-  matchSeats  MatchPlayer[]
+  id           String         @id @default(cuid())
+  displayName  String
+  avatarId     Int            @default(0)
+  avatarUrl    String?
+  friendCode   String?        @unique
+  email        String?
+  referredById String?
+  language     String         @default("en") // "en" | "ne"
+  country      String?
+  xp           Int            @default(0)
+  level        Int            @default(1)
+  rating       Int            @default(1200)
+  status       UserStatus     @default(ACTIVE)
+  createdAt    DateTime       @default(now())
+  lastSeenAt   DateTime?
+  identities   AuthIdentity[]
+  wallet       WalletAccount?
+  devices      Device[]
+  stats        GameStat[]
+  matchSeats   MatchPlayer[]
 }
 
 model AuthIdentity {

@@ -305,7 +305,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
               // 6. Action Buttons next to Hand (Right Side)
               Positioned(
                 right: 12,
-                bottom: 12,
+                bottom: tableWidth < 700 ? 84 : 98,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -315,7 +315,8 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
                       constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                       child: GhostButton(
                         label: isSortedBySuit ? 'marriage.sort_suit'.tr() : 'marriage.sort_rank'.tr(),
-                        icon: Icons.sort,
+                        icon: Icons.sort_rounded,
+                        height: 36,
                         onPressed: _toggleSort,
                       ),
                     ),
@@ -327,6 +328,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
                         child: DangerButton(
                           label: 'marriage.discard'.tr(),
                           icon: Icons.arrow_upward,
+                          height: 36,
                           onPressed: () => _onDiscardCard(selectedCard!),
                         ),
                       ),
@@ -336,9 +338,9 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
 
               // 7. My 21-Card Hand (Centered at Bottom)
               Positioned(
-                left: 100,
-                right: 100,
-                bottom: 4,
+                left: 108,
+                right: 12,
+                bottom: -14,
                 child: CardHand(
                   cards: myHand,
                   selectedCardId: selectedCardId,

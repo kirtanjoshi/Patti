@@ -1,19 +1,20 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/colors.dart';
-import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/coin_counter.dart';
 
-/// Top HUD bar for the Casino Lobby.
-/// Displays Player Avatar + VIP Badge, Username, CoinCounter pill with "+" CTA,
-/// and a quick settings / component gallery action button.
+/// Lobby header: avatar with a level-progress ring, name + level,
+/// coin balance with a "+" and a utility button.
 class LobbyTopBar extends StatelessWidget {
   final int coins;
   final int vipLevel;
   final String username;
   final VoidCallback onAddCoins;
   final VoidCallback onOpenGallery;
+  final VoidCallback? onAvatarTap;
+  final double levelProgress;
 
   const LobbyTopBar({
     super.key,
@@ -22,80 +23,58 @@ class LobbyTopBar extends StatelessWidget {
     this.username = 'Player 1',
     required this.onAddCoins,
     required this.onOpenGallery,
+    this.onAvatarTap,
+    this.levelProgress = 0.62,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: PatiiSpacing.s16,
-        vertical: PatiiSpacing.s4,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       child: Row(
         children: [
-          // Player Avatar with Level/VIP Badge
-          Semantics(
-            label: '$username, VIP level $vipLevel',
-            button: true,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [PatiiColors.navyElevated, PatiiColors.navySurface],
-                    ),
-                    border: Border.all(
-                      color: PatiiColors.gold,
-                      width: 2.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: PatiiColors.gold.withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        spreadRadius: 1,
+          Pressable(
+            onPressed: onAvatarTap,
+            child: Semantics(
+              label: '$username, ${'lobby.level'.tr()} $vipLevel',
+              child: SizedBox(
+                width: 46,
+                height: 46,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox.expand(
+                      child: CircularProgressIndicator(
+                        value: levelProgress,
+                        strokeWidth: 2.5,
+                        strokeCap: StrokeCap.round,
+                        color: PatiiColors.gold,
+                        backgroundColor: PatiiColors.hairline,
                       ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.person_outline,
-                      color: PatiiColors.goldLight,
-                      size: 26,
                     ),
-                  ),
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFE5484D), Color(0xFF7A1220)],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        username.isNotEmpty ? username.characters.first.toUpperCase() : 'P',
+                        style: PatiiTypography.display(fontSize: 17, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
                 ),
-                Positioned(
-                  bottom: -4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [PatiiColors.crimson, PatiiColors.goldDark],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: PatiiColors.goldLight, width: 0.8),
-                    ),
-                    child: Text(
-                      'lobby.vip_level'.tr(args: [vipLevel.toString()]),
-                      style: PatiiTypography.poppins(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: PatiiColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(width: PatiiSpacing.s8),
-
-          // User info text
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,48 +82,27 @@ class LobbyTopBar extends StatelessWidget {
               children: [
                 Text(
                   username,
-                  style: PatiiTypography.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: PatiiColors.textPrimary,
-                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: PatiiTypography.display(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  'lobby.title'.tr(),
-                  style: PatiiTypography.poppins(
-                    fontSize: 11,
-                    color: PatiiColors.goldLight,
-                  ),
+                  'lobby.level_short'.tr(args: ['$vipLevel']),
+                  style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textSecondary),
                 ),
               ],
             ),
           ),
-
-          // Luxury Coin Counter Capsule with "+" CTA
-          CoinCounter(
-            coins: coins,
-            showPlusButton: true,
-            onPlusTap: onAddCoins,
-          ),
-          const SizedBox(width: PatiiSpacing.s4),
-
-          // Quick Dev Gallery / Settings Button (min 48x48 tap target)
+          CoinCounter(coins: coins, showPlusButton: true, onPlusTap: onAddCoins),
           Semantics(
             button: true,
             label: 'lobby.dev_gallery'.tr(),
-            child: SizedBox(
-              width: PatiiSpacing.minTouchTarget,
-              height: PatiiSpacing.minTouchTarget,
-              child: IconButton(
-                tooltip: 'lobby.dev_gallery'.tr(),
-                icon: const Icon(
-                  Icons.palette_outlined,
-                  color: PatiiColors.gold,
-                  size: 22,
-                ),
-                onPressed: onOpenGallery,
+            child: Pressable(
+              onPressed: onOpenGallery,
+              child: const SizedBox(
+                width: 44,
+                height: 48,
+                child: Icon(Icons.tune_rounded, color: PatiiColors.textSecondary, size: 22),
               ),
             ),
           ),

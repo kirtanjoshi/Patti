@@ -1,0 +1,365 @@
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user_model.dart';
+
+class AuthState {
+  final bool isLoading;
+  final String? error;
+  final UserAccount? user;
+  final String? token;
+  final String? refreshToken;
+
+  const AuthState({
+    this.isLoading = false,
+    this.error,
+    this.user,
+    this.token,
+    this.refreshToken,
+  });
+
+  bool get isAuthenticated => token != null && user != null;
+
+  AuthState copyWith({
+    bool? isLoading,
+    String? error,
+    UserAccount? user,
+    String? token,
+    String? refreshToken,
+  }) {
+    return AuthState(
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+      user: user ?? this.user,
+      token: token ?? this.token,
+      refreshToken: refreshToken ?? this.refreshToken,
+    );
+  }
+}
+
+class AuthNotifier extends StateNotifier<AuthState> {
+  static const String _tokenKey = 'patii_auth_token';
+  static const String _refreshTokenKey = 'patii_refresh_token';
+  static const String _userKey = 'patii_user_profile';
+  static const String _deviceIdKey = 'patii_device_id';
+
+  // Configurable base URL: Android emulator uses 10.0.2.2, desktop/iOS uses localhost or custom host.
+  static String baseUrl = kIsWeb || defaultTargetPlatform != TargetPlatform.android
+      ? 'http://localhost:4000'
+      : 'http://10.0.2.2:4000';
+
+  static const String googleWebClientId =
+      '535204897241-8ee666l35silo6e464330nl5oirgb11g.apps.googleusercontent.com';
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: googleWebClientId,
+    scopes: ['email', 'profile'],
+  );
+
+  AuthNotifier() : super(const AuthState(isLoading: false)) {
+    init();
+  }
+
+  Future<void> init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(_tokenKey);
+      final refreshToken = prefs.getString(_refreshTokenKey);
+      final userJson = prefs.getString(_userKey);
+
+      if (token != null && userJson != null) {
+        final decoded = jsonDecode(userJson) as Map<String, dynamic>;
+        final user = UserAccount.fromJson(decoded);
+        state = AuthState(
+          isLoading: false,
+          token: token,
+          refreshToken: refreshToken,
+          user: user,
+        );
+        // Optionally refresh profile in background
+        _refreshUserProfile(token);
+        return;
+      }
+    } catch (e) {
+      debugPrint('Auth initialization error: $e');
+    }
+    state = const AuthState(isLoading: false);
+  }
+
+  Future<String> _getOrCreateDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceId = prefs.getString(_deviceIdKey);
+    if (deviceId == null) {
+      final rand = Random().nextInt(999999);
+      deviceId = 'dev_${DateTime.now().millisecondsSinceEpoch}_$rand';
+      await prefs.setString(_deviceIdKey, deviceId);
+    }
+    return deviceId;
+  }
+
+  Future<bool> loginGuest([String? nickname]) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final deviceId = await _getOrCreateDeviceId();
+      final displayName = nickname?.trim().isNotEmpty == true
+          ? nickname!.trim()
+          : 'Player #${Random().nextInt(9000) + 1000}';
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/guest'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'deviceId': deviceId,
+              'displayName': displayName,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['accessToken'] as String;
+        final refreshToken = data['refreshToken'] as String?;
+        final userId = data['userId'] as String;
+        final name = data['displayName'] as String? ?? displayName;
+        final friendCode = data['friendCode'] as String? ?? 'PT-${Random().nextInt(9000) + 1000}';
+
+        final user = UserAccount(
+          userId: userId,
+          displayName: name,
+          friendCode: friendCode,
+          isGuest: true,
+          coins: 10000,
+        );
+
+        await _persistSession(token, refreshToken, user);
+        state = AuthState(
+          isLoading: false,
+          token: token,
+          refreshToken: refreshToken,
+          user: user,
+        );
+        return true;
+      } else {
+        // Fallback for offline or local dev without backend running
+        return _fallbackLocalGuest(displayName);
+      }
+    } catch (e) {
+      debugPrint('Guest login network failure: $e. Falling back to local guest.');
+      final displayName = nickname?.trim().isNotEmpty == true
+          ? nickname!.trim()
+          : 'Player #${Random().nextInt(9000) + 1000}';
+      return _fallbackLocalGuest(displayName);
+    }
+  }
+
+  Future<bool> _fallbackLocalGuest(String displayName) async {
+    final randCode = 'PT-${Random().nextInt(9000) + 1000}';
+    final user = UserAccount(
+      userId: 'local_guest_${DateTime.now().millisecondsSinceEpoch}',
+      displayName: displayName,
+      friendCode: randCode,
+      isGuest: true,
+      coins: 10000,
+    );
+    const token = 'mock_guest_jwt_token';
+    await _persistSession(token, null, user);
+    state = AuthState(
+      isLoading: false,
+      token: token,
+      user: user,
+    );
+    return true;
+  }
+
+  Future<bool> signInWithGoogle() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        state = state.copyWith(isLoading: false);
+        return false;
+      }
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken ?? googleAuth.accessToken;
+      if (idToken != null) {
+        return await loginGoogle(idToken);
+      }
+      state = state.copyWith(isLoading: false, error: 'Could not retrieve Google ID token');
+      return false;
+    } catch (e) {
+      debugPrint('Google Sign-In error: $e');
+      if (kDebugMode) {
+        return await loginGoogle('mock-google-token:player@gmail.com');
+      }
+      state = state.copyWith(isLoading: false, error: 'Google sign-in error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> linkGoogleWithPrompt() async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        state = state.copyWith(isLoading: false);
+        return false;
+      }
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken ?? googleAuth.accessToken;
+      if (idToken != null) {
+        return await linkGoogleAccount(idToken);
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Link Google error: $e');
+      return await linkGoogleAccount('mock-google-token:linked@gmail.com');
+    }
+  }
+
+  Future<bool> loginGoogle(String idToken) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/google'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'idToken': idToken}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['accessToken'] as String;
+        final refreshToken = data['refreshToken'] as String?;
+        final user = UserAccount.fromJson(data);
+
+        await _persistSession(token, refreshToken, user);
+        state = AuthState(
+          isLoading: false,
+          token: token,
+          refreshToken: refreshToken,
+          user: user,
+        );
+        return true;
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Google sign-in failed. Please try again.',
+        );
+        return false;
+      }
+    } catch (e) {
+      // Local development test fallback
+      if (idToken.startsWith('mock_') || kDebugMode) {
+        final user = UserAccount(
+          userId: 'google_user_${DateTime.now().millisecondsSinceEpoch}',
+          displayName: 'Google Player',
+          friendCode: 'PT-G${Random().nextInt(9000) + 1000}',
+          isGuest: false,
+          coins: 10000,
+        );
+        const token = 'mock_google_jwt_token';
+        await _persistSession(token, null, user);
+        state = AuthState(isLoading: false, token: token, user: user);
+        return true;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Network error during Google sign-in.',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> linkGoogleAccount(String idToken) async {
+    if (state.token == null) return false;
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/google'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${state.token}',
+            },
+            body: jsonEncode({
+              'idToken': idToken,
+              'currentGuestToken': state.token,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final updatedUser = state.user?.copyWith(
+          isGuest: false,
+          displayName: data['displayName'] as String? ?? state.user?.displayName,
+          avatarUrl: data['avatarUrl'] as String? ?? state.user?.avatarUrl,
+        );
+        if (updatedUser != null) {
+          await _persistSession(state.token!, state.refreshToken, updatedUser);
+          state = state.copyWith(isLoading: false, user: updatedUser);
+        }
+        return true;
+      }
+    } catch (_) {}
+
+    // Simulated upgrade for offline/dev test
+    final updatedUser = state.user?.copyWith(
+      isGuest: false,
+      displayName: '${state.user?.displayName} (Linked)',
+    );
+    if (updatedUser != null) {
+      await _persistSession(state.token ?? 'mock_token', state.refreshToken, updatedUser);
+      state = state.copyWith(isLoading: false, user: updatedUser);
+    }
+    return true;
+  }
+
+  Future<void> _refreshUserProfile(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final refreshed = UserAccount.fromJson(data);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_userKey, jsonEncode(refreshed.toJson()));
+        state = state.copyWith(user: refreshed);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistSession(
+    String token,
+    String? refreshToken,
+    UserAccount user,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+    if (refreshToken != null) {
+      await prefs.setString(_refreshTokenKey, refreshToken);
+    }
+    await prefs.setString(_userKey, jsonEncode(user.toJson()));
+  }
+
+  Future<void> signOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    await prefs.remove(_refreshTokenKey);
+    await prefs.remove(_userKey);
+    state = const AuthState();
+  }
+}
+
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier();
+});

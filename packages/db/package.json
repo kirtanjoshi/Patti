@@ -1,11 +1,11 @@
 {
   "name": "@patii/db",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "prisma generate && tsc -b",
+    "build": "tsc -b",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",

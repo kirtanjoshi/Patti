@@ -6,6 +6,9 @@ import { MatchmakingModule } from './modules/matchmaking/matchmaking.module.js';
 import { RoomsModule } from './modules/rooms/rooms.module.js';
 import { EconomyModule } from './modules/economy/economy.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { SocialModule } from './modules/social/social.module.js';
+import { InvitesModule } from './modules/invites/invites.module.js';
+import { HealthModule } from './modules/health/health.module.js';
 import { GameGateway } from './gateways/game.gateway.js';
 
 @Module({
@@ -17,6 +20,9 @@ import { GameGateway } from './gateways/game.gateway.js';
     RoomsModule,
     EconomyModule,
     AdminModule,
+    SocialModule,
+    InvitesModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [GameGateway],

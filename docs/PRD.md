@@ -1184,6 +1184,38 @@ Phase 9 — Admin panel. All pages in section 11 with roles and audit log. Accep
 
 Phase 10 — Hardening + launch. Load test, security review, store assets (en/ne screenshots), privacy policy, beta with 50 players, fixes. Accept: NFR targets in 12.1 met; Play Store and App Store approval.
 
+14. Social, Deep Linking & Guest/Google Multiplayer Integration (v1.1 / Wave 8)
+
+14.1 Authentication & Guest Support
+- Play as Guest: 1-tap device-bound login with 10,000 starting coins, auto-generated unique 6-character `friendCode` (excluding 0, O, 1, I), and full multiplayer capabilities (rooms, tables, friends).
+- Continue with Google: Google OAuth / ID token verification (`POST /auth/google`).
+- Guest-to-Google Account Linking: 1-tap upgrade from profile modal merges the Google identity into the existing user record, preserving 100% of coins, friends, level, and match history.
+- Profile Sheet: View friend code, copy/share pill, account badge (Guest vs Google Verified), and logout.
+
+14.2 Deep Linking & Invite Links
+- URI Schemes: `patii://room/<CODE>`, `patii://friend/<FRIEND_CODE>`.
+- HTTPS Universal / App Links: `https://patii.app/r/<CODE>` and `https://patii.app/f/<FRIEND_CODE>`.
+- Smart Landing Controller (`/r/:code`, `/f/:friendCode`): Serves rich OpenGraph preview cards for WhatsApp/Viber/Messenger, executes `patii://` deep link, provides "Copy Code" fallback.
+- Assetlinks & Apple App Site Association served from server root.
+
+14.3 Friends & Presence System
+- SocialModule: Track live presence (`online`, `in_room`, `in_table`, `offline`).
+- Viral Friend Links: Auto-connect mutual friendship on opening shared invite link (`POST /social/friends/connect-link`).
+- Manual Friend Requests: Send request via 6-character friend code or user ID. Accept/decline management.
+- In-App Table Invites: 1-tap invite from Friends list or Room Lobby sends instant in-app banner with sound/haptics to online friends.
+
+14.4 Multi-Game Real-Time Table & Room Gateway
+- Socket.IO Gateway wired with `room:create`, `room:join`, `room:leave`, `room:addBot`, `room:kick`, `room:start`, `room:invite_friend`.
+- Authoritative multi-game TableRuntime supporting all 8 card games dynamically.
+- Room lobby UI on mobile with real-time seat sync, bot addition, share link, and auto-transition to landscape game table on start.
+
+14.5 Location-Based Discovery: "Players Around Me" (वरिपरि रहेका खेलाडीहरू)
+- Detect & list active card game players in the neighborhood (within 500m to 10km radius).
+- Privacy & safety: Opt-in visibility toggle ("Discoverable nearby"), coarse geohashing/approximate distance ("~350m away"), zero exact GPS coordinates exposed or shared with other players, 15-minute TTL on temporary spatial records.
+- Actions: 1-tap "Add Friend" and "Invite to Table" directly from nearby radar results.
+- Endpoints: `POST /social/nearby/location`, `GET /social/nearby`, `POST /social/nearby/toggle-visibility`.
+- Mobile UX: Animated radar pulse scanner in Friends screen with distance pills and status indicators.
+
 Tips for working with Antigravity
 
 Keep the rules engine phase strictly separate from UI; ask it to write tests first from the rule text in section 5.

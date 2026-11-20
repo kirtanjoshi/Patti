@@ -1,13 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/widgets/buttons.dart';
-import '../../../../core/widgets/glass_sheet.dart';
 
-/// Casino-Style Action Bar for Teen Patti (Landscape).
-/// Houses Pack (Danger crimson), Side Show (Ghost outline), Chaal / Show (Gold CTA),
-/// and Raise (+) actions with live stakes and turn gating.
+/// Teen Patti actions, right thumb zone.
+/// Hierarchy: Chaal/Show is the one gold primary; Raise and Side Show are
+/// secondary; Pack is destructive. Off-turn, everything goes neutral.
 class TeenPattiActionBar extends StatelessWidget {
   final bool isMyTurn;
   final bool isSeen;
@@ -43,96 +43,80 @@ class TeenPattiActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Blind limit warning if active
-          if (isBlindLimitReached && !isSeen && isMyTurn)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: Text(
-                'teenpatti.blind_limit_reached'.tr(),
-                style: PatiiTypography.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: PatiiColors.warning,
-                ),
-              ),
+    const h = 44.0;
+    const pad = EdgeInsets.symmetric(horizontal: 14);
+    final canBet = isMyTurn && (!isBlindLimitReached || isSeen);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (isBlindLimitReached && !isSeen && isMyTurn)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'teenpatti.blind_limit_reached'.tr(),
+              style: PatiiTypography.body(fontSize: 12, fontWeight: FontWeight.w700, color: PatiiColors.warning),
             ),
-
-          // Main Action Buttons Row
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 1. Pack Button (Nepali Crimson)
-              Flexible(
-                child: DangerButton(
-                  label: 'teenpatti.pack'.tr(),
-                  icon: Icons.close,
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
-                  isEnabled: isMyTurn,
-                  onPressed: onPack,
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // 2. Side Show Button (Gold Outlined Ghost)
-              Flexible(
-                child: GhostButton(
-                  label: 'teenpatti.sideshow'.tr(),
-                  icon: Icons.compare_arrows,
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-                  isEnabled: isMyTurn && canSideShow,
-                  onPressed: onSideShow,
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // 3. Chaal OR Show Button (Gold CTA)
-              if (canShow)
-                Flexible(
-                  child: GoldButton(
-                    label: '${'teenpatti.show'.tr()} $baseBet',
-                    icon: Icons.visibility,
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                    isEnabled: isMyTurn,
-                    onPressed: onShow,
-                  ),
-                )
-              else
-                Flexible(
-                  child: GoldButton(
-                    label: '${'teenpatti.chaal'.tr()} $baseBet',
-                    icon: Icons.flash_on,
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                    isEnabled: isMyTurn && (!isBlindLimitReached || isSeen),
-                    onPressed: () => onChaal(baseBet),
-                  ),
-                ),
-              const SizedBox(width: 8),
-
-              // 4. Raise (+) Button
-              if (!canShow)
-                Flexible(
-                  child: GoldButton(
-                    label: '+$raiseBet',
-                    icon: Icons.arrow_upward,
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
-                    isEnabled: isMyTurn && (!isBlindLimitReached || isSeen),
-                    onPressed: () => onChaal(raiseBet),
-                  ),
-                ),
-            ],
+          )
+        else if (!isMyTurn)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6, right: 4),
+            child: Text(
+              'table.waiting'.tr(),
+              style: PatiiTypography.eyebrow(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)),
+            ),
           ),
-        ],
-      ),
-    );
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            DangerButton(
+              label: 'teenpatti.pack'.tr(),
+              height: h,
+              padding: pad,
+              isEnabled: isMyTurn,
+              onPressed: onPack,
+            ),
+            GhostButton(
+              label: 'teenpatti.sideshow'.tr(),
+              icon: Icons.compare_arrows_rounded,
+              height: h,
+              padding: pad,
+              isEnabled: isMyTurn && canSideShow,
+              onPressed: onSideShow,
+            ),
+            if (!canShow)
+              GhostButton(
+                label: '+$raiseBet',
+                height: h,
+                padding: pad,
+                isEnabled: canBet,
+                onPressed: () => onChaal(raiseBet),
+              ),
+            if (canShow)
+              GoldButton(
+                label: '${'teenpatti.show'.tr()} $baseBet',
+                icon: Icons.visibility_rounded,
+                height: h,
+                padding: pad,
+                minWidth: 112,
+                isEnabled: isMyTurn,
+                onPressed: onShow,
+              )
+            else
+              GoldButton(
+                label: '${'teenpatti.chaal'.tr()} $baseBet',
+                height: h,
+                padding: pad,
+                minWidth: 112,
+                isEnabled: canBet,
+                onPressed: () => onChaal(baseBet),
+              ),
+          ],
+        ),
+      ],
+    ).animate(target: isMyTurn ? 1 : 0).scaleXY(begin: 0.98, end: 1, duration: 200.ms);
   }
 }

@@ -40,44 +40,51 @@ class ToastBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final goldColor = accentColor ?? PatiiColors.goldLight;
+    final accent = accentColor ?? PatiiColors.gold;
 
     return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.0),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-            decoration: BoxDecoration(
-              color: PatiiColors.navySurface.withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(24.0),
-              border: Border.all(color: goldColor, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: PatiiColors.goldDark.withValues(alpha: 0.35),
-                  blurRadius: 16.0,
-                  spreadRadius: 1.0,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 20, color: goldColor),
-                  const SizedBox(width: 8.0),
-                ],
-                Text(
-                  message,
-                  style: PatiiTypography.cinzel(
-                    fontSize: 15.0,
-                    fontWeight: FontWeight.w700,
-                    color: goldColor,
-                    letterSpacing: 0.5,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14.0, sigmaY: 14.0),
+            child: Container(
+              padding: EdgeInsets.fromLTRB(icon != null ? 8 : 18, 8, 18, 8),
+              decoration: BoxDecoration(
+                color: PatiiColors.navyElevated.withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: PatiiColors.hairlineStrong),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: accent.withValues(alpha: 0.16),
+                      ),
+                      child: Icon(icon, size: 15, color: accent),
+                    ),
+                    const SizedBox(width: 10.0),
+                  ],
+                  Flexible(
+                    child: Text(
+                      message,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: PatiiTypography.body(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: PatiiColors.textPrimary,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -141,9 +148,9 @@ class _ToastBannerOverlayState extends State<_ToastBannerOverlay>
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 64.0,
-      left: 0,
-      right: 0,
+      top: MediaQuery.paddingOf(context).top + 52.0,
+      left: 16,
+      right: 16,
       child: IgnorePointer(
         child: FadeTransition(
           opacity: _fadeAnimation,

@@ -128,7 +128,7 @@ class KittiArrangeBoard extends StatelessWidget {
                       child: Text(
                         title,
                         overflow: TextOverflow.ellipsis,
-                        style: PatiiTypography.cinzel(
+                        style: PatiiTypography.display(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: PatiiColors.goldLight,

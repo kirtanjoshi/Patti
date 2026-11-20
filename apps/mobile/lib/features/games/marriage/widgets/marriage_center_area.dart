@@ -73,7 +73,7 @@ class MarriageCenterArea extends StatelessWidget {
                         ),
                         child: Text(
                           '${stockPile.length}',
-                          style: PatiiTypography.cinzel(
+                          style: PatiiTypography.display(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: PatiiColors.goldLight,
@@ -157,7 +157,7 @@ class MarriageCenterArea extends StatelessWidget {
                       ),
                       child: Text(
                         isMaalSeen ? 'TIPLU' : 'MAAL',
-                        style: PatiiTypography.cinzel(
+                        style: PatiiTypography.display(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           color: isMaalSeen

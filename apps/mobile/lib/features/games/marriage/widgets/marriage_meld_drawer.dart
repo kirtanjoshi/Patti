@@ -96,7 +96,7 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
               child: Text(
                 'marriage.meld_tray'.tr(),
                 overflow: TextOverflow.ellipsis,
-                style: PatiiTypography.cinzel(
+                style: PatiiTypography.display(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: PatiiColors.goldLight,
@@ -186,7 +186,7 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
                   const SizedBox(width: 6),
                   Text(
                     'marriage.meld_tray'.tr(),
-                    style: PatiiTypography.cinzel(
+                    style: PatiiTypography.display(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: PatiiColors.goldLight,

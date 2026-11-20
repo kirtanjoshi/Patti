@@ -65,6 +65,73 @@ export const RoomStartSchema = z.object({
   code: z.string().length(6),
 });
 
+export const RoomInviteFriendSchema = z.object({
+  code: z.string().length(6),
+  targetUserId: z.string().min(1),
+});
+
+export const RoomParticipantSchema = z.object({
+  seat: z.number().int().nonnegative(),
+  userId: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable().optional(),
+  isHost: z.boolean(),
+  isBot: z.boolean(),
+  botDifficulty: BotDifficultyEnum.optional(),
+});
+
+export const RoomStateSchema = z.object({
+  code: z.string().length(6),
+  gameId: GameIdEnum,
+  hostUserId: z.string(),
+  rules: z.record(z.unknown()),
+  stake: z.number().int().nonnegative().default(0),
+  maxSeats: z.number().int().positive(),
+  botDifficulty: BotDifficultyEnum.default('medium'),
+  turnTimerSeconds: z.number().int().positive().default(15),
+  inviteUrl: z.string().optional(),
+  deepLinkUrl: z.string().optional(),
+  participants: z.array(RoomParticipantSchema),
+});
+
+export const RoomStartedSchema = z.object({
+  code: z.string().length(6),
+  tableId: z.string().min(1),
+  gameId: GameIdEnum,
+});
+
+// Social Events
+export const SocialRoomInviteSchema = z.object({
+  code: z.string().length(6),
+  gameId: GameIdEnum,
+  stake: z.number().int().nonnegative(),
+  hostUserId: z.string(),
+  hostName: z.string(),
+  hostAvatarUrl: z.string().nullable().optional(),
+});
+
+export const SocialPresenceStatusEnum = z.enum(['online', 'in_room', 'in_table', 'offline']);
+export type SocialPresenceStatus = z.infer<typeof SocialPresenceStatusEnum>;
+
+export const SocialPresenceUpdateSchema = z.object({
+  userId: z.string(),
+  status: SocialPresenceStatusEnum,
+  gameId: GameIdEnum.nullable().optional(),
+});
+
+export const SocialFriendEventTypeEnum = z.enum(['request_received', 'request_accepted', 'friend_removed']);
+export type SocialFriendEventType = z.infer<typeof SocialFriendEventTypeEnum>;
+
+export const SocialFriendEventSchema = z.object({
+  type: SocialFriendEventTypeEnum,
+  fromUser: z.object({
+    userId: z.string(),
+    displayName: z.string(),
+    avatarUrl: z.string().nullable().optional(),
+    friendCode: z.string().nullable().optional(),
+  }),
+});
+
 export const TableMoveSchema = z.object({
   tableId: z.string().min(1),
   version: z.number().int().nonnegative(),

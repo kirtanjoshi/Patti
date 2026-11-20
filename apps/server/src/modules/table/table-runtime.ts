@@ -1,14 +1,19 @@
 import {
   CallbreakGameModule,
-  CallbreakMove,
-  CallbreakPublicView,
-  CallbreakRules,
   CallbreakState,
   DEFAULT_CALLBREAK_RULES,
+  DhumbalGameModule,
+  GameId,
+  GameModule,
+  JutpattiGameModule,
+  KittiGameModule,
+  MarriageGameModule,
+  RummyGameModule,
   SeedRng,
   TableSeat,
   TableState,
   SeatStatus,
+  TeenPattiGameModule,
 } from '@patii/game-engine';
 import { CallbreakBotStrategy } from '@patii/bots';
 
@@ -16,27 +21,51 @@ export type TableEventBroadcaster = (event: string, payload: Record<string, unkn
 
 export interface TableConfig {
   readonly tableId: string;
-  readonly gameId: 'callbreak';
+  readonly gameId: GameId;
   readonly tier: string;
   readonly stake: bigint;
-  readonly rules: CallbreakRules;
+  readonly rules?: Record<string, unknown>;
   readonly seatsCount: number;
+}
+
+export function createGameModule(gameId: GameId): GameModule<any, any, any, any> {
+  switch (gameId) {
+    case 'callbreak':
+      return new CallbreakGameModule();
+    case 'marriage':
+      return new MarriageGameModule();
+    case 'teenpatti':
+      return new TeenPattiGameModule();
+    case 'kitti':
+      return new KittiGameModule();
+    case 'dhumbal':
+      return new DhumbalGameModule();
+    case 'jutpatti':
+      return new JutpattiGameModule();
+    case 'rummy':
+      return new RummyGameModule(false);
+    case 'jokerrummy':
+      return new RummyGameModule(true);
+    default:
+      return new CallbreakGameModule();
+  }
 }
 
 export class TableRuntime {
   public state: TableState = TableState.WAITING;
   public version = 1;
   public seats: TableSeat[] = [];
-  public engineState: CallbreakState | null = null;
+  public engineState: any = null;
   public turnDeadlineEpochMs: number | null = null;
-  public readonly module = new CallbreakGameModule();
-  private readonly botStrategy = new CallbreakBotStrategy('medium');
+  public readonly module: GameModule<any, any, any, any>;
+  private readonly callbreakBot = new CallbreakBotStrategy('medium');
   private botRng: SeedRng;
 
   constructor(
     public readonly config: TableConfig,
     private readonly broadcast: TableEventBroadcaster,
   ) {
+    this.module = createGameModule(config.gameId);
     this.botRng = new SeedRng(`table_${config.tableId}_bots`);
     for (let s = 0; s < config.seatsCount; s++) {
       this.seats.push({
@@ -98,7 +127,8 @@ export class TableRuntime {
     this.state = TableState.DEALING;
     const playerIds = this.seats.map((s) => s.playerId!);
     const seed = `match_${this.config.tableId}_${Date.now()}`;
-    this.engineState = this.module.setup(playerIds, this.config.rules, seed);
+    const initialRules = this.config.rules ?? this.module.defaultRules;
+    this.engineState = this.module.setup(playerIds, initialRules, seed);
 
     this.state = TableState.PLAYING;
     this.version++;
@@ -114,7 +144,7 @@ export class TableRuntime {
     if (!currentActor) return;
 
     const currentSeat = this.seats.findIndex((s) => s.playerId === currentActor);
-    const turnDurationSeconds = this.engineState.phase === 'bidding' ? 10 : 10;
+    const turnDurationSeconds = 15;
     this.turnDeadlineEpochMs = Date.now() + turnDurationSeconds * 1000;
 
     this.broadcast('table:turn', {
@@ -133,15 +163,20 @@ export class TableRuntime {
   private scheduleBotMove(playerId: string, seatIndex: number): void {
     if (!this.engineState) return;
 
-    // Simulate human pacing: 800ms
     setTimeout(() => {
       try {
         if (!this.engineState || this.module.currentActor(this.engineState) !== playerId) return;
         const view = this.module.viewFor(this.engineState, playerId);
-        const move = this.botStrategy.decide(view, this.botRng);
+        let move: any;
+
+        if (this.config.gameId === 'callbreak') {
+          move = this.callbreakBot.decide(view, this.botRng);
+        } else {
+          move = this.module.autoMove(this.engineState, playerId);
+        }
+
         this.applyPlayerMove(playerId, this.version, move);
       } catch {
-        // Fallback to autoMove
         if (this.engineState) {
           const fallback = this.module.autoMove(this.engineState, playerId);
           this.applyPlayerMove(playerId, this.version, fallback);
@@ -150,7 +185,7 @@ export class TableRuntime {
     }, 800);
   }
 
-  public applyPlayerMove(playerId: string, clientVersion: number, move: CallbreakMove): void {
+  public applyPlayerMove(playerId: string, clientVersion: number, move: any): void {
     if (!this.engineState) {
       throw new Error('Game not started.');
     }
@@ -164,7 +199,7 @@ export class TableRuntime {
     this.broadcastEvent('table:moved', {
       playerId,
       move,
-      phase: this.engineState.phase,
+      phase: this.engineState.phase ?? 'playing',
     });
 
     if (this.module.isGameOver(this.engineState)) {
@@ -172,8 +207,8 @@ export class TableRuntime {
       const result = this.module.scoreRound(this.engineState);
       this.broadcast('table:result', {
         tableId: this.config.tableId,
-        gameId: 'callbreak',
-        roundNumber: this.engineState.currentRound,
+        gameId: this.config.gameId,
+        roundNumber: this.engineState.currentRound ?? 1,
         isGameOver: true,
         scores: result.scores,
       });
@@ -183,7 +218,7 @@ export class TableRuntime {
     this.promptCurrentTurn();
   }
 
-  public getViewFor(playerId: string | 'spectator'): CallbreakPublicView | null {
+  public getViewFor(playerId: string | 'spectator'): any {
     if (!this.engineState) return null;
     return this.module.viewFor(this.engineState, playerId);
   }
