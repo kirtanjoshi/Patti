@@ -1,7 +1,6 @@
 # Patii - Real-Time Card Gaming Platform
 
 [![Backend CI & Deploy](https://github.com/kirtanjoshi/Patti/actions/workflows/backend-deploy.yml/badge.svg)](https://github.com/kirtanjoshi/Patti/actions/workflows/backend-deploy.yml)
-[![Mobile CI](https://github.com/kirtanjoshi/Patti/actions/workflows/mobile.yml/badge.svg)](https://github.com/kirtanjoshi/Patti/actions/workflows/mobile.yml)
 [![Version](https://img.shields.io/badge/version-1.1.0-gold.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
