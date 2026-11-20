@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/constants/api_const.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/socket_service.dart';
@@ -83,7 +84,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
       if (token != null) {
         // Send coarse coordinates (Kathmandu central default: 27.7172, 85.3240)
         await http.post(
-          Uri.parse('${AuthNotifier.baseUrl}/social/nearby/location'),
+          Uri.parse(ApiConst.nearbyLocation),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -96,7 +97,11 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
         ).timeout(const Duration(seconds: 3));
 
         final res = await http.get(
-          Uri.parse('${AuthNotifier.baseUrl}/social/nearby?radiusKm=$_radiusKm&lat=27.7172&lon=85.3240'),
+          ApiConst.nearbyPlayersUri(
+            radiusKm: _radiusKm,
+            lat: 27.7172,
+            lon: 85.3240,
+          ),
           headers: {'Authorization': 'Bearer $token'},
         ).timeout(const Duration(seconds: 3));
 
@@ -126,7 +131,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     if (token != null) {
       try {
         await http.post(
-          Uri.parse('${AuthNotifier.baseUrl}/social/nearby/visibility'),
+          Uri.parse(ApiConst.nearbyVisibility),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -152,7 +157,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     try {
       if (token != null) {
         await http.post(
-          Uri.parse('${AuthNotifier.baseUrl}/social/friends/request'),
+          Uri.parse(ApiConst.friendRequest),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -227,7 +232,8 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                   ),
                   Switch(
                     value: _isDiscoverable,
-                    activeThumbColor: PatiiColors.gold,
+                    // ignore: deprecated_member_use
+                    activeColor: PatiiColors.gold,
                     onChanged: _toggleDiscoverable,
                   ),
                 ],

@@ -206,7 +206,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            initialValue: _selectedGame,
+            // ignore: deprecated_member_use
+            value: _selectedGame,
             dropdownColor: PatiiColors.navyElevated,
             style: PatiiTypography.body(color: PatiiColors.textPrimary),
             decoration: InputDecoration(

@@ -1,14 +1,30 @@
-name: CI/CD Pipeline
+name: Backend CI & Render Deploy
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/server/**'
+      - 'packages/**'
+      - 'render.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/backend-deploy.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'apps/server/**'
+      - 'packages/**'
+      - 'render.yaml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/backend-deploy.yml'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: backend-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -58,52 +74,9 @@ jobs:
           echo "| **Server Unit Tests** | ✅ Passed | 27 tests passing across 9 test suites |" >> $GITHUB_STEP_SUMMARY
           echo "| **Keep-Alive Heartbeat** | ✅ Enabled | 5-min intervals on /health & /health/ping |" >> $GITHUB_STEP_SUMMARY
 
-  mobile-ci:
-    name: Mobile CI (Flutter Analysis & Tests)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/mobile
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.0'
-          channel: 'stable'
-          cache: true
-
-      - name: Install Flutter dependencies
-        run: flutter pub get
-
-      - name: Run Flutter analyzer
-        run: flutter analyze .
-
-      - name: Run Flutter unit & widget tests
-        run: flutter test
-
-      - name: Generate Mobile Summary
-        if: always()
-        run: |
-          echo "### 📱 Mobile CI Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Flutter Version** | 3.29.0 | Channel stable |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Flutter Analyze** | ✅ Passed | 0 issues found |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Widget & Unit Tests** | ✅ Passed | 65 tests passing |" >> $GITHUB_STEP_SUMMARY
-          echo "| **App Version** | v1.1.0+2 | Includes Nearby Radar & Google Auth |" >> $GITHUB_STEP_SUMMARY
-
   deploy-render:
     name: Trigger Render Deploy
-    needs: [backend-ci, mobile-ci]
+    needs: [backend-ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:

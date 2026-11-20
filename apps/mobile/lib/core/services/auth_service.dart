@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/api_const.dart';
 import '../models/user_model.dart';
 
 class AuthState {
@@ -47,16 +48,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   static const String _userKey = 'patii_user_profile';
   static const String _deviceIdKey = 'patii_device_id';
 
-  // Configurable base URL: Android emulator uses 10.0.2.2, desktop/iOS uses localhost or custom host.
-  static String baseUrl = kIsWeb || defaultTargetPlatform != TargetPlatform.android
-      ? 'http://localhost:4000'
-      : 'http://10.0.2.2:4000';
+  // Base URL and Google client id delegated to centralized ApiConst
+  static String get baseUrl => ApiConst.baseUrl;
+  static set baseUrl(String value) => ApiConst.baseUrl = value;
 
-  static const String googleWebClientId =
-      '535204897241-8ee666l35silo6e464330nl5oirgb11g.apps.googleusercontent.com';
+  static String get googleWebClientId => ApiConst.googleWebClientId;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: googleWebClientId,
+    serverClientId: ApiConst.googleWebClientId,
     scopes: ['email', 'profile'],
   );
 
@@ -111,7 +110,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/guest'),
+            Uri.parse(ApiConst.authGuest),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'deviceId': deviceId,
@@ -226,7 +225,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/google'),
+            Uri.parse(ApiConst.authGoogle),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'idToken': idToken}),
           )
@@ -282,7 +281,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/google'),
+            Uri.parse(ApiConst.authGoogle),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ${state.token}',
@@ -324,7 +323,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _refreshUserProfile(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/auth/me'),
+        Uri.parse(ApiConst.authMe),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 5));
 

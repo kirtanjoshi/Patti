@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
+import '../../core/constants/api_const.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/socket_service.dart';
@@ -79,7 +80,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('${AuthNotifier.baseUrl}/social/friends'),
+        Uri.parse(ApiConst.friends),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 4));
 

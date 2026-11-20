@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import '../constants/api_const.dart';
 import '../models/user_model.dart';
 import 'auth_service.dart';
 
@@ -61,7 +62,7 @@ class SocketService {
   void connect(String? token) {
     if (_socket != null && _isConnected) return;
 
-    final url = AuthNotifier.baseUrl;
+    final url = ApiConst.socketUrl;
     _socket = io.io(
       '$url/game',
       io.OptionBuilder()
