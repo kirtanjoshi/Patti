@@ -29,38 +29,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   bool _isLoading = false;
   int _subTab = 0; // 0: My Friends, 1: Nearby Radar
 
-  // Local list of friends for responsive UI
-  List<FriendModel> _friends = [
-    const FriendModel(
-      userId: 'usr_saroj',
-      displayName: 'Saroj Shrestha',
-      friendCode: 'PT-9941',
-      isOnline: true,
-      currentGame: 'Callbreak',
-    ),
-    const FriendModel(
-      userId: 'usr_anita',
-      displayName: 'Anita Gurung',
-      friendCode: 'PT-1284',
-      isOnline: true,
-      currentGame: null,
-    ),
-    const FriendModel(
-      userId: 'usr_bipin',
-      displayName: 'Bipin Thapa',
-      friendCode: 'PT-7723',
-      isOnline: false,
-    ),
-  ];
-
-  final List<FriendModel> _pendingRequests = [
-    const FriendModel(
-      userId: 'usr_kiran',
-      displayName: 'Kiran KC',
-      friendCode: 'PT-5512',
-      status: 'pending',
-    ),
-  ];
+  // Real friends list loaded dynamically from backend
+  List<FriendModel> _friends = [];
+  final List<FriendModel> _pendingRequests = [];
 
   @override
   void initState() {

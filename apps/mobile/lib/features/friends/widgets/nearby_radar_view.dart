@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/api_const.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
@@ -11,8 +12,9 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/toast_banner.dart';
+import 'radar_dome_widget.dart';
 
-/// Interactive Radar Scanner and Nearby Players list
+/// Visually compelling Sonar Radar Scanner and Nearby Players Discovery
 class NearbyRadarView extends ConsumerStatefulWidget {
   const NearbyRadarView({super.key});
 
@@ -27,45 +29,16 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
   bool _isScanning = false;
   double _radiusKm = 5.0;
 
-  List<NearbyPlayerModel> _nearbyPlayers = [
-    const NearbyPlayerModel(
-      userId: 'usr_rohan',
-      displayName: 'Rohan Sharma',
-      friendCode: 'PT-8842',
-      distanceMeters: 350,
-      distanceText: '~350m away',
-      level: 4,
-      isOnline: true,
-      currentGame: 'Callbreak',
-    ),
-    const NearbyPlayerModel(
-      userId: 'usr_deepa',
-      displayName: 'Deepa Shakya',
-      friendCode: 'PT-3190',
-      distanceMeters: 800,
-      distanceText: '~800m away',
-      level: 2,
-      isOnline: true,
-      currentGame: null,
-    ),
-    const NearbyPlayerModel(
-      userId: 'usr_prabhat',
-      displayName: 'Prabhat Adhikari',
-      friendCode: 'PT-6651',
-      distanceMeters: 2100,
-      distanceText: '~2.1 km away',
-      level: 6,
-      isOnline: true,
-      currentGame: 'Marriage',
-    ),
-  ];
+  // Real nearby players list loaded from API (empty by default)
+  List<NearbyPlayerModel> _nearbyPlayers = [];
+  NearbyPlayerModel? _selectedPlayer;
 
   @override
   void initState() {
     super.initState();
     _radarAnim = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     )..repeat();
     _fetchNearbyPlayers();
   }
@@ -82,7 +55,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
 
     try {
       if (token != null) {
-        // Send coarse coordinates (Kathmandu central default: 27.7172, 85.3240)
+        // Broadcast location (Kathmandu central default: 27.7172, 85.3240)
         await http.post(
           Uri.parse(ApiConst.nearbyLocation),
           headers: {
@@ -96,6 +69,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
           }),
         ).timeout(const Duration(seconds: 3));
 
+        // Query active nearby players
         final res = await http.get(
           ApiConst.nearbyPlayersUri(
             radiusKm: _radiusKm,
@@ -103,21 +77,25 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
             lon: 85.3240,
           ),
           headers: {'Authorization': 'Bearer $token'},
-        ).timeout(const Duration(seconds: 3));
+        ).timeout(const Duration(seconds: 4));
 
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body) as List<dynamic>;
-          if (mounted && data.isNotEmpty) {
+          if (mounted) {
             setState(() {
               _nearbyPlayers = data
                   .map((p) => NearbyPlayerModel.fromJson(Map<String, dynamic>.from(p as Map)))
                   .toList();
             });
           }
+        } else {
+          if (mounted) setState(() => _nearbyPlayers = []);
         }
+      } else {
+        if (mounted) setState(() => _nearbyPlayers = []);
       }
     } catch (_) {
-      // Keep responsive mock fallback
+      if (mounted) setState(() => _nearbyPlayers = []);
     } finally {
       if (mounted) setState(() => _isScanning = false);
     }
@@ -144,7 +122,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     if (mounted) {
       ToastBanner.show(
         context,
-        value ? 'You are now visible to players around you' : 'Location hidden from nearby players',
+        value ? 'You are now visible on the radar' : 'Location hidden from radar',
         icon: value ? Icons.visibility_rounded : Icons.visibility_off_rounded,
       );
     }
@@ -188,99 +166,36 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     );
   }
 
+  void _shareInviteLink() {
+    final user = ref.read(authProvider).user;
+    final code = user?.friendCode ?? 'PATII';
+    final shareUrl = 'https://patii.app/f/$code';
+    Share.share(
+      '🃏 Play Callbreak & Marriage cards with me on Patii! Join my table: $shareUrl (Code: $code)',
+      subject: 'Play Patii with me!',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Privacy toggle & scan controls card
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: PatiiColors.navySurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: PatiiColors.hairline),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: PatiiColors.gold.withValues(alpha: 0.16),
-                    ),
-                    child: const Icon(Icons.radar_rounded, color: PatiiColors.gold, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Discoverable Nearby',
-                          style: PatiiTypography.display(fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Let nearby players see your profile and invite you',
-                          style: PatiiTypography.body(fontSize: 11, color: PatiiColors.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isDiscoverable,
-                    // ignore: deprecated_member_use
-                    activeColor: PatiiColors.gold,
-                    onChanged: _toggleDiscoverable,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Search Radius: ${_radiusKm.toInt()} km',
-                    style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textSecondary),
-                  ),
-                  Row(
-                    children: [1.0, 5.0, 10.0].map((r) {
-                      final isSel = _radiusKm == r;
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: ChoiceChip(
-                          label: Text('${r.toInt()} km'),
-                          selected: isSel,
-                          selectedColor: PatiiColors.gold,
-                          labelStyle: TextStyle(
-                            color: isSel ? PatiiColors.navy : PatiiColors.textSecondary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          backgroundColor: PatiiColors.navyElevated,
-                          onSelected: (val) {
-                            if (val) {
-                              setState(() => _radiusKm = r);
-                              _fetchNearbyPlayers();
-                            }
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        // 1. Interactive Sonar Radar Dome
+        RadarDomeWidget(
+          animation: _radarAnim,
+          radiusKm: _radiusKm,
+          players: _nearbyPlayers,
+          selectedPlayer: _selectedPlayer,
+          onSelectPlayer: (p) => setState(() => _selectedPlayer = p),
         ),
 
-        // Radar pulse visual banner
-        _buildRadarBanner(),
+        // 2. Discoverability & Radius Controls
+        _buildControlsCard(),
 
-        // Player list
+        // 3. Status Bar
+        _buildStatusBar(),
+
+        // 4. Players List or Empty State
         Expanded(
           child: _nearbyPlayers.isEmpty
               ? _buildEmptyState()
@@ -300,52 +215,125 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     );
   }
 
-  Widget _buildRadarBanner() {
+  Widget _buildControlsCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
+        color: PatiiColors.navySurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: PatiiColors.hairline),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: PatiiColors.gold.withValues(alpha: 0.16),
+                ),
+                child: const Icon(Icons.radar_rounded, color: PatiiColors.gold, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Discoverable Nearby',
+                      style: PatiiTypography.display(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Allow local card players to discover and invite you',
+                      style: PatiiTypography.body(fontSize: 10.5, color: PatiiColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _isDiscoverable,
+                // ignore: deprecated_member_use
+                activeColor: PatiiColors.gold,
+                onChanged: _toggleDiscoverable,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Radius: ${_radiusKm.toInt()} km',
+                style: PatiiTypography.body(fontSize: 11.5, color: PatiiColors.textSecondary),
+              ),
+              Row(
+                children: [1.0, 5.0, 10.0].map((r) {
+                  final isSel = _radiusKm == r;
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: ChoiceChip(
+                      label: Text('${r.toInt()} km'),
+                      selected: isSel,
+                      selectedColor: PatiiColors.gold,
+                      labelStyle: TextStyle(
+                        color: isSel ? PatiiColors.navy : PatiiColors.textSecondary,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      backgroundColor: PatiiColors.navyElevated,
+                      onSelected: (val) {
+                        if (val) {
+                          setState(() => _radiusKm = r);
+                          _fetchNearbyPlayers();
+                        }
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
         color: PatiiColors.navyElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.25)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: PatiiColors.hairline),
       ),
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _radarAnim,
-            builder: (ctx, child) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 28 + (_radarAnim.value * 12),
-                    height: 28 + (_radarAnim.value * 12),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: PatiiColors.gold.withValues(alpha: (1 - _radarAnim.value).clamp(0.0, 1.0)),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.my_location_rounded, color: PatiiColors.gold, size: 18),
-                ],
-              );
-            },
+          Icon(
+            _isScanning ? Icons.sync_rounded : Icons.my_location_rounded,
+            color: PatiiColors.gold,
+            size: 16,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               _isScanning
-                  ? 'Scanning for players around you...'
-                  : '${_nearbyPlayers.length} players found in your area',
-              style: PatiiTypography.body(fontSize: 12.5, color: PatiiColors.goldLight),
+                  ? 'Scanning area for card players...'
+                  : _nearbyPlayers.isEmpty
+                      ? 'No other players detected within ${_radiusKm.toInt()} km'
+                      : '${_nearbyPlayers.length} card players detected in range',
+              style: PatiiTypography.body(fontSize: 11.5, color: PatiiColors.goldLight),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: PatiiColors.gold, size: 20),
+            icon: const Icon(Icons.refresh_rounded, color: PatiiColors.gold, size: 18),
             onPressed: _fetchNearbyPlayers,
-            tooltip: 'Rescan Area',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            tooltip: 'Rescan',
           ),
         ],
       ),
@@ -353,21 +341,25 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
   }
 
   Widget _buildNearbyCard(NearbyPlayerModel p) {
+    final isSel = _selectedPlayer?.userId == p.userId;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: PatiiColors.navySurface,
+        color: isSel ? PatiiColors.navyElevated : PatiiColors.navySurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PatiiColors.hairline),
+        border: Border.all(
+          color: isSel ? PatiiColors.gold : PatiiColors.hairline,
+          width: isSel ? 1.5 : 1.0,
+        ),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 22,
+            radius: 20,
             backgroundColor: PatiiColors.gold.withValues(alpha: 0.2),
             child: Text(
               p.displayName.isNotEmpty ? p.displayName[0].toUpperCase() : '?',
-              style: PatiiTypography.display(fontSize: 16, color: PatiiColors.goldLight),
+              style: PatiiTypography.display(fontSize: 15, color: PatiiColors.goldLight),
             ),
           ),
           const SizedBox(width: 12),
@@ -380,21 +372,20 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                     Flexible(
                       child: Text(
                         p.displayName,
-                        maxLines: 1,
+                        style: PatiiTypography.body(fontSize: 14, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
-                        style: PatiiTypography.display(fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
-                        color: PatiiColors.chipBlue.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        color: PatiiColors.navyElevated,
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         'Lv ${p.level}',
-                        style: PatiiTypography.body(fontSize: 10, color: PatiiColors.chipBlue),
+                        style: PatiiTypography.body(fontSize: 9, color: PatiiColors.gold),
                       ),
                     ),
                   ],
@@ -402,18 +393,31 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded, size: 12, color: PatiiColors.gold),
-                    const SizedBox(width: 3),
+                    const Icon(Icons.place_rounded, color: PatiiColors.gold, size: 12),
+                    const SizedBox(width: 2),
                     Text(
                       p.distanceText,
-                      style: PatiiTypography.body(fontSize: 11, color: PatiiColors.goldLight),
+                      style: PatiiTypography.body(fontSize: 11, color: PatiiColors.textMuted),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      p.currentGame != null ? 'Playing ${p.currentGame}' : 'In Lobby',
-                      style: PatiiTypography.body(
-                        fontSize: 11,
-                        color: p.currentGame != null ? PatiiColors.info : PatiiColors.success,
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: PatiiColors.hairline,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        p.currentGame != null ? 'Playing ${p.currentGame}' : 'In Lobby',
+                        style: PatiiTypography.body(
+                          fontSize: 11,
+                          color: p.currentGame != null ? const Color(0xFF00E5FF) : PatiiColors.success,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -421,23 +425,24 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Column(
             children: [
               SizedBox(
-                height: 32,
+                height: 28,
                 child: Pressable(
                   onPressed: () => _sendFriendRequest(p),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: PatiiColors.gold,
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: PatiiColors.goldButtonGradient,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '+ Friend',
                       style: PatiiTypography.body(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: PatiiColors.navy,
                       ),
@@ -447,7 +452,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
               ),
               const SizedBox(height: 4),
               SizedBox(
-                height: 26,
+                height: 24,
                 child: Pressable(
                   onPressed: () => _inviteToTable(p),
                   child: Container(
@@ -455,12 +460,12 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: PatiiColors.navyElevated,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: PatiiColors.hairline),
                     ),
                     child: Text(
                       'Invite',
-                      style: PatiiTypography.body(fontSize: 10, color: PatiiColors.textSecondary),
+                      style: PatiiTypography.body(fontSize: 9.5, color: PatiiColors.textSecondary),
                     ),
                   ),
                 ),
@@ -474,21 +479,74 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.radar_rounded, size: 48, color: PatiiColors.textMuted),
-          const SizedBox(height: 12),
-          Text(
-            'No players detected nearby',
-            style: PatiiTypography.display(fontSize: 15, fontWeight: FontWeight.bold),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: PatiiColors.gold.withValues(alpha: 0.1),
+                  border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.25)),
+                ),
+                child: const Icon(Icons.people_outline_rounded, size: 30, color: PatiiColors.gold),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Be the First in Your Area!',
+                style: PatiiTypography.display(fontSize: 16, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Your radar is actively broadcasting. Invite friends nearby on WhatsApp or Viber to challenge them!',
+                style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 42,
+                child: Pressable(
+                  onPressed: _shareInviteLink,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: PatiiColors.goldButtonGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: PatiiColors.gold.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.share_rounded, size: 16, color: PatiiColors.navy),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Share Invite Link',
+                          style: PatiiTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: PatiiColors.navy,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Try increasing your search radius or share your invite link',
-            style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textMuted),
-          ),
-        ],
+        ),
       ),
     );
   }
