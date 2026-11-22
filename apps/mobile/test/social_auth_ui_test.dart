@@ -8,7 +8,8 @@ import 'package:patii/features/friends/friends_screen.dart';
 
 void main() {
   group('Social & Auth UI Tests', () {
-    testWidgets('AuthScreen renders Google and Guest login options', (tester) async {
+    testWidgets('AuthScreen renders Google and Guest login options',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(393, 852));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -26,7 +27,8 @@ void main() {
       expect(find.byType(GhostButton), findsOneWidget);
     });
 
-    testWidgets('FriendsScreen renders Share Invite Link and Add Friend input', (tester) async {
+    testWidgets('FriendsScreen renders Share Invite Link and Add Friend input',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(393, 852));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -44,7 +46,8 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('GoogleAuthSheet renders modal profile details', (tester) async {
+    testWidgets('GoogleAuthSheet renders modal profile details',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(393, 852));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 

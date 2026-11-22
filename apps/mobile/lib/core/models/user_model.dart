@@ -56,7 +56,8 @@ class UserAccount {
   factory UserAccount.fromJson(Map<String, dynamic> json) {
     return UserAccount(
       userId: json['userId'] as String? ?? json['id'] as String? ?? '',
-      displayName: json['displayName'] as String? ?? json['name'] as String? ?? 'Player',
+      displayName:
+          json['displayName'] as String? ?? json['name'] as String? ?? 'Player',
       friendCode: json['friendCode'] as String? ?? 'PT-NEW',
       avatarUrl: json['avatarUrl'] as String?,
       isGuest: json['isGuest'] as bool? ?? true,
@@ -122,7 +123,8 @@ class RoomParticipantModel {
     return RoomParticipantModel(
       seat: (json['seat'] as num?)?.toInt() ?? 0,
       userId: json['userId'] as String? ?? '',
-      displayName: json['displayName'] as String? ?? (json['isBot'] == true ? 'Bot' : 'Player'),
+      displayName: json['displayName'] as String? ??
+          (json['isBot'] == true ? 'Bot' : 'Player'),
       avatarUrl: json['avatarUrl'] as String?,
       isHost: json['isHost'] as bool? ?? false,
       isBot: json['isBot'] as bool? ?? false,
@@ -133,6 +135,7 @@ class RoomParticipantModel {
 
 class RoomStateModel {
   final String code;
+  final String? pin;
   final String gameId;
   final String hostUserId;
   final int stake;
@@ -144,6 +147,7 @@ class RoomStateModel {
 
   const RoomStateModel({
     required this.code,
+    this.pin,
     required this.gameId,
     required this.hostUserId,
     this.stake = 0,
@@ -158,6 +162,7 @@ class RoomStateModel {
     final rawParticipants = json['participants'] as List<dynamic>? ?? [];
     return RoomStateModel(
       code: json['code'] as String? ?? '',
+      pin: json['pin'] as String?,
       gameId: json['gameId'] as String? ?? 'callbreak',
       hostUserId: json['hostUserId'] as String? ?? '',
       stake: (json['stake'] as num?)?.toInt() ?? 0,
@@ -165,7 +170,8 @@ class RoomStateModel {
       turnTimerSeconds: (json['turnTimerSeconds'] as num?)?.toInt() ?? 15,
       rules: Map<String, dynamic>.from(json['rules'] as Map? ?? {}),
       participants: rawParticipants
-          .map((p) => RoomParticipantModel.fromJson(Map<String, dynamic>.from(p as Map)))
+          .map((p) => RoomParticipantModel.fromJson(
+              Map<String, dynamic>.from(p as Map)))
           .toList(),
       tableId: json['tableId'] as String?,
     );
@@ -185,6 +191,7 @@ class NearbyPlayerModel {
   final String? currentGame;
   final bool isFriend;
   final bool hasPendingRequest;
+  final bool isSameWifi;
 
   const NearbyPlayerModel({
     required this.userId,
@@ -199,6 +206,7 @@ class NearbyPlayerModel {
     this.currentGame,
     this.isFriend = false,
     this.hasPendingRequest = false,
+    this.isSameWifi = false,
   });
 
   factory NearbyPlayerModel.fromJson(Map<String, dynamic> json) {
@@ -216,6 +224,7 @@ class NearbyPlayerModel {
       currentGame: presence?['gameId'] as String?,
       isFriend: json['isFriend'] as bool? ?? false,
       hasPendingRequest: json['hasPendingRequest'] as bool? ?? false,
+      isSameWifi: json['isSameWifi'] as bool? ?? false,
     );
   }
 }

@@ -15,6 +15,8 @@ export type RoomStatePayload = z.infer<typeof events.RoomStateSchema>;
 export type RoomStartedPayload = z.infer<typeof events.RoomStartedSchema>;
 
 export type SocialRoomInvitePayload = z.infer<typeof events.SocialRoomInviteSchema>;
+export type SocialShakePayload = z.infer<typeof events.SocialShakeSchema>;
+export type SocialShakeMatchedPayload = z.infer<typeof events.SocialShakeMatchedSchema>;
 export type SocialPresenceUpdatePayload = z.infer<typeof events.SocialPresenceUpdateSchema>;
 export type SocialFriendEventPayload = z.infer<typeof events.SocialFriendEventSchema>;
 export type TableMovePayload = z.infer<typeof events.TableMoveSchema>;

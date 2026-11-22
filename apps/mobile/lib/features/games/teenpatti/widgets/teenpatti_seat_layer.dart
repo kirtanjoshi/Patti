@@ -93,8 +93,12 @@ class TeenPattiSeatLayer extends StatelessWidget {
             final p = opponents[i];
             final t = n == 1 ? 0.5 : i / (n - 1);
             final a = (start + (end - start) * t) * math.pi / 180;
-            final x = (cx + rx * math.cos(a) - _seatW / 2).clamp(4.0, math.max(4.0, w - _seatW - 4)).toDouble();
-            final y = (cy + ry * math.sin(a) - _seatH / 2).clamp(28.0, math.max(28.0, h - _seatH - 70)).toDouble();
+            final x = (cx + rx * math.cos(a) - _seatW / 2)
+                .clamp(4.0, math.max(4.0, w - _seatW - 4))
+                .toDouble();
+            final y = (cy + ry * math.sin(a) - _seatH / 2)
+                .clamp(28.0, math.max(28.0, h - _seatH - 70))
+                .toDouble();
             return Positioned(
               left: x,
               top: y,

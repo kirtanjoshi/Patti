@@ -42,21 +42,37 @@ class SocketService {
   bool get isConnected => _isConnected;
 
   final _roomStateController = StreamController<RoomStateModel>.broadcast();
-  final _roomStartedController = StreamController<Map<String, dynamic>>.broadcast();
-  final _roomInviteController = StreamController<RoomInviteNotification>.broadcast();
-  final _tableStateController = StreamController<Map<String, dynamic>>.broadcast();
-  final _tableEventController = StreamController<Map<String, dynamic>>.broadcast();
-  final _tableTurnController = StreamController<Map<String, dynamic>>.broadcast();
-  final _tableResultController = StreamController<Map<String, dynamic>>.broadcast();
+  final _roomStartedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _roomInviteController =
+      StreamController<RoomInviteNotification>.broadcast();
+  final _tableStateController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _tableEventController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _tableTurnController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _tableResultController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _shakeMatchedController =
+      StreamController<Map<String, dynamic>>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
   Stream<RoomStateModel> get roomStateStream => _roomStateController.stream;
-  Stream<Map<String, dynamic>> get roomStartedStream => _roomStartedController.stream;
-  Stream<RoomInviteNotification> get roomInviteStream => _roomInviteController.stream;
-  Stream<Map<String, dynamic>> get tableStateStream => _tableStateController.stream;
-  Stream<Map<String, dynamic>> get tableEventStream => _tableEventController.stream;
-  Stream<Map<String, dynamic>> get tableTurnStream => _tableTurnController.stream;
-  Stream<Map<String, dynamic>> get tableResultStream => _tableResultController.stream;
+  Stream<Map<String, dynamic>> get roomStartedStream =>
+      _roomStartedController.stream;
+  Stream<RoomInviteNotification> get roomInviteStream =>
+      _roomInviteController.stream;
+  Stream<Map<String, dynamic>> get tableStateStream =>
+      _tableStateController.stream;
+  Stream<Map<String, dynamic>> get tableEventStream =>
+      _tableEventController.stream;
+  Stream<Map<String, dynamic>> get tableTurnStream =>
+      _tableTurnController.stream;
+  Stream<Map<String, dynamic>> get tableResultStream =>
+      _tableResultController.stream;
+  Stream<Map<String, dynamic>> get shakeMatchedStream =>
+      _shakeMatchedController.stream;
   Stream<String> get errorStream => _errorController.stream;
 
   void connect(String? token) {
@@ -128,6 +144,12 @@ class SocketService {
       }
     });
 
+    _socket!.on('social:shake_matched', (data) {
+      if (data is Map) {
+        _shakeMatchedController.add(Map<String, dynamic>.from(data));
+      }
+    });
+
     _socket!.on('error', (data) {
       if (data is Map && data['message'] != null) {
         _errorController.add(data['message'].toString());
@@ -150,7 +172,8 @@ class SocketService {
     if (_socket == null || !_isConnected) {
       // Simulate local mock room state for offline/demo
       final mock = RoomStateModel(
-        code: 'PAT${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+        code:
+            'PAT${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
         gameId: gameId,
         hostUserId: 'me',
         stake: stake,
@@ -257,6 +280,23 @@ class SocketService {
     });
   }
 
+  void shakeToMatch(String gameId) {
+    if (_socket == null || !_isConnected) {
+      // Simulate local match for offline/demo
+      Future.delayed(const Duration(milliseconds: 1400), () {
+        if (!_shakeMatchedController.isClosed) {
+          _shakeMatchedController.add({
+            'code': 'SHK${(1000 + (DateTime.now().millisecond % 9000))}',
+            'gameId': gameId,
+            'matchedWith': 'Rajesh Sharma',
+          });
+        }
+      });
+      return;
+    }
+    _socket?.emit('social:shake', {'gameId': gameId});
+  }
+
   void disconnect() {
     _socket?.disconnect();
     _socket?.dispose();
@@ -273,6 +313,7 @@ class SocketService {
     _tableEventController.close();
     _tableTurnController.close();
     _tableResultController.close();
+    _shakeMatchedController.close();
     _errorController.close();
   }
 }

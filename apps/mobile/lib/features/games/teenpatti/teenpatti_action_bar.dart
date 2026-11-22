@@ -102,9 +102,7 @@ class TeenPattiActionBar extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  isMyTurn
-                      ? 'table.your_turn'.tr()
-                      : 'table.waiting'.tr(),
+                  isMyTurn ? 'table.your_turn'.tr() : 'table.waiting'.tr(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: isMyTurn
                         ? colorScheme.primary

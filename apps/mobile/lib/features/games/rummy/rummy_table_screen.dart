@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
+import '../../../core/services/audio_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/card_hand.dart';
 import '../../../core/widgets/player_seat.dart';
 import '../../../core/widgets/playing_card.dart';
+import '../../../core/widgets/stacked_deck.dart';
 import '../../../core/widgets/table_shell.dart';
 import '../../../core/widgets/toast_banner.dart';
 
@@ -37,7 +39,8 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
   bool isSortedBySuit = true;
 
   // Joker Card (for Joker Rummy)
-  final Card cutJoker = const Card(suit: Suit.C, rank: 8, deck: 0, id: '8C_cut');
+  final Card cutJoker =
+      const Card(suit: Suit.C, rank: 8, deck: 0, id: '8C_cut');
 
   List<Card> stockPile = [
     const Card(suit: Suit.S, rank: 5, deck: 0, id: '5S1'),
@@ -67,29 +70,38 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
   ];
 
   void _onDrawStock() {
-    if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) return;
+    if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) {
+      return;
+    }
+    AudioService.instance.playCardSlide();
     setState(() {
       final drawn = stockPile.removeLast();
       myHand.add(drawn);
       turnPhase = 'discard';
       selectedCardId = drawn.id;
     });
-    ToastBanner.show(context, 'Discard 1 card to end turn', icon: Icons.arrow_upward);
+    ToastBanner.show(context, 'Discard 1 card to end turn',
+        icon: Icons.arrow_upward);
   }
 
   void _onDrawDiscard() {
-    if (currentTurnSeat != 0 || turnPhase != 'draw' || discardPile.isEmpty) return;
+    if (currentTurnSeat != 0 || turnPhase != 'draw' || discardPile.isEmpty) {
+      return;
+    }
+    AudioService.instance.playCardSlide();
     setState(() {
       final drawn = discardPile.removeLast();
       myHand.add(drawn);
       turnPhase = 'discard';
       selectedCardId = drawn.id;
     });
-    ToastBanner.show(context, 'Discard 1 card to end turn', icon: Icons.arrow_upward);
+    ToastBanner.show(context, 'Discard 1 card to end turn',
+        icon: Icons.arrow_upward);
   }
 
   void _onDiscardCard(Card card) {
     if (currentTurnSeat != 0 || turnPhase != 'discard') return;
+    AudioService.instance.playCardSnap();
     setState(() {
       myHand.removeWhere((c) => c.id == card.id);
       discardPile.add(card);
@@ -109,7 +121,8 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
               currentTurnSeat = 0;
               turnPhase = 'draw';
             });
-            ToastBanner.show(context, 'Your turn to draw', icon: Icons.touch_app);
+            ToastBanner.show(context, 'Your turn to draw',
+                icon: Icons.touch_app);
           });
         });
       });
@@ -117,6 +130,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
   }
 
   void _toggleSort() {
+    AudioService.instance.playShuffle();
     setState(() {
       isSortedBySuit = !isSortedBySuit;
       if (isSortedBySuit) {
@@ -134,6 +148,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
   }
 
   void _onDeclare() {
+    AudioService.instance.playWinJingle();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -159,7 +174,8 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
         content: Text(
           'Valid declaration with Pure Sequence, Sequences & Sets!\n\n'
           '🎉 YOU WIN 600 COINS!',
-          style: PatiiTypography.body(fontSize: 14, color: PatiiColors.textPrimary),
+          style: PatiiTypography.body(
+              fontSize: 14, color: PatiiColors.textPrimary),
         ),
         actions: [
           GoldButton(
@@ -206,7 +222,8 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Got it', style: PatiiTypography.display(color: PatiiColors.gold)),
+            child: Text('Got it',
+                style: PatiiTypography.display(color: PatiiColors.gold)),
           ),
         ],
       ),
@@ -280,58 +297,39 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Stock Pile
-                      GestureDetector(
-                        onTap: isMyTurn && turnPhase == 'draw' ? _onDrawStock : null,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          clipBehavior: Clip.none,
-                          children: [
-                            PlayingCard.table(
-                              card: const Card(suit: Suit.S, rank: 1, deck: 0, id: 'back'),
-                              isFaceDown: true,
-                              width: 48,
-                              height: 68,
-                            ),
-                            Positioned(
-                              bottom: -6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: PatiiColors.navy.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: PatiiColors.goldDark, width: 0.8),
-                                ),
-                                child: Text(
-                                  '${stockPile.length}',
-                                  style: PatiiTypography.caption(color: PatiiColors.goldLight, bold: true),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      // Stock Pile (Physical 3D stacked deck)
+                      StackedDeck(
+                        topCard: const Card(
+                            suit: Suit.S, rank: 1, deck: 0, id: 'back'),
+                        isFaceDown: true,
+                        cardCount: stockPile.length,
+                        width: 48,
+                        height: 68,
+                        label: 'STOCK',
+                        isInteractive: isMyTurn && turnPhase == 'draw',
+                        onTap: isMyTurn && turnPhase == 'draw'
+                            ? _onDrawStock
+                            : null,
                       ),
                       const SizedBox(width: 16),
 
-                      // Discard Pile
-                      GestureDetector(
-                        onTap: isMyTurn && turnPhase == 'draw' && discardPile.isNotEmpty
+                      // Discard Pile (Layered discard stack)
+                      StackedDeck(
+                        topCard: discardPile.isNotEmpty ? discardPile.last : null,
+                        isFaceDown: false,
+                        cardCount: discardPile.length,
+                        width: 48,
+                        height: 68,
+                        label: 'DISCARD',
+                        spreadDiscard: true,
+                        isInteractive: isMyTurn &&
+                            turnPhase == 'draw' &&
+                            discardPile.isNotEmpty,
+                        onTap: isMyTurn &&
+                                turnPhase == 'draw' &&
+                                discardPile.isNotEmpty
                             ? _onDrawDiscard
                             : null,
-                        child: discardPile.isEmpty
-                            ? Container(
-                                width: 48,
-                                height: 68,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                                ),
-                              )
-                            : PlayingCard.table(
-                                card: discardPile.last,
-                                width: 48,
-                                height: 68,
-                              ),
                       ),
 
                       // Cut Joker (if Joker Rummy variant)
@@ -369,13 +367,20 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
                 child: CardHand(
                   cards: myHand,
                   selectedCardId: selectedCardId,
-                  wildOrMaalCardId: widget.isJokerVariant ? cutJoker.id : null,
                   cardWidth: 54,
                   cardHeight: 78,
                   maxArcDegrees: 8,
+                  cardBadgeBuilder: (card) =>
+                      (widget.isJokerVariant &&
+                              (card.id == cutJoker.id ||
+                                  card.rank == cutJoker.rank ||
+                                  card.isJoker))
+                          ? 'JOKER'
+                          : null,
                   onCardTap: (card) {
                     setState(() {
-                      selectedCardId = selectedCardId == card.id ? null : card.id;
+                      selectedCardId =
+                          selectedCardId == card.id ? null : card.id;
                     });
                   },
                   onCardPlay: (card) {
@@ -415,7 +420,9 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
                     const SizedBox(height: 6),
 
                     // Discard Button
-                    if (isMyTurn && turnPhase == 'discard' && selectedCard != null)
+                    if (isMyTurn &&
+                        turnPhase == 'discard' &&
+                        selectedCard != null)
                       DangerButton(
                         label: 'Discard',
                         icon: Icons.arrow_upward,

@@ -19,6 +19,9 @@ import '../games/kitti/kitti_table_screen.dart';
 import '../games/marriage/marriage_table_screen.dart';
 import '../games/rummy/rummy_table_screen.dart';
 import '../games/teenpatti/teenpatti_table_screen.dart';
+import 'widgets/create_room_tab_view.dart';
+import 'widgets/join_room_tab_view.dart';
+import 'widgets/room_qr_dialog.dart';
 
 class RoomScreen extends ConsumerStatefulWidget {
   final String? initialCode;
@@ -29,28 +32,13 @@ class RoomScreen extends ConsumerStatefulWidget {
   ConsumerState<RoomScreen> createState() => _RoomScreenState();
 }
 
-class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProviderStateMixin {
+class _RoomScreenState extends ConsumerState<RoomScreen>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final TextEditingController _codeController = TextEditingController();
-  String _selectedGame = 'callbreak';
-  int _stake = 0;
-  int _seats = 2;
   RoomStateModel? _currentRoom;
   StreamSubscription? _roomSub;
   StreamSubscription? _startSub;
-
-  List<int> _getAllowedSeats(String gameId) {
-    switch (gameId) {
-      case 'callbreak':
-        return [2, 4];
-      case 'teenpatti':
-      case 'rummy':
-      case 'jokerrummy':
-        return [2, 3, 4, 5, 6];
-      default:
-        return [2, 3, 4, 5];
-    }
-  }
 
   @override
   void initState() {
@@ -71,13 +59,17 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
 
     _startSub = socket.roomStartedStream.listen((data) {
       if (!mounted) return;
-      final gameId = data['gameId'] as String? ?? _currentRoom?.gameId ?? 'callbreak';
+      final gameId =
+          data['gameId'] as String? ?? _currentRoom?.gameId ?? 'callbreak';
       final tableId = data['tableId'] as String?;
       final myUserId = ref.read(authProvider).user?.userId;
-      final mySeat = _currentRoom?.participants.firstWhere(
-        (p) => p.userId == myUserId,
-        orElse: () => _currentRoom!.participants.first,
-      ).seat ?? 0;
+      final mySeat = _currentRoom?.participants
+              .firstWhere(
+                (p) => p.userId == myUserId,
+                orElse: () => _currentRoom!.participants.first,
+              )
+              .seat ??
+          0;
       _navigateToGameTable(
         gameId,
         tableId: tableId,
@@ -141,18 +133,22 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
     super.dispose();
   }
 
-  void _handleCreateRoom() {
+  void _handleCreateRoom({
+    required String gameId,
+    required int seats,
+    required int stake,
+  }) {
     final socket = ref.read(socketServiceProvider);
     socket.createRoom(
-      gameId: _selectedGame,
+      gameId: gameId,
       rules: {},
-      stake: _stake,
-      seats: _seats,
+      stake: stake,
+      seats: seats,
     );
   }
 
-  void _handleJoinRoom() {
-    final code = _codeController.text.trim();
+  void _handleJoinRoom([String? customCode]) {
+    final code = customCode ?? _codeController.text.trim();
     if (code.length < 4) return;
     final socket = ref.read(socketServiceProvider);
     socket.joinRoom(code);
@@ -183,7 +179,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
   void _addBot() {
     if (_currentRoom == null) return;
     ref.read(socketServiceProvider).addBot(_currentRoom!.code);
-    ToastBanner.show(context, 'Bot added to room', icon: Icons.smart_toy_outlined);
+    ToastBanner.show(context, 'Bot added to room',
+        icon: Icons.smart_toy_outlined);
   }
 
   void _startGame() {
@@ -203,7 +200,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
         backgroundColor: PatiiColors.navyElevated,
         title: Text(
           'room.title'.tr(),
-          style: PatiiTypography.display(fontSize: 18, fontWeight: FontWeight.bold),
+          style: PatiiTypography.display(
+              fontSize: 18, fontWeight: FontWeight.bold),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -227,186 +225,23 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
   }
 
   Widget _buildCreateRoomTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'room.rules'.tr(),
-            style: PatiiTypography.display(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: PatiiColors.goldLight,
-            ),
-          ),
-          const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            // ignore: deprecated_member_use
-            value: _selectedGame,
-            dropdownColor: PatiiColors.navyElevated,
-            style: PatiiTypography.body(color: PatiiColors.textPrimary),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: PatiiColors.navySurface,
-              labelText: 'Select Game',
-              labelStyle: PatiiTypography.body(color: PatiiColors.textMuted),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: PatiiColors.hairline),
-              ),
-            ),
-            items: [
-              'callbreak',
-              'marriage',
-              'teenpatti',
-              'kitti',
-              'dhumbal',
-              'jutpatti',
-              'rummy',
-              'jokerrummy'
-            ].map((id) {
-              return DropdownMenuItem(
-                value: id,
-                child: Text('lobby.games.$id'.tr()),
-              );
-            }).toList(),
-            onChanged: (val) {
-              if (val != null) {
-                setState(() {
-                  _selectedGame = val;
-                  final allowed = _getAllowedSeats(val);
-                  if (!allowed.contains(_seats)) {
-                    _seats = allowed.first;
-                  }
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Number of Players',
-            style: PatiiTypography.body(fontSize: 13, color: PatiiColors.textSecondary),
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<int>(
-            segments: _getAllowedSeats(_selectedGame).map((s) {
-              return ButtonSegment<int>(
-                value: s,
-                label: Text(
-                  _selectedGame == 'callbreak' && s == 2
-                      ? '2 (1v1 + 2 Bots)'
-                      : '$s Players',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              );
-            }).toList(),
-            selected: {_seats},
-            onSelectionChanged: (set) => setState(() => _seats = set.first),
-            style: ButtonStyle(
-              backgroundColor: WidgetStateProperty.resolveWith(
-                (states) => states.contains(WidgetState.selected)
-                    ? PatiiColors.gold.withValues(alpha: 0.25)
-                    : PatiiColors.navySurface,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Table Stake',
-            style: PatiiTypography.body(fontSize: 13, color: PatiiColors.textSecondary),
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Friendly (0)')),
-              ButtonSegment(value: 100, label: Text('100')),
-              ButtonSegment(value: 500, label: Text('500')),
-            ],
-            selected: {_stake},
-            onSelectionChanged: (set) => setState(() => _stake = set.first),
-            style: ButtonStyle(
-              backgroundColor: WidgetStateProperty.resolveWith(
-                (states) => states.contains(WidgetState.selected)
-                    ? PatiiColors.gold.withValues(alpha: 0.25)
-                    : PatiiColors.navySurface,
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          GoldButton(
-            label: 'room.create'.tr(),
-            icon: Icons.add_circle_outline_rounded,
-            height: 50,
-            onPressed: _handleCreateRoom,
-          ),
-        ],
-      ),
-    );
+    return CreateRoomTabView(onCreate: _handleCreateRoom);
   }
 
   Widget _buildJoinRoomTab() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'room.enter_code'.tr(),
-            style: PatiiTypography.display(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: PatiiColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _codeController,
-                  maxLength: 6,
-                  textCapitalization: TextCapitalization.characters,
-                  style: PatiiTypography.display(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 4,
-                    color: PatiiColors.goldLight,
-                  ),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    filled: true,
-                    fillColor: PatiiColors.navySurface,
-                    hintText: 'e.g. 7X8K2M',
-                    hintStyle: PatiiTypography.body(letterSpacing: 2, color: PatiiColors.textMuted),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: PatiiColors.hairline),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                icon: const Icon(Icons.paste_rounded, color: PatiiColors.gold),
-                onPressed: _pasteFromClipboard,
-                tooltip: 'Paste',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          GoldButton(
-            label: 'room.join'.tr(),
-            icon: Icons.login_rounded,
-            height: 50,
-            onPressed: _handleJoinRoom,
-          ),
-        ],
-      ),
+    return JoinRoomTabView(
+      codeController: _codeController,
+      onJoin: _handleJoinRoom,
+      onPaste: _pasteFromClipboard,
     );
   }
 
   Widget _buildRoomLobby(RoomStateModel room) {
+    final voicePin = room.pin ??
+        (room.code.length >= 4
+            ? room.code.substring(room.code.length - 4)
+            : '5521');
+
     return Scaffold(
       backgroundColor: PatiiColors.navy,
       appBar: AppBar(
@@ -420,7 +255,8 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
         ),
         title: Text(
           'Room Lobby · ${room.gameId.toUpperCase()}',
-          style: PatiiTypography.display(fontSize: 17, fontWeight: FontWeight.bold),
+          style: PatiiTypography.display(
+              fontSize: 17, fontWeight: FontWeight.bold),
         ),
       ),
       body: Padding(
@@ -433,39 +269,142 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
               decoration: BoxDecoration(
                 color: PatiiColors.navySurface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: PatiiColors.gold.withValues(alpha: 0.3)),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('room.code_label'.tr(),
+                                style: PatiiTypography.body(
+                                    fontSize: 12, color: PatiiColors.textMuted)),
+                            const SizedBox(height: 2),
+                            SelectableText(
+                              room.code,
+                              style: PatiiTypography.display(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: PatiiColors.goldLight,
+                                letterSpacing: 3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy_rounded,
+                            color: PatiiColors.gold),
+                        tooltip: 'Copy Code',
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: room.code));
+                          ToastBanner.show(context, 'Room code copied!',
+                              icon: Icons.copy_rounded);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_2_rounded,
+                            color: PatiiColors.gold),
+                        tooltip: 'QR Code',
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => RoomQrDialog(
+                              roomCode: room.code,
+                              pin: voicePin,
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.share_rounded,
+                            color: PatiiColors.info),
+                        tooltip: 'Share',
+                        onPressed: () => _shareRoom(room.code),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Voice PIN Prominent Display
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: PatiiColors.navyElevated,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF00E676).withValues(alpha: 0.35),
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('room.code_label'.tr(),
-                            style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textMuted)),
-                        const SizedBox(height: 2),
-                        SelectableText(
-                          room.code,
-                          style: PatiiTypography.display(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: PatiiColors.goldLight,
-                            letterSpacing: 3,
-                          ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.record_voice_over_rounded,
+                              color: Color(0xFF00E676),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Voice PIN: ',
+                              style: PatiiTypography.body(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: PatiiColors.textMuted,
+                              ),
+                            ),
+                            SelectableText(
+                              voicePin,
+                              style: PatiiTypography.display(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF00E676),
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.copy_rounded,
+                                  color: PatiiColors.gold, size: 16),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Copy Voice PIN',
+                              onPressed: () {
+                                Clipboard.setData(
+                                    ClipboardData(text: voicePin));
+                                ToastBanner.show(
+                                  context,
+                                  'Voice PIN copied: $voicePin',
+                                  icon: Icons.copy_rounded,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.volume_up_rounded,
+                                size: 12, color: PatiiColors.goldLight),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Shout this 4-digit PIN to friends nearby',
+                              style: PatiiTypography.body(
+                                fontSize: 10.5,
+                                color: PatiiColors.goldLight,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy_rounded, color: PatiiColors.gold),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: room.code));
-                      ToastBanner.show(context, 'Room code copied!', icon: Icons.copy_rounded);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.share_rounded, color: PatiiColors.info),
-                    onPressed: () => _shareRoom(room.code),
                   ),
                 ],
               ),
@@ -478,26 +417,40 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
                 itemCount: room.maxSeats,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (ctx, index) {
-                  final participant =
-                      room.participants.firstWhere((p) => p.seat == index, orElse: () => const RoomParticipantModel(seat: -1, userId: '', displayName: ''));
+                  final participant = room.participants.firstWhere(
+                      (p) => p.seat == index,
+                      orElse: () => const RoomParticipantModel(
+                          seat: -1, userId: '', displayName: ''));
                   final isOccupied = participant.seat != -1;
 
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isOccupied ? PatiiColors.navyElevated : PatiiColors.navySurface.withValues(alpha: 0.5),
+                      color: isOccupied
+                          ? PatiiColors.navyElevated
+                          : PatiiColors.navySurface.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isOccupied ? PatiiColors.gold.withValues(alpha: 0.2) : PatiiColors.hairline),
+                      border: Border.all(
+                          color: isOccupied
+                              ? PatiiColors.gold.withValues(alpha: 0.2)
+                              : PatiiColors.hairline),
                     ),
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: isOccupied ? PatiiColors.gold.withValues(alpha: 0.15) : Colors.white10,
+                          backgroundColor: isOccupied
+                              ? PatiiColors.gold.withValues(alpha: 0.15)
+                              : Colors.white10,
                           child: Icon(
                             isOccupied
-                                ? (participant.isBot ? Icons.smart_toy_outlined : Icons.person)
+                                ? (participant.isBot
+                                    ? Icons.smart_toy_outlined
+                                    : Icons.person)
                                 : Icons.chair_alt_outlined,
-                            color: isOccupied ? PatiiColors.goldLight : PatiiColors.textMuted,
+                            color: isOccupied
+                                ? PatiiColors.goldLight
+                                : PatiiColors.textMuted,
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -507,15 +460,22 @@ class _RoomScreenState extends ConsumerState<RoomScreen> with SingleTickerProvid
                                 ? '${participant.displayName} ${participant.isHost ? "👑" : ""}'
                                 : 'Empty Seat ${index + 1}',
                             style: PatiiTypography.body(
-                              fontWeight: isOccupied ? FontWeight.bold : FontWeight.normal,
-                              color: isOccupied ? PatiiColors.textPrimary : PatiiColors.textMuted,
+                              fontWeight: isOccupied
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isOccupied
+                                  ? PatiiColors.textPrimary
+                                  : PatiiColors.textMuted,
                             ),
                           ),
                         ),
                         if (!isOccupied)
                           TextButton.icon(
-                            icon: const Icon(Icons.add, size: 16, color: PatiiColors.gold),
-                            label: const Text('Add Bot', style: TextStyle(color: PatiiColors.gold, fontSize: 12)),
+                            icon: const Icon(Icons.add,
+                                size: 16, color: PatiiColors.gold),
+                            label: const Text('Add Bot',
+                                style: TextStyle(
+                                    color: PatiiColors.gold, fontSize: 12)),
                             onPressed: _addBot,
                           ),
                       ],

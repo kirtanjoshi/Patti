@@ -89,7 +89,8 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                   child: GestureDetector(
                     onTap: () => setState(() => _activeShowIndex = index),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0, vertical: 6.0),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? PatiiColors.gold
@@ -107,7 +108,9 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                         style: PatiiTypography.display(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? PatiiColors.navy : PatiiColors.textPrimary,
+                          color: isSelected
+                              ? PatiiColors.navy
+                              : PatiiColors.textPrimary,
                         ),
                       ),
                     ),
@@ -121,12 +124,15 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
 
           // Show Outcome Header
           GlassPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  showResult?.isVoid == true ? Icons.handshake : Icons.emoji_events,
+                  showResult?.isVoid == true
+                      ? Icons.handshake
+                      : Icons.emoji_events,
                   size: 18,
                   color: PatiiColors.gold,
                 ),
@@ -135,7 +141,8 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                   showResult?.isVoid == true
                       ? 'kitti.show_void'.tr()
                       : (winningPlayer != null
-                          ? 'kitti.show_winner'.tr(args: [winningPlayer.displayName])
+                          ? 'kitti.show_winner'
+                              .tr(args: [winningPlayer.displayName])
                           : ''),
                   style: PatiiTypography.display(
                     fontSize: 13,
@@ -161,7 +168,8 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 3.0),
               child: GlassPanel(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
                 customBorder: Border.all(
                   color: isThisWinner
                       ? PatiiColors.gold
@@ -181,8 +189,12 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                             player.displayName,
                             style: PatiiTypography.body(
                               fontSize: 12,
-                              fontWeight: isThisWinner ? FontWeight.bold : FontWeight.w500,
-                              color: isThisWinner ? PatiiColors.goldLight : PatiiColors.textPrimary,
+                              fontWeight: isThisWinner
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: isThisWinner
+                                  ? PatiiColors.goldLight
+                                  : PatiiColors.textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -191,7 +203,9 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                             Text(
                               evaluation.labelKey.tr(),
                               style: PatiiTypography.caption(
-                                color: isThisWinner ? PatiiColors.success : PatiiColors.textMuted,
+                                color: isThisWinner
+                                    ? PatiiColors.success
+                                    : PatiiColors.textMuted,
                                 bold: isThisWinner,
                               ).copyWith(fontSize: 9),
                               maxLines: 1,
@@ -208,7 +222,8 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: handCards.map((card) {
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 2.0),
                             child: PlayingCard.table(
                               card: card,
                               width: 32.0,
@@ -270,7 +285,8 @@ class _KittiRevealBoardState extends State<KittiRevealBoard> {
                 ),
                 Text(
                   subtitle,
-                  style: PatiiTypography.caption(color: PatiiColors.textSecondary),
+                  style:
+                      PatiiTypography.caption(color: PatiiColors.textSecondary),
                 ),
               ],
             ),

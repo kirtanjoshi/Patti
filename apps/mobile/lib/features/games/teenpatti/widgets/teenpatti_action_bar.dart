@@ -56,7 +56,10 @@ class TeenPattiActionBar extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               'teenpatti.blind_limit_reached'.tr(),
-              style: PatiiTypography.body(fontSize: 12, fontWeight: FontWeight.w700, color: PatiiColors.warning),
+              style: PatiiTypography.body(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: PatiiColors.warning),
             ),
           )
         else if (!isMyTurn)
@@ -64,7 +67,8 @@ class TeenPattiActionBar extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 6, right: 4),
             child: Text(
               'table.waiting'.tr(),
-              style: PatiiTypography.eyebrow(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)),
+              style: PatiiTypography.eyebrow(
+                  fontSize: 10, color: Colors.white.withValues(alpha: 0.5)),
             ),
           ),
         Wrap(
@@ -117,6 +121,8 @@ class TeenPattiActionBar extends StatelessWidget {
           ],
         ),
       ],
-    ).animate(target: isMyTurn ? 1 : 0).scaleXY(begin: 0.98, end: 1, duration: 200.ms);
+    )
+        .animate(target: isMyTurn ? 1 : 0)
+        .scaleXY(begin: 0.98, end: 1, duration: 200.ms);
   }
 }

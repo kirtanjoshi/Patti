@@ -6,7 +6,8 @@ import 'package:patii_engine/patii_engine.dart';
 
 void main() {
   group('KittiEvaluator Tests', () {
-    test('evaluates Trail, Pure Run, Run, Color, Pair, High Card, and 2-3-5', () {
+    test('evaluates Trail, Pure Run, Run, Color, Pair, High Card, and 2-3-5',
+        () {
       // Trail
       final trail = [
         const Card(suit: Suit.S, rank: 1, deck: 0, id: 'AS'),
@@ -21,7 +22,8 @@ void main() {
         const Card(suit: Suit.S, rank: 13, deck: 0, id: 'KS'),
         const Card(suit: Suit.S, rank: 12, deck: 0, id: 'QS'),
       ];
-      expect(KittiEvaluator.evaluate(pureRun).category, KittiHandCategory.pureRun);
+      expect(
+          KittiEvaluator.evaluate(pureRun).category, KittiHandCategory.pureRun);
 
       // Run (Straight)
       final run = [
@@ -53,7 +55,8 @@ void main() {
         const Card(suit: Suit.D, rank: 9, deck: 0, id: '9D'),
         const Card(suit: Suit.H, rank: 4, deck: 0, id: '4H'),
       ];
-      expect(KittiEvaluator.evaluate(highCard).category, KittiHandCategory.highCard);
+      expect(KittiEvaluator.evaluate(highCard).category,
+          KittiHandCategory.highCard);
 
       // 2-3-5 of different suits
       final special235 = [
@@ -61,7 +64,8 @@ void main() {
         const Card(suit: Suit.H, rank: 3, deck: 0, id: '3H'),
         const Card(suit: Suit.D, rank: 5, deck: 0, id: '5D'),
       ];
-      expect(KittiEvaluator.evaluate(special235).category, KittiHandCategory.special235);
+      expect(KittiEvaluator.evaluate(special235).category,
+          KittiHandCategory.special235);
     });
 
     test('bestArrangement splits 9 cards into 3 valid hands of 3', () {
@@ -86,7 +90,8 @@ void main() {
   });
 
   group('KittiTableScreen Widget Tests', () {
-    testWidgets('renders Kitti table screen with seats, slots, and actions', (tester) async {
+    testWidgets('renders Kitti table screen with seats, slots, and actions',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: KittiTableScreen(),

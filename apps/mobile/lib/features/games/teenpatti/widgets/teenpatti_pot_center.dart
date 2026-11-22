@@ -8,7 +8,7 @@ import '../../../../core/widgets/coin_counter.dart';
 
 /// Centre pot: chip stacks over a large counting number.
 /// The number rolls to each new total and the chips pop when the pot grows.
-class TeenPattiPotCenter extends StatelessWidget {
+class TeenPattiPotCenter extends StatefulWidget {
   final int pot;
   final int currentStake;
   final int? lastBetAmount;
@@ -21,7 +21,30 @@ class TeenPattiPotCenter extends StatelessWidget {
   });
 
   @override
+  State<TeenPattiPotCenter> createState() => _TeenPattiPotCenterState();
+}
+
+class _TeenPattiPotCenterState extends State<TeenPattiPotCenter> {
+  int _previousPot = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _previousPot = widget.pot;
+  }
+
+  @override
+  void didUpdateWidget(covariant TeenPattiPotCenter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pot != widget.pot) {
+      _previousPot = oldWidget.pot;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final pot = widget.pot;
+    final currentStake = widget.currentStake;
     final formattedPot = NumberFormat('#,###').format(pot);
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
@@ -37,13 +60,13 @@ class TeenPattiPotCenter extends StatelessWidget {
       ],
     );
     if (!reduceMotion) {
-      chips = chips
-          .animate(key: ValueKey(pot))
-          .scaleXY(begin: 0.9, end: 1, duration: 260.ms, curve: Curves.easeOutBack);
+      chips = chips.animate(key: ValueKey(pot)).scaleXY(
+          begin: 0.9, end: 1, duration: 260.ms, curve: Curves.easeOutBack);
     }
 
     return Semantics(
-      label: '${'teenpatti.pot'.tr()}: $formattedPot, ${'teenpatti.stake'.tr()}: $currentStake',
+      label:
+          '${'teenpatti.pot'.tr()}: $formattedPot, ${'teenpatti.stake'.tr()}: $currentStake',
       child: ExcludeSemantics(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -63,7 +86,10 @@ class TeenPattiPotCenter extends StatelessWidget {
                   const CoinGlyph(size: 22),
                   const SizedBox(width: 8),
                   TweenAnimationBuilder<double>(
-                    tween: Tween(begin: pot.toDouble(), end: pot.toDouble()),
+                    tween: Tween(
+                      begin: _previousPot.toDouble(),
+                      end: pot.toDouble(),
+                    ),
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.easeOutCubic,
                     builder: (context, v, _) => Text(
@@ -81,7 +107,8 @@ class TeenPattiPotCenter extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'teenpatti.pot'.tr().toUpperCase(),
-              style: PatiiTypography.eyebrow(fontSize: 9.5, color: Colors.white.withValues(alpha: 0.5)),
+              style: PatiiTypography.eyebrow(
+                  fontSize: 9.5, color: Colors.white.withValues(alpha: 0.5)),
             ),
           ],
         ),

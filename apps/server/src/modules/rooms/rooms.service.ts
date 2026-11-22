@@ -15,6 +15,7 @@ export interface RoomParticipant {
 
 export interface PrivateRoom {
   readonly code: string;
+  readonly pin: string;
   readonly gameId: GameId;
   hostUserId: string;
   rules: Record<string, unknown>;
@@ -32,6 +33,7 @@ const CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excludes 0, O, 1, I pe
 @Injectable()
 export class RoomsService {
   private readonly activeRooms = new Map<string, PrivateRoom>();
+  private readonly pinToRoomCode = new Map<string, string>();
 
   constructor(private readonly tableService?: TableService) {}
 
@@ -53,6 +55,10 @@ export class RoomsService {
     return code;
   }
 
+  public generateRoomPin(): string {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
   public createRoom(
     hostUserId: string,
     gameId: GameId,
@@ -69,8 +75,14 @@ export class RoomsService {
       code = this.generateRoomCode();
     }
 
+    let pin = this.generateRoomPin();
+    while (this.pinToRoomCode.has(pin)) {
+      pin = this.generateRoomPin();
+    }
+
     const room: PrivateRoom = {
       code,
+      pin,
       gameId,
       hostUserId,
       rules,
@@ -93,13 +105,25 @@ export class RoomsService {
     };
 
     this.activeRooms.set(code, room);
+    this.pinToRoomCode.set(pin, code);
     return room;
   }
 
-  public getRoom(code: string): PrivateRoom {
-    const room = this.activeRooms.get(code.toUpperCase());
+  public getRoom(codeOrPin: string): PrivateRoom {
+    const trimmed = codeOrPin.trim();
+    let resolvedCode = trimmed.toUpperCase();
+
+    // If 4 digits, resolve to room code via pinToRoomCode
+    if (/^\d{4}$/.test(trimmed)) {
+      const mappedCode = this.pinToRoomCode.get(trimmed);
+      if (mappedCode) {
+        resolvedCode = mappedCode;
+      }
+    }
+
+    const room = this.activeRooms.get(resolvedCode);
     if (!room) {
-      throw new NotFoundException(`Room with code ${code} not found.`);
+      throw new NotFoundException(`Room with code or pin ${codeOrPin} not found.`);
     }
     return room;
   }
@@ -150,6 +174,7 @@ export class RoomsService {
 
     if (room.participants.length === 0) {
       this.activeRooms.delete(code.toUpperCase());
+      this.pinToRoomCode.delete(room.pin);
       return null;
     }
 
@@ -160,6 +185,7 @@ export class RoomsService {
         room.hostUserId = nextHuman.userId;
       } else {
         this.activeRooms.delete(code.toUpperCase());
+        this.pinToRoomCode.delete(room.pin);
         return null;
       }
     }
@@ -293,6 +319,7 @@ export class RoomsService {
 
     return {
       code: room.code,
+      pin: room.pin,
       gameId: room.gameId,
       hostUserId: room.hostUserId,
       rules: room.rules,

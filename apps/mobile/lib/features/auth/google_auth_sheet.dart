@@ -51,7 +51,8 @@ class GoogleAuthSheet extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(top: BorderSide(color: PatiiColors.hairline)),
       ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -71,7 +72,9 @@ class GoogleAuthSheet extends ConsumerWidget {
             radius: 36,
             backgroundColor: PatiiColors.gold.withValues(alpha: 0.2),
             child: Text(
-              user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : 'P',
+              user.displayName.isNotEmpty
+                  ? user.displayName[0].toUpperCase()
+                  : 'P',
               style: PatiiTypography.display(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -113,7 +116,9 @@ class GoogleAuthSheet extends ConsumerWidget {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  user.isGuest ? 'auth.guest_badge'.tr() : 'auth.google_verified'.tr(),
+                  user.isGuest
+                      ? 'auth.guest_badge'.tr()
+                      : 'auth.google_verified'.tr(),
                   style: PatiiTypography.body(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -160,12 +165,14 @@ class GoogleAuthSheet extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.copy_rounded, color: PatiiColors.gold, size: 20),
+                  icon: const Icon(Icons.copy_rounded,
+                      color: PatiiColors.gold, size: 20),
                   onPressed: () => _copyFriendCode(context, user.friendCode),
                   tooltip: 'Copy',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.share_rounded, color: PatiiColors.info, size: 20),
+                  icon: const Icon(Icons.share_rounded,
+                      color: PatiiColors.info, size: 20),
                   onPressed: () => _shareFriendCode(user.friendCode),
                   tooltip: 'Share',
                 ),
@@ -181,14 +188,16 @@ class GoogleAuthSheet extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: PatiiColors.info.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: PatiiColors.info.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: PatiiColors.info.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.cloud_upload_outlined, color: PatiiColors.info, size: 20),
+                      const Icon(Icons.cloud_upload_outlined,
+                          color: PatiiColors.info, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -217,8 +226,9 @@ class GoogleAuthSheet extends ConsumerWidget {
                     height: 42,
                     onPressed: () async {
                       Navigator.pop(context);
-                      final success =
-                          await ref.read(authProvider.notifier).linkGoogleWithPrompt();
+                      final success = await ref
+                          .read(authProvider.notifier)
+                          .linkGoogleWithPrompt();
                       if (context.mounted && success) {
                         ToastBanner.show(
                           context,
@@ -256,7 +266,8 @@ class GoogleAuthSheet extends ConsumerWidget {
                       shape: BoxShape.circle,
                       color: PatiiColors.gold.withValues(alpha: 0.16),
                     ),
-                    child: const Icon(Icons.auto_awesome, color: PatiiColors.gold, size: 16),
+                    child: const Icon(Icons.auto_awesome,
+                        color: PatiiColors.gold, size: 16),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -273,12 +284,14 @@ class GoogleAuthSheet extends ConsumerWidget {
                         ),
                         Text(
                           'Nearby Radar, Deep Links & Friends',
-                          style: PatiiTypography.body(fontSize: 11, color: PatiiColors.textMuted),
+                          style: PatiiTypography.body(
+                              fontSize: 11, color: PatiiColors.textMuted),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: PatiiColors.textMuted),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 13, color: PatiiColors.textMuted),
                 ],
               ),
             ),

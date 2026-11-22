@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart' as engine;
 import '../../core/theme/patii_theme.dart';
 import '../../core/widgets/patii_widgets.dart';
+import 'widgets/audio_studio_section.dart';
 
 /// Design System Component Gallery Screen (`/dev/gallery`)
 /// Showcases every theme token, shared component, and interactive state.
@@ -65,20 +66,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
               _buildSectionTitle('1. Typography Tokens'),
               _buildTypographySection(),
               const SizedBox(height: PatiiSpacing.s24),
-
               _buildSectionTitle('2. Color Tokens & Swatches'),
               _buildColorSwatches(),
               const SizedBox(height: PatiiSpacing.s24),
-
               _buildSectionTitle('3. Buttons (Gold CTA, Ghost, Danger)'),
               _buildButtonsSection(),
               const SizedBox(height: PatiiSpacing.s24),
-
               _buildSectionTitle('4. Playing Cards (States & Styles)'),
               _buildPlayingCardsSection(),
               const SizedBox(height: PatiiSpacing.s24),
-
-              _buildSectionTitle('5. Overlapping Card Hand (Callbreak 13-Card Fan)'),
+              _buildSectionTitle(
+                  '5. Overlapping Card Hand (Callbreak 13-Card Fan)'),
               Text(
                 'Full hand guaranteed to fit width; tap to select, drag up to play',
                 style: PatiiTypography.bodySmall,
@@ -102,21 +100,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 },
               ),
               const SizedBox(height: PatiiSpacing.s24),
-
-              _buildSectionTitle('6. Player Seats (Circular 52px, Timer Ring, Badges)'),
+              _buildSectionTitle(
+                  '6. Player Seats (Circular 52px, Timer Ring, Badges)'),
               _buildPlayerSeatsSection(),
               const SizedBox(height: PatiiSpacing.s24),
-
               _buildSectionTitle('7. Casino Chips & Stacks'),
               _buildChipsSection(),
               const SizedBox(height: PatiiSpacing.s24),
-
-              _buildSectionTitle('8. Table Felt (Wood Rail, Gold Line, Watermark)'),
+              _buildSectionTitle(
+                  '8. Table Felt (Wood Rail, Gold Line, Watermark)'),
               _buildTableFeltPreview(),
               const SizedBox(height: PatiiSpacing.s24),
-
               _buildSectionTitle('9. Glass Panels & Sheets'),
               _buildGlassSection(),
+              const SizedBox(height: PatiiSpacing.s24),
+              _buildSectionTitle('10. Audio & Sound Design Studio'),
+              const AudioStudioSection(),
               const SizedBox(height: PatiiSpacing.s32),
             ],
           ),
@@ -152,13 +151,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Cinzel Heading: POT 4,800 COINS', style: PatiiTypography.potDisplay),
+          Text('Sora Display Heading: POT 4,800 COINS',
+              style: PatiiTypography.potDisplay),
           const SizedBox(height: 4),
-          Text('Title Large (Cinzel): Callbreak Nepali Table', style: PatiiTypography.titleLarge),
+          Text('Title Large (Sora): Callbreak Nepali Table',
+              style: PatiiTypography.titleLarge),
           const SizedBox(height: 4),
-          Text('Body Large (Poppins): Real-time multiplayer card action', style: PatiiTypography.bodyLarge),
+          Text('Body Large (Mukta): Real-time multiplayer card action',
+              style: PatiiTypography.bodyLarge),
           const SizedBox(height: 4),
-          Text('Nepali Mukta: पत्ती — कल ब्रेक, म्यारिज र तीन पत्ती खेल्नुहोस्', style: PatiiTypography.mukta(fontSize: 16)),
+          Text('Nepali Mukta: पत्ती — कल ब्रेक, म्यारिज र तीन पत्ती खेल्नुहोस्',
+              style: PatiiTypography.mukta(fontSize: 16)),
         ],
       ),
     );
@@ -193,7 +196,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
               Container(height: 24),
               Text(
                 s.$1,
-                style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -214,7 +220,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
           icon: Icons.stars,
           onPressed: () {
             setState(() => _coins += 1000);
-            ToastBanner.show(context, 'Claimed 1,000 Coins!', icon: Icons.stars);
+            ToastBanner.show(context, 'Claimed 1,000 Coins!',
+                icon: Icons.stars);
           },
         ),
         GhostButton(
@@ -272,6 +279,25 @@ class _GalleryScreenState extends State<GalleryScreen> {
         PlayingCard(
           card: engine.Card(suit: engine.Suit.S, rank: 1, deck: 0, id: 'BACK'),
           isFaceDown: true,
+        ),
+        // Physical Stacked Stock Deck (3D layered thickness)
+        StackedDeck(
+          topCard: engine.Card(suit: engine.Suit.S, rank: 1, deck: 0, id: 'STOCK'),
+          isFaceDown: true,
+          cardCount: 32,
+          width: 52,
+          height: 74,
+          label: 'STOCK',
+        ),
+        // Physical Discard Stack (with realistic spread)
+        StackedDeck(
+          topCard: engine.Card(suit: engine.Suit.H, rank: 13, deck: 0, id: 'KH_DISCARD'),
+          isFaceDown: false,
+          cardCount: 8,
+          width: 52,
+          height: 74,
+          label: 'DISCARD',
+          spreadDiscard: true,
         ),
       ],
     );

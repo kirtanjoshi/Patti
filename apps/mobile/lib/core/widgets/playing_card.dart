@@ -106,6 +106,29 @@ class PlayingCard extends StatelessWidget {
         engine.Suit.X => 'Joker',
       };
 
+  /// Asset path for high-resolution realistic card graphics.
+  String get assetPath {
+    final effectiveRank = switch (card.rank) {
+      0 => 0,
+      14 => 1,
+      _ => card.rank,
+    };
+    final suitCode = switch (card.suit) {
+      engine.Suit.S => 'S',
+      engine.Suit.H => 'H',
+      engine.Suit.D => 'D',
+      engine.Suit.C => 'C',
+      engine.Suit.X => 'X',
+    };
+    if (isJoker || suitCode == 'X') {
+      return 'assets/images/cards/0X.png';
+    }
+    return 'assets/images/cards/$effectiveRank$suitCode.png';
+  }
+
+  /// Default back design asset path.
+  static const String backAssetPath = 'assets/images/cards/card_back.png';
+
   @override
   Widget build(BuildContext context) {
     final w = resolvedWidth;
@@ -126,30 +149,48 @@ class PlayingCard extends StatelessWidget {
       child: GestureDetector(
         onTap: isPlayable ? onTap : null,
         child: AnimatedContainer(
-          duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+          duration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
           curve: Curves.easeOutBack,
-          transform: Matrix4.translationValues(0, isSelected ? -h * 0.2 : 0.0, 0),
+          transform:
+              Matrix4.translationValues(0, isSelected ? -h * 0.2 : 0.0, 0),
           width: w,
           height: h,
           decoration: BoxDecoration(
             borderRadius: radius,
             boxShadow: [
-              if (isSelected)
+              if (isSelected) ...[
+                // Deep physical elevation shadow
                 BoxShadow(
-                  color: PatiiColors.gold.withValues(alpha: 0.55),
-                  blurRadius: 16,
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
                   spreadRadius: 1,
-                )
-              else ...[
+                ),
+                // Warm card-lift edge reflection (restrained luxury)
+                BoxShadow(
+                  color: PatiiColors.goldLight.withValues(alpha: 0.38),
+                  blurRadius: 10,
+                  spreadRadius: 0.5,
+                ),
+              ] else ...[
+                // Micro contact shadow at card base
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
+                  blurRadius: 1.5,
+                  offset: const Offset(0, 0.8),
                 ),
+                // Mid-distance card body drop
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.22),
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2.5),
+                ),
+                // Ambient soft felt bleed
+                BoxShadow(
+                  color: const Color(0xFF040A07).withValues(alpha: 0.30),
                   blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  offset: const Offset(0, 5),
                 ),
               ],
             ],
@@ -159,18 +200,21 @@ class PlayingCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: isFaceDown ? _CardBack(width: w) : _buildFace(w, h, radius),
+                  child: isFaceDown
+                      ? _CardBack(width: w)
+                      : _buildFace(w, h, radius),
                 ),
                 if (!isPlayable && !isFaceDown)
                   Positioned.fill(
-                    child: ColoredBox(color: const Color(0xFF0A1020).withValues(alpha: 0.42)),
+                    child: ColoredBox(
+                        color: const Color(0xFF0A1020).withValues(alpha: 0.42)),
                   ),
                 if (isSelected)
                   Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: radius,
-                        border: Border.all(color: PatiiColors.gold, width: 2),
+                        border: Border.all(color: PatiiColors.gold, width: 1.5),
                       ),
                     ),
                   ),
@@ -189,6 +233,49 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildFace(double w, double h, BorderRadius radius) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: radius,
+        border: Border.all(color: const Color(0xFFD6D1C4), width: 0.7),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _buildFallbackFace(w, h, radius),
+          Image.asset(
+            assetPath,
+            fit: BoxFit.fill,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (context, error, stackTrace) =>
+                const SizedBox.shrink(),
+          ),
+          // Subtle physical cardstock sheen
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  gradient: LinearGradient(
+                    begin: const Alignment(-0.8, -1.0),
+                    end: const Alignment(0.8, 1.0),
+                    colors: [
+                      Colors.white.withValues(alpha: 0.08),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.03),
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFallbackFace(double w, double h, BorderRadius radius) {
     final idx = (w * 0.27).clamp(10.0, 19.0);
     final idxSuit = (w * 0.19).clamp(7.0, 13.0);
     final pad = (w * 0.07).clamp(2.5, 5.0);
@@ -209,7 +296,8 @@ class PlayingCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: idx * 0.08),
-            if (!isJoker) SuitIcon(suit: card.suit, size: idxSuit, color: suitColor),
+            if (!isJoker)
+              SuitIcon(suit: card.suit, size: idxSuit, color: suitColor),
           ],
         );
 
@@ -249,7 +337,8 @@ class PlayingCard extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SuitIcon(suit: engine.Suit.X, size: w * 0.4, color: PatiiColors.crimson),
+          SuitIcon(
+              suit: engine.Suit.X, size: w * 0.4, color: PatiiColors.crimson),
           if (h >= 64)
             Text(
               'JOKER',
@@ -270,7 +359,8 @@ class PlayingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: suitColor.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(w * 0.06),
-          border: Border.all(color: suitColor.withValues(alpha: 0.28), width: 0.8),
+          border:
+              Border.all(color: suitColor.withValues(alpha: 0.28), width: 0.8),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -328,7 +418,7 @@ class _Badge extends StatelessWidget {
   }
 }
 
-/// Crimson card back: fine dhaka lattice + a "प" (Patii) medallion.
+/// Crimson card back: classic authentic back with Nepali Dhaka lattice fallback.
 class _CardBack extends StatelessWidget {
   final double width;
 
@@ -336,6 +426,21 @@ class _CardBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _buildFallbackBack(context),
+        Image.asset(
+          PlayingCard.backAssetPath,
+          fit: BoxFit.fill,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFallbackBack(BuildContext context) {
     final inset = (width * 0.07).clamp(2.0, 4.0);
     final medallion = width * 0.42;
     return DecoratedBox(
@@ -350,7 +455,9 @@ class _CardBack extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(width * 0.07),
-            border: Border.all(color: PatiiColors.goldLight.withValues(alpha: 0.45), width: 0.8),
+            border: Border.all(
+                color: PatiiColors.goldLight.withValues(alpha: 0.45),
+                width: 0.8),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(width * 0.07),
@@ -360,8 +467,10 @@ class _CardBack extends StatelessWidget {
                 Positioned.fill(
                   child: CustomPaint(
                     painter: DhakaPatternPainter(
-                      primaryColor: PatiiColors.goldLight.withValues(alpha: 0.16),
-                      secondaryColor: PatiiColors.goldLight.withValues(alpha: 0.10),
+                      primaryColor:
+                          PatiiColors.goldLight.withValues(alpha: 0.16),
+                      secondaryColor:
+                          PatiiColors.goldLight.withValues(alpha: 0.10),
                       step: (width * 0.16).clamp(6.0, 11.0),
                     ),
                   ),
@@ -373,7 +482,9 @@ class _CardBack extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: PatiiColors.cardBackDeep,
-                      border: Border.all(color: PatiiColors.goldLight.withValues(alpha: 0.7), width: 1),
+                      border: Border.all(
+                          color: PatiiColors.goldLight.withValues(alpha: 0.7),
+                          width: 1),
                     ),
                     alignment: Alignment.center,
                     child: Text(

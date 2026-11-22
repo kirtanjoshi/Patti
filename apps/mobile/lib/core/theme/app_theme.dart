@@ -40,9 +40,12 @@ abstract class PatiiTheme {
         },
       ),
       textTheme: TextTheme(
-        displayLarge: PatiiTypography.display(fontSize: 32, fontWeight: FontWeight.w800),
-        displayMedium: PatiiTypography.display(fontSize: 26, fontWeight: FontWeight.w800),
-        displaySmall: PatiiTypography.display(fontSize: 20, fontWeight: FontWeight.w700),
+        displayLarge:
+            PatiiTypography.display(fontSize: 32, fontWeight: FontWeight.w800),
+        displayMedium:
+            PatiiTypography.display(fontSize: 26, fontWeight: FontWeight.w800),
+        displaySmall:
+            PatiiTypography.display(fontSize: 20, fontWeight: FontWeight.w700),
         headlineMedium: PatiiTypography.titleLarge,
         titleLarge: PatiiTypography.titleMedium,
         titleMedium: PatiiTypography.bodyLarge,
@@ -93,7 +96,8 @@ abstract class PatiiTheme {
         style: TextButton.styleFrom(
           foregroundColor: PatiiColors.textSecondary,
           minimumSize: const Size(64, 44),
-          textStyle: PatiiTypography.body(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle:
+              PatiiTypography.body(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -108,8 +112,10 @@ abstract class PatiiTheme {
       tabBarTheme: TabBarThemeData(
         labelColor: PatiiColors.textPrimary,
         unselectedLabelColor: PatiiColors.textMuted,
-        labelStyle: PatiiTypography.display(fontSize: 14, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: PatiiTypography.display(fontSize: 14, fontWeight: FontWeight.w600),
+        labelStyle:
+            PatiiTypography.display(fontSize: 14, fontWeight: FontWeight.w700),
+        unselectedLabelStyle:
+            PatiiTypography.display(fontSize: 14, fontWeight: FontWeight.w600),
         dividerColor: PatiiColors.hairline,
         indicatorSize: TabBarIndicatorSize.label,
         indicator: const UnderlineTabIndicator(
@@ -124,15 +130,19 @@ abstract class PatiiTheme {
           selectedBackgroundColor: PatiiColors.gold,
           selectedForegroundColor: const Color(0xFF241A05),
           side: const BorderSide(color: PatiiColors.hairlineStrong),
-          textStyle: PatiiTypography.display(fontSize: 13.5, fontWeight: FontWeight.w700),
+          textStyle: PatiiTypography.display(
+              fontSize: 13.5, fontWeight: FontWeight.w700),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.05),
-        labelStyle: PatiiTypography.body(fontSize: 14, color: PatiiColors.textSecondary),
-        hintStyle: PatiiTypography.body(fontSize: 14, color: PatiiColors.textMuted),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        labelStyle: PatiiTypography.body(
+            fontSize: 14, color: PatiiColors.textSecondary),
+        hintStyle:
+            PatiiTypography.body(fontSize: 14, color: PatiiColors.textMuted),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: PatiiSpacing.rounded12,
           borderSide: const BorderSide(color: PatiiColors.hairlineStrong),

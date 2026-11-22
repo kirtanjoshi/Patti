@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/services/audio_service.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
@@ -15,7 +16,15 @@ import '../../core/widgets/toast_banner.dart';
 class DailyRewardDialog extends ConsumerStatefulWidget {
   const DailyRewardDialog({super.key});
 
-  static const List<int> dailyRewards = [500, 750, 1000, 1250, 1500, 2000, 3000];
+  static const List<int> dailyRewards = [
+    500,
+    750,
+    1000,
+    1250,
+    1500,
+    2000,
+    3000
+  ];
 
   @override
   ConsumerState<DailyRewardDialog> createState() => _DailyRewardDialogState();
@@ -55,6 +64,8 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
     if (!mounted) return;
 
     if (amount > 0) {
+      AudioService.instance.playCoinsCollect();
+      AudioService.instance.playWinJingle();
       setState(() => _isClaimedToday = true);
       ToastBanner.show(
         context,
@@ -90,15 +101,23 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          gradient: (isToday && !_isClaimedToday) ? PatiiColors.goldButtonGradient : null,
+          gradient: (isToday && !_isClaimedToday)
+              ? PatiiColors.goldButtonGradient
+              : null,
           color: (isToday && !_isClaimedToday)
               ? null
               : Colors.white.withValues(alpha: isClaimed ? 0.03 : 0.06),
           border: Border.all(
-            color: (isToday && !_isClaimedToday) ? Colors.transparent : PatiiColors.hairline,
+            color: (isToday && !_isClaimedToday)
+                ? Colors.transparent
+                : PatiiColors.hairline,
           ),
           boxShadow: (isToday && !_isClaimedToday)
-              ? [BoxShadow(color: PatiiColors.gold.withValues(alpha: 0.4), blurRadius: 16)]
+              ? [
+                  BoxShadow(
+                      color: PatiiColors.gold.withValues(alpha: 0.4),
+                      blurRadius: 16)
+                ]
               : null,
         ),
         child: Opacity(
@@ -112,14 +131,18 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
                 style: PatiiTypography.body(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: (isToday && !_isClaimedToday) ? const Color(0xFF3A2A06) : PatiiColors.textSecondary,
+                  color: (isToday && !_isClaimedToday)
+                      ? const Color(0xFF3A2A06)
+                      : PatiiColors.textSecondary,
                 ),
               ),
               SizedBox(width: wide ? 12 : 0, height: wide ? 0 : 4),
               isClaimed
-                  ? const Icon(Icons.check_circle_rounded, size: 22, color: PatiiColors.success)
+                  ? const Icon(Icons.check_circle_rounded,
+                      size: 22, color: PatiiColors.success)
                   : wide
-                      ? const Icon(Icons.inventory_2_rounded, size: 26, color: PatiiColors.gold)
+                      ? const Icon(Icons.inventory_2_rounded,
+                          size: 26, color: PatiiColors.gold)
                       : const CoinGlyph(size: 22),
               SizedBox(width: wide ? 12 : 0, height: wide ? 0 : 4),
               Text(
@@ -127,7 +150,9 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
                 style: PatiiTypography.display(
                   fontSize: wide ? 16 : 12.5,
                   fontWeight: FontWeight.w800,
-                  color: (isToday && !_isClaimedToday) ? const Color(0xFF241A05) : PatiiColors.textPrimary,
+                  color: (isToday && !_isClaimedToday)
+                      ? const Color(0xFF241A05)
+                      : PatiiColors.textPrimary,
                 ),
               ),
             ],
@@ -135,9 +160,8 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
         ),
       );
       if (isToday && !_isClaimedToday && !reduceMotion) {
-        tile = tile
-            .animate(onPlay: (c) => c.repeat(reverse: true))
-            .scaleXY(begin: 1, end: 1.05, duration: 900.ms, curve: Curves.easeInOut);
+        tile = tile.animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(
+            begin: 1, end: 1.05, duration: 900.ms, curve: Curves.easeInOut);
       }
       return tile;
     }
@@ -161,17 +185,21 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
                     shape: BoxShape.circle,
                     gradient: PatiiColors.goldButtonGradient,
                     boxShadow: [
-                      BoxShadow(color: PatiiColors.gold.withValues(alpha: 0.45), blurRadius: 24),
+                      BoxShadow(
+                          color: PatiiColors.gold.withValues(alpha: 0.45),
+                          blurRadius: 24),
                     ],
                   ),
-                  child: const Icon(Icons.redeem_rounded, size: 28, color: Color(0xFF241A05)),
+                  child: const Icon(Icons.redeem_rounded,
+                      size: 28, color: Color(0xFF241A05)),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 'economy.daily_reward'.tr(),
                 textAlign: TextAlign.center,
-                style: PatiiTypography.display(fontSize: 20, fontWeight: FontWeight.w800),
+                style: PatiiTypography.display(
+                    fontSize: 20, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
               Text(
@@ -218,17 +246,20 @@ class _DailyRewardDialogState extends ConsumerState<DailyRewardDialog> {
                           foregroundColor: PatiiColors.textMuted,
                           side: const BorderSide(color: PatiiColors.hairline),
                           minimumSize: const Size.fromHeight(50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.check_circle_rounded, color: PatiiColors.success),
+                        icon: const Icon(Icons.check_circle_rounded,
+                            color: PatiiColors.success),
                         label: const Text(
                           'Claimed Today • Come back tomorrow!',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       )
                     : GoldButton(
-                        label: '${'economy.claim'.tr()} +${CoinCounter.formatCoins(rewardAmount)}',
+                        label:
+                            '${'economy.claim'.tr()} +${CoinCounter.formatCoins(rewardAmount)}',
                         icon: Icons.redeem_rounded,
                         height: 50,
                         onPressed: _handleClaim,

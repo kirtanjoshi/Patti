@@ -6,7 +6,8 @@ import 'package:patii/features/games/rummy/rummy_table_screen.dart';
 
 void main() {
   group('Dhumbal Table UI Tests', () {
-    testWidgets('renders Dhumbal table without overflow (852x393)', (tester) async {
+    testWidgets('renders Dhumbal table without overflow (852x393)',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -25,7 +26,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
     });
 
-    testWidgets('renders Dhumbal table without overflow on small landscape (640x360)', (tester) async {
+    testWidgets(
+        'renders Dhumbal table without overflow on small landscape (640x360)',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -42,7 +45,8 @@ void main() {
   });
 
   group('Jutpatti Table UI Tests', () {
-    testWidgets('renders Jutpatti table without overflow (852x393)', (tester) async {
+    testWidgets('renders Jutpatti table without overflow (852x393)',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -59,7 +63,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
     });
 
-    testWidgets('renders Jutpatti table without overflow on small landscape (640x360)', (tester) async {
+    testWidgets(
+        'renders Jutpatti table without overflow on small landscape (640x360)',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -76,7 +82,8 @@ void main() {
   });
 
   group('Rummy Table UI Tests', () {
-    testWidgets('renders Classic Rummy table without overflow (852x393)', (tester) async {
+    testWidgets('renders Classic Rummy table without overflow (852x393)',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -95,7 +102,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
     });
 
-    testWidgets('renders Joker Rummy variant with Joker indicator without overflow (640x360)', (tester) async {
+    testWidgets(
+        'renders Joker Rummy variant with Joker indicator without overflow (640x360)',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 

@@ -3,7 +3,14 @@ import 'package:patii_engine/patii_engine.dart';
 
 enum MeldType { pure, dublee }
 
-enum MeldSlotStatus { empty, incomplete, pureSequence, tunnela, dublee, invalid }
+enum MeldSlotStatus {
+  empty,
+  incomplete,
+  pureSequence,
+  tunnela,
+  dublee,
+  invalid
+}
 
 class SpecialCardsInfo {
   final Card tiplu;
@@ -53,7 +60,8 @@ class SpecialCardsInfo {
     return SpecialCardsInfo(
       tiplu: maal,
       poplu: Card(suit: maal.suit, rank: popluRank, deck: 0, id: 'poplu_ref'),
-      jhiplu: Card(suit: maal.suit, rank: jhipluRank, deck: 0, id: 'jhiplu_ref'),
+      jhiplu:
+          Card(suit: maal.suit, rank: jhipluRank, deck: 0, id: 'jhiplu_ref'),
       alter: Card(suit: alterSuit, rank: maal.rank, deck: 0, id: 'alter_ref'),
     );
   }

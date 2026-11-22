@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/audio_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 
@@ -44,6 +45,7 @@ class _PressableState extends State<Pressable> {
       onTapCancel: () => _set(false),
       onTap: _active
           ? () {
+              AudioService.instance.playButtonClick();
               HapticFeedback.selectionClick();
               widget.onPressed!();
             }
@@ -99,45 +101,47 @@ class _PatiiButton extends StatelessWidget {
             PatiiColors.textMuted,
           )
         : switch (kind) {
-      _Kind.gold => (
-          BoxDecoration(
-            gradient: PatiiColors.goldButtonGradient,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x66FFF3CF), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: PatiiColors.gold.withValues(alpha: 0.28),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+            _Kind.gold => (
+                BoxDecoration(
+                  gradient: PatiiColors.goldButtonGradient,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0x66FFF3CF), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: PatiiColors.gold.withValues(alpha: 0.28),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                const Color(0xFF241A05),
               ),
-            ],
-          ),
-          const Color(0xFF241A05),
-        ),
-      _Kind.ghost => (
-          BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: PatiiColors.hairlineStrong, width: 1),
-          ),
-          PatiiColors.textPrimary,
-        ),
-      _Kind.danger => (
-          BoxDecoration(
-            gradient: PatiiColors.dangerGradient,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: PatiiColors.crimson.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+            _Kind.ghost => (
+                BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(14),
+                  border:
+                      Border.all(color: PatiiColors.hairlineStrong, width: 1),
+                ),
+                PatiiColors.textPrimary,
               ),
-            ],
-          ),
-          Colors.white,
-        ),
-    };
+            _Kind.danger => (
+                BoxDecoration(
+                  gradient: PatiiColors.dangerGradient,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: PatiiColors.crimson.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                Colors.white,
+              ),
+          };
 
     final compact = height < 40;
     return Semantics(
@@ -152,7 +156,8 @@ class _PatiiButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           constraints: BoxConstraints(minWidth: minWidth, minHeight: height),
-          padding: padding ?? EdgeInsets.symmetric(horizontal: compact ? 12 : 18, vertical: 6),
+          padding: padding ??
+              EdgeInsets.symmetric(horizontal: compact ? 12 : 18, vertical: 6),
           decoration: deco,
           // widthFactor: 1 => hug the content when width is loose
           // (a plain Center stretched these to full width).

@@ -51,10 +51,33 @@ describe('RoomsService (Private Rooms & Codes)', () => {
     const room = roomsService.createRoom('user_host', 'marriage', { mode: 'classic' }, 100, 4);
     const payload = roomsService.toRoomStatePayload(room);
     expect(payload.code).toBe(room.code);
+    expect(payload.pin).toBe(room.pin);
+    expect(payload.pin).toMatch(/^\d{4}$/);
     expect(payload.gameId).toBe('marriage');
     expect(payload.inviteUrl).toContain(`/r/${room.code}`);
     expect(payload.deepLinkUrl).toBe(`patii://room/${room.code}`);
     expect(payload.participants).toHaveLength(1);
     expect(payload.participants[0]!.displayName).toBe('Host');
+  });
+
+  it('supports 4-digit voice PIN generation, room lookup, and joining via PIN', () => {
+    const room = roomsService.createRoom('user_host', 'teenpatti', {});
+    expect(room.pin).toBeDefined();
+    expect(room.pin).toMatch(/^\d{4}$/);
+    expect(parseInt(room.pin, 10)).toBeGreaterThanOrEqual(1000);
+    expect(parseInt(room.pin, 10)).toBeLessThanOrEqual(9999);
+
+    // Resolves room via PIN
+    const foundRoom = roomsService.getRoom(room.pin);
+    expect(foundRoom.code).toBe(room.code);
+
+    // Allows guest to join using PIN
+    const joined = roomsService.joinRoom(room.pin, 'user_guest_pin', 'Pin Guest');
+    expect(joined.participants.map((p) => p.userId)).toContain('user_guest_pin');
+
+    // Cleans up pin mapping when room is destroyed
+    roomsService.leaveRoom(room.code, 'user_guest_pin');
+    roomsService.leaveRoom(room.code, 'user_host');
+    expect(() => roomsService.getRoom(room.pin)).toThrow('not found');
   });
 });

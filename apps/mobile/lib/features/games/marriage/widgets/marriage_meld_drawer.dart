@@ -198,7 +198,8 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
                 iconSize: 22,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                icon: const Icon(Icons.keyboard_arrow_down, color: PatiiColors.goldLight),
+                icon: const Icon(Icons.keyboard_arrow_down,
+                    color: PatiiColors.goldLight),
                 onPressed: () => setState(() => _isExpanded = false),
               ),
             ],
@@ -250,7 +251,8 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: widget.slots.map((slot) => _buildSlotItem(slot)).toList(),
+              children:
+                  widget.slots.map((slot) => _buildSlotItem(slot)).toList(),
             ),
           ),
           const SizedBox(height: 6),
@@ -305,7 +307,8 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: DragTarget<Card>(
         onWillAcceptWithDetails: (details) => !slot.isFull,
-        onAcceptWithDetails: (details) => widget.onCardAdded(slot.id, details.data),
+        onAcceptWithDetails: (details) =>
+            widget.onCardAdded(slot.id, details.data),
         builder: (context, candidateData, rejectedData) {
           return GestureDetector(
             onTap: () {
@@ -332,7 +335,8 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
                   Text(
                     'Slot ${slot.id + 1}',
                     style: PatiiTypography.caption(
-                      color: isValid ? PatiiColors.success : PatiiColors.goldLight,
+                      color:
+                          isValid ? PatiiColors.success : PatiiColors.goldLight,
                       bold: true,
                     ).copyWith(fontSize: 10),
                   ),
@@ -353,9 +357,11 @@ class _MarriageMeldDrawerState extends State<MarriageMeldDrawer> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: slot.cards.map((card) {
                                 return GestureDetector(
-                                  onTap: () => widget.onCardRemoved(slot.id, card),
+                                  onTap: () =>
+                                      widget.onCardRemoved(slot.id, card),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 1),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 1),
                                     child: PlayingCard.table(
                                       card: card,
                                       width: 22,

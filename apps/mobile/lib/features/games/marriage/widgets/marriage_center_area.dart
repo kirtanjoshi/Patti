@@ -4,6 +4,7 @@ import 'package:patii_engine/patii_engine.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/widgets/playing_card.dart';
+import '../../../../core/widgets/stacked_deck.dart';
 import '../marriage_models.dart';
 
 /// Center Table Area for Marriage (Landscape).
@@ -43,90 +44,38 @@ class MarriageCenterArea extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 1. Stock Pile (Face Down)
-            GestureDetector(
+            // 1. Stock Pile (Physical 3D stacked deck)
+            StackedDeck(
+              topCard: const Card(
+                  suit: Suit.S, rank: 1, deck: 0, id: 'stock_back'),
+              isFaceDown: true,
+              cardCount: stockPile.length,
+              width: 46,
+              height: 66,
+              label: 'table.stock'.tr(),
+              isInteractive: canDraw,
               onTap: canDraw ? onDrawStock : null,
-              child: Semantics(
-                button: true,
-                label: '${'table.stock'.tr()}, ${stockPile.length} cards',
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    PlayingCard.table(
-                      card: const Card(suit: Suit.S, rank: 1, deck: 0, id: 'stock_back'),
-                      isFaceDown: true,
-                      width: 46,
-                      height: 66,
-                    ),
-                    Positioned(
-                      bottom: -6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: PatiiColors.navy.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: PatiiColors.gold.withValues(alpha: 0.6),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          '${stockPile.length}',
-                          style: PatiiTypography.display(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: PatiiColors.goldLight,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
             const SizedBox(width: 14),
 
-            // 2. Discard Pile (Top card face up)
-            GestureDetector(
+            // 2. Discard Pile (Layered Discard StackedDeck)
+            StackedDeck(
+              topCard: discardPile.isNotEmpty ? discardPile.last : null,
+              isFaceDown: false,
+              cardCount: discardPile.length,
+              width: 46,
+              height: 66,
+              label: 'table.discard_pile'.tr(),
+              spreadDiscard: true,
+              isInteractive: canDraw && discardPile.isNotEmpty,
               onTap: canDraw && discardPile.isNotEmpty ? onDrawDiscard : null,
-              child: Semantics(
-                button: true,
-                label: 'table.discard_pile'.tr(),
-                child: discardPile.isEmpty
-                    ? Container(
-                        width: 46,
-                        height: 66,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            width: 1.0,
-                          ),
-                          color: Colors.black.withValues(alpha: 0.15),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'table.discard_pile'.tr(),
-                            style: PatiiTypography.caption(
-                              color: Colors.white38,
-                            ).copyWith(fontSize: 8),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
-                    : PlayingCard.table(
-                        card: discardPile.last,
-                        width: 46,
-                        height: 66,
-                      ),
-              ),
             ),
             const SizedBox(width: 14),
 
             // 3. Cut Joker (Maal) Card
             Semantics(
-              label: isMaalSeen ? 'Cut Joker: ${cutJoker.id}' : 'Hidden Cut Joker',
+              label:
+                  isMaalSeen ? 'Cut Joker: ${cutJoker.id}' : 'Hidden Cut Joker',
               child: Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
@@ -141,11 +90,11 @@ class MarriageCenterArea extends StatelessWidget {
                   Positioned(
                     bottom: -6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
-                        gradient: isMaalSeen
-                            ? PatiiColors.goldButtonGradient
-                            : null,
+                        gradient:
+                            isMaalSeen ? PatiiColors.goldButtonGradient : null,
                         color: isMaalSeen
                             ? null
                             : PatiiColors.navy.withValues(alpha: 0.85),

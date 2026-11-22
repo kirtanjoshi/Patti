@@ -53,7 +53,8 @@ class ChangelogDialog extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: PatiiColors.gold.withValues(alpha: 0.16),
                     ),
-                    child: const Icon(Icons.auto_awesome, color: PatiiColors.gold, size: 22),
+                    child: const Icon(Icons.auto_awesome,
+                        color: PatiiColors.gold, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -72,7 +73,8 @@ class ChangelogDialog extends StatelessWidget {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: PatiiColors.gold,
                                 borderRadius: BorderRadius.circular(6),
@@ -89,7 +91,8 @@ class ChangelogDialog extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               'Nov 20, 2026',
-                              style: PatiiTypography.body(fontSize: 11, color: PatiiColors.textMuted),
+                              style: PatiiTypography.body(
+                                  fontSize: 11, color: PatiiColors.textMuted),
                             ),
                           ],
                         ),
@@ -97,7 +100,8 @@ class ChangelogDialog extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: PatiiColors.textMuted),
+                    icon: const Icon(Icons.close_rounded,
+                        color: PatiiColors.textMuted),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -107,7 +111,8 @@ class ChangelogDialog extends StatelessWidget {
             // Scrollable Content
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 children: [
                   _buildSectionHeader('Current Release (v1.1.0)'),
                   const SizedBox(height: 10),
@@ -146,7 +151,6 @@ class ChangelogDialog extends StatelessWidget {
                     description:
                         'Create custom private rooms for all 8 card games with 6-character room codes, bot seats, and customizable house rules.',
                   ),
-
                   const SizedBox(height: 16),
                   _buildSectionHeader('Previous Release (v1.0.0)'),
                   const SizedBox(height: 10),

@@ -31,11 +31,13 @@ class OpponentSeatPanel extends StatelessWidget {
     this.stackOnLeft = false,
   });
 
-  static const _back = engine.Card(suit: engine.Suit.S, rank: 2, deck: 0, id: 'back');
+  static const _back =
+      engine.Card(suit: engine.Suit.S, rank: 2, deck: 0, id: 'back');
 
   @override
   Widget build(BuildContext context) {
-    final infoText = bid != null ? '$tricksWon / $bid tricks' : '$tricksWon tricks';
+    final infoText =
+        bid != null ? '$tricksWon / $bid tricks' : '$tricksWon tricks';
 
     return Stack(
       clipBehavior: Clip.none,
@@ -68,22 +70,29 @@ class OpponentSeatPanel extends StatelessWidget {
                         top: i * -1.0,
                         child: Transform.rotate(
                           angle: (i - 1) * 0.12,
-                          child: const PlayingCard(card: _back, isFaceDown: true, width: 18, height: 26),
+                          child: const PlayingCard(
+                              card: _back,
+                              isFaceDown: true,
+                              width: 18,
+                              height: 26),
                         ),
                       ),
                     Positioned(
                       right: -2,
                       bottom: -4,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 0.5),
                         decoration: BoxDecoration(
                           color: PatiiColors.navy,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: PatiiColors.hairlineStrong, width: 0.8),
+                          border: Border.all(
+                              color: PatiiColors.hairlineStrong, width: 0.8),
                         ),
                         child: Text(
                           '$cardCount',
-                          style: PatiiTypography.display(fontSize: 9.5, fontWeight: FontWeight.w700),
+                          style: PatiiTypography.display(
+                              fontSize: 9.5, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),

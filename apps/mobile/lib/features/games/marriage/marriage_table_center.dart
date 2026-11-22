@@ -47,9 +47,8 @@ class MarriageTableCenter extends StatelessWidget {
               displayName: 'Bot 2',
               isBot: true,
               isCurrentTurn: currentTurnSeat == 2,
-              statusText: isMaalSeen
-                  ? 'marriage.seen'.tr()
-                  : 'marriage.unseen'.tr(),
+              statusText:
+                  isMaalSeen ? 'marriage.seen'.tr() : 'marriage.unseen'.tr(),
             ),
           ),
         ),
@@ -62,9 +61,8 @@ class MarriageTableCenter extends StatelessWidget {
             displayName: 'Bot 1',
             isBot: true,
             isCurrentTurn: currentTurnSeat == 1,
-            statusText: isMaalSeen
-                ? 'marriage.seen'.tr()
-                : 'marriage.unseen'.tr(),
+            statusText:
+                isMaalSeen ? 'marriage.seen'.tr() : 'marriage.unseen'.tr(),
           ),
         ),
 
@@ -76,9 +74,8 @@ class MarriageTableCenter extends StatelessWidget {
             displayName: 'Bot 3',
             isBot: true,
             isCurrentTurn: currentTurnSeat == 3,
-            statusText: isMaalSeen
-                ? 'marriage.seen'.tr()
-                : 'marriage.unseen'.tr(),
+            statusText:
+                isMaalSeen ? 'marriage.seen'.tr() : 'marriage.unseen'.tr(),
           ),
         ),
 

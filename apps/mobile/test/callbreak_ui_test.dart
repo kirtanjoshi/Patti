@@ -11,7 +11,8 @@ import 'package:patii/features/games/callbreak/widgets/opponent_seat_panel.dart'
 
 void main() {
   group('Callbreak Table Screen Landscape Tests', () {
-    testWidgets('Renders Callbreak on 852x393 landscape without overflow', (tester) async {
+    testWidgets('Renders Callbreak on 852x393 landscape without overflow',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -47,7 +48,9 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     });
 
-    testWidgets('Renders Callbreak on 640x360 compact landscape without overflow', (tester) async {
+    testWidgets(
+        'Renders Callbreak on 640x360 compact landscape without overflow',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -65,7 +68,8 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     });
 
-    testWidgets('Confirming bid switches phase from bidding to playing', (tester) async {
+    testWidgets('Confirming bid switches phase from bidding to playing',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 

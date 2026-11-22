@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
+import '../../../core/services/audio_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/card_hand.dart';
 import '../../../core/widgets/player_seat.dart';
-import '../../../core/widgets/playing_card.dart';
+import '../../../core/widgets/stacked_deck.dart';
 import '../../../core/widgets/table_shell.dart';
 import '../../../core/widgets/toast_banner.dart';
 
@@ -65,7 +66,10 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
     return myHand.fold<int>(0, (sum, card) => sum + _cardValue(card));
   }
 
-  bool get canCallJhyap => handTotal <= jhyapThreshold && currentTurnSeat == 0 && turnPhase == 'throw';
+  bool get canCallJhyap =>
+      handTotal <= jhyapThreshold &&
+      currentTurnSeat == 0 &&
+      turnPhase == 'throw';
 
   void _onCardTap(Card card) {
     if (currentTurnSeat != 0 || turnPhase != 'throw') return;
@@ -79,20 +83,30 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
   }
 
   void _onThrowSelected() {
-    if (selectedForThrow.isEmpty || currentTurnSeat != 0 || turnPhase != 'throw') return;
+    if (selectedForThrow.isEmpty ||
+        currentTurnSeat != 0 ||
+        turnPhase != 'throw') {
+      return;
+    }
 
-    final thrownCards = myHand.where((c) => selectedForThrow.contains(c.id)).toList();
+    AudioService.instance.playCardSnap();
+    final thrownCards =
+        myHand.where((c) => selectedForThrow.contains(c.id)).toList();
     setState(() {
       myHand.removeWhere((c) => selectedForThrow.contains(c.id));
       discardPile.addAll(thrownCards);
       selectedForThrow.clear();
       turnPhase = 'draw';
     });
-    ToastBanner.show(context, 'Draw 1 card from Stock or Discard', icon: Icons.touch_app);
+    ToastBanner.show(context, 'Draw 1 card from Stock or Discard',
+        icon: Icons.touch_app);
   }
 
   void _onDrawStock() {
-    if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) return;
+    if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) {
+      return;
+    }
+    AudioService.instance.playCardSlide();
     setState(() {
       final drawn = stockPile.removeLast();
       myHand.add(drawn);
@@ -103,7 +117,10 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
   }
 
   void _onDrawDiscard() {
-    if (currentTurnSeat != 0 || turnPhase != 'draw' || discardPile.isEmpty) return;
+    if (currentTurnSeat != 0 || turnPhase != 'draw' || discardPile.isEmpty) {
+      return;
+    }
+    AudioService.instance.playCardSlide();
     setState(() {
       final drawn = discardPile.removeLast();
       myHand.add(drawn);
@@ -115,6 +132,8 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
 
   void _onCallJhyap() {
     if (!canCallJhyap) return;
+    AudioService.instance.playSpecialHand();
+    AudioService.instance.playWinJingle();
     setState(() {
       isGameOver = true;
     });
@@ -188,7 +207,8 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
             currentTurnSeat = 0;
             turnPhase = 'throw';
           });
-          ToastBanner.show(context, 'Your turn! Select cards to throw', icon: Icons.touch_app);
+          ToastBanner.show(context, 'Your turn! Select cards to throw',
+              icon: Icons.touch_app);
         });
       });
     });
@@ -226,7 +246,8 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Got it', style: PatiiTypography.display(color: PatiiColors.gold)),
+            child: Text('Got it',
+                style: PatiiTypography.display(color: PatiiColors.gold)),
           ),
         ],
       ),
@@ -297,58 +318,39 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Stock Pile
-                      GestureDetector(
-                        onTap: isMyTurn && turnPhase == 'draw' ? _onDrawStock : null,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          clipBehavior: Clip.none,
-                          children: [
-                            PlayingCard.table(
-                              card: const Card(suit: Suit.S, rank: 1, deck: 0, id: 'back'),
-                              isFaceDown: true,
-                              width: 48,
-                              height: 68,
-                            ),
-                            Positioned(
-                              bottom: -6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: PatiiColors.navy.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: PatiiColors.goldDark, width: 0.8),
-                                ),
-                                child: Text(
-                                  '${stockPile.length}',
-                                  style: PatiiTypography.caption(color: PatiiColors.goldLight, bold: true),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      // Stock Pile (Physical 3D stacked deck)
+                      StackedDeck(
+                        topCard: const Card(
+                            suit: Suit.S, rank: 1, deck: 0, id: 'back'),
+                        isFaceDown: true,
+                        cardCount: stockPile.length,
+                        width: 48,
+                        height: 68,
+                        label: 'STOCK',
+                        isInteractive: isMyTurn && turnPhase == 'draw',
+                        onTap: isMyTurn && turnPhase == 'draw'
+                            ? _onDrawStock
+                            : null,
                       ),
                       const SizedBox(width: 20),
 
-                      // Discard Pile
-                      GestureDetector(
-                        onTap: isMyTurn && turnPhase == 'draw' && discardPile.isNotEmpty
+                      // Discard Pile (Layered discard stack)
+                      StackedDeck(
+                        topCard: discardPile.isNotEmpty ? discardPile.last : null,
+                        isFaceDown: false,
+                        cardCount: discardPile.length,
+                        width: 48,
+                        height: 68,
+                        label: 'DISCARD',
+                        spreadDiscard: true,
+                        isInteractive: isMyTurn &&
+                            turnPhase == 'draw' &&
+                            discardPile.isNotEmpty,
+                        onTap: isMyTurn &&
+                                turnPhase == 'draw' &&
+                                discardPile.isNotEmpty
                             ? _onDrawDiscard
                             : null,
-                        child: discardPile.isEmpty
-                            ? Container(
-                                width: 48,
-                                height: 68,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                                ),
-                              )
-                            : PlayingCard.table(
-                                card: discardPile.last,
-                                width: 48,
-                                height: 68,
-                              ),
                       ),
                     ],
                   ),
@@ -377,14 +379,17 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
                   children: [
                     // Live Hand Total chip
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: canCallJhyap
                             ? PatiiColors.crimson.withValues(alpha: 0.85)
                             : PatiiColors.navySurface.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: canCallJhyap ? PatiiColors.gold : PatiiColors.goldDark.withValues(alpha: 0.4),
+                          color: canCallJhyap
+                              ? PatiiColors.gold
+                              : PatiiColors.goldDark.withValues(alpha: 0.4),
                           width: 1.0,
                         ),
                       ),
@@ -393,16 +398,21 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
                         style: PatiiTypography.display(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: canCallJhyap ? PatiiColors.goldLight : PatiiColors.textPrimary,
+                          color: canCallJhyap
+                              ? PatiiColors.goldLight
+                              : PatiiColors.textPrimary,
                         ),
                       ),
                     ),
                     const SizedBox(height: 4),
 
-                    // Cards Fan
+                    // Cards Fan with Multi-Select Lift
                     CardHand(
                       cards: myHand,
-                      selectedCardId: selectedForThrow.isNotEmpty ? selectedForThrow.first : null,
+                      selectedCardId: selectedForThrow.isNotEmpty
+                          ? selectedForThrow.first
+                          : null,
+                      selectedCardIds: selectedForThrow,
                       cardWidth: 54,
                       cardHeight: 78,
                       maxArcDegrees: 6,
@@ -453,15 +463,18 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
                     // Draw Hint
                     if (isMyTurn && turnPhase == 'draw')
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: PatiiColors.goldDark.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: PatiiColors.gold, width: 0.8),
+                          border:
+                              Border.all(color: PatiiColors.gold, width: 0.8),
                         ),
                         child: Text(
                           'Tap Stock or Discard',
-                          style: PatiiTypography.caption(color: PatiiColors.goldLight, bold: true),
+                          style: PatiiTypography.caption(
+                              color: PatiiColors.goldLight, bold: true),
                         ),
                       ),
                   ],

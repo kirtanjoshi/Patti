@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
+import '../../../../core/services/audio_service.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/spacing.dart';
 import '../../../../core/theme/typography.dart';
@@ -49,6 +50,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   bool _isGameOver = false;
   List<int> _winnerSeats = [];
   Timer? _botTimer;
+  Timer? _dealTimer;
 
   // Chip toss animation state
   bool _isTossing = false;
@@ -66,10 +68,17 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   @override
   void dispose() {
     _botTimer?.cancel();
+    _dealTimer?.cancel();
     super.dispose();
   }
 
   void _startNewRound() {
+    _dealTimer?.cancel();
+    AudioService.instance.playShuffle();
+    _dealTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) AudioService.instance.playDeal();
+    });
+
     final deck = TeenPattiEvaluator.createShuffledDeck();
     _players = List.generate(_playerCount, (index) {
       final hand = deck.sublist(index * 3, index * 3 + 3);
@@ -116,6 +125,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
 
   void _triggerChipToss(Offset from, Offset to, int amount) {
     if (!mounted) return;
+    AudioService.instance.playChip();
     setState(() {
       _chipTossStart = from;
       _chipTossEnd = to;
@@ -125,10 +135,13 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   }
 
   void _onToggleSeen() {
+    AudioService.instance.playCardSlide();
     setState(() => _myState.isSeen = !_myState.isSeen);
     ToastBanner.show(
       context,
-      _myState.isSeen ? 'teenpatti.cards_revealed'.tr() : 'teenpatti.cards_hidden'.tr(),
+      _myState.isSeen
+          ? 'teenpatti.cards_revealed'.tr()
+          : 'teenpatti.cards_hidden'.tr(),
       icon: _myState.isSeen ? Icons.visibility : Icons.visibility_off,
     );
   }
@@ -143,9 +156,8 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
       _pot += amount;
       _lastBetAmount = amount;
 
-      final isRaise = _myState.isSeen
-          ? amount > _currentStake * 2
-          : amount > _currentStake;
+      final isRaise =
+          _myState.isSeen ? amount > _currentStake * 2 : amount > _currentStake;
       if (isRaise) {
         _currentStake = _myState.isSeen ? amount ~/ 2 : amount;
       }
@@ -163,6 +175,7 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   void _onPack() {
     if (_isGameOver || _currentTurnSeat != 0) return;
 
+    AudioService.instance.playCardFold();
     setState(() {
       _myState.isPacked = true;
       _checkRemainingWinner();
@@ -229,10 +242,12 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     setState(() {
       if (scoreA <= scoreB) {
         _players[seatA].isPacked = true;
-        ToastBanner.show(context, '${_players[seatA].name} lost side show and packed!');
+        ToastBanner.show(
+            context, '${_players[seatA].name} lost side show and packed!');
       } else {
         _players[seatB].isPacked = true;
-        ToastBanner.show(context, '${_players[seatB].name} lost side show and packed!');
+        ToastBanner.show(
+            context, '${_players[seatB].name} lost side show and packed!');
       }
       _checkRemainingWinner();
       if (!_isGameOver) {
@@ -294,7 +309,8 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         return;
       }
 
-      final shouldPack = math.Random().nextDouble() < 0.10 && _activePlayers.length > 2;
+      final shouldPack =
+          math.Random().nextDouble() < 0.10 && _activePlayers.length > 2;
 
       setState(() {
         if (shouldPack) {
@@ -326,6 +342,12 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
 
   void _showWinnerDialog(int winnerSeat) {
     final winner = _players[winnerSeat];
+    if (winner.isMe) {
+      AudioService.instance.playWinJingle();
+      AudioService.instance.playPotCollect();
+    } else {
+      AudioService.instance.playLoseStinger();
+    }
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -458,7 +480,8 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
     // Pot lives on the table (the hero), so the HUD doesn't repeat it.
     return TableShell(
       gameTitle: 'Teen Patti',
-      roundInfo: '${'table.round'.tr()} $_roundNumber · ${'teenpatti.stake'.tr()} $_currentStake',
+      roundInfo:
+          '${'table.round'.tr()} $_roundNumber · ${'teenpatti.stake'.tr()} $_currentStake',
       feltShape: TableFeltShape.oval,
       onRulesTap: _showRulesDialog,
       child: LayoutBuilder(

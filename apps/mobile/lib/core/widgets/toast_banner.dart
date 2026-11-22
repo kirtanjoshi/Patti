@@ -124,7 +124,8 @@ class _ToastBannerOverlayState extends State<_ToastBannerOverlay>
       duration: const Duration(milliseconds: 250),
     );
 
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _fadeAnimation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -0.4),
       end: Offset.zero,

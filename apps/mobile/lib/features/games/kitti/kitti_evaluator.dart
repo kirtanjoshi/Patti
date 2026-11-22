@@ -28,7 +28,8 @@ class KittiEvaluator {
   static int aceHighRank(int rank) => rank == 1 ? 14 : rank;
 
   /// Evaluates a 3-card hand according to Kitti / Teen Patti rules (PRD 5.4).
-  static KittiHandEvaluation evaluate(List<Card> cards, {bool enable235 = true}) {
+  static KittiHandEvaluation evaluate(List<Card> cards,
+      {bool enable235 = true}) {
     if (cards.length != 3) {
       return KittiHandEvaluation(
         category: KittiHandCategory.highCard,
@@ -147,7 +148,8 @@ class KittiEvaluator {
       for (int j = i + 1; j < 8; j++) {
         for (int k = j + 1; k < 9; k++) {
           final h1Cards = [nineCards[i], nineCards[j], nineCards[k]];
-          final remaining = indices.where((x) => x != i && x != j && x != k).toList();
+          final remaining =
+              indices.where((x) => x != i && x != j && x != k).toList();
 
           // Pick 3 from the 6 remaining
           // Fixed first element to prevent symmetric duplicates
@@ -155,7 +157,8 @@ class KittiEvaluator {
           for (int b1 = 1; b1 < remaining.length - 1; b1++) {
             for (int b2 = b1 + 1; b2 < remaining.length; b2++) {
               final h2Indices = [r0, remaining[b1], remaining[b2]];
-              final h3Indices = remaining.where((x) => !h2Indices.contains(x)).toList();
+              final h3Indices =
+                  remaining.where((x) => !h2Indices.contains(x)).toList();
 
               final h2Cards = h2Indices.map((idx) => nineCards[idx]).toList();
               final h3Cards = h3Indices.map((idx) => nineCards[idx]).toList();
@@ -174,7 +177,11 @@ class KittiEvaluator {
 
               if (partitionScore > highestPartitionScore) {
                 highestPartitionScore = partitionScore;
-                bestPartition = [evals[0].cards, evals[1].cards, evals[2].cards];
+                bestPartition = [
+                  evals[0].cards,
+                  evals[1].cards,
+                  evals[2].cards
+                ];
               }
             }
           }

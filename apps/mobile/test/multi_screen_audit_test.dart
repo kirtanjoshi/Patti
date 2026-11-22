@@ -13,24 +13,27 @@ import 'package:patii/features/lobby/casino_lobby_screen.dart';
 
 void main() {
   const landscapeSizes = [
-    Size(640, 360),   // Small Android Landscape
-    Size(852, 393),   // Standard Phone Landscape
-    Size(1024, 600),  // 7-inch Tablet Landscape
+    Size(640, 360), // Small Android Landscape
+    Size(852, 393), // Standard Phone Landscape
+    Size(1024, 600), // 7-inch Tablet Landscape
   ];
 
   const portraitSizes = [
-    Size(360, 640),   // Small Android Portrait
-    Size(393, 852),   // Standard Phone Portrait
-    Size(600, 960),   // 7-inch Tablet Portrait
+    Size(360, 640), // Small Android Portrait
+    Size(393, 852), // Standard Phone Portrait
+    Size(600, 960), // 7-inch Tablet Portrait
   ];
 
   group('Lobby Multi-Screen Overflow Audit (Portrait)', () {
     for (final size in portraitSizes) {
-      testWidgets('Lobby renders cleanly on ${size.width.toInt()}x${size.height.toInt()} with 0 overflows', (tester) async {
+      testWidgets(
+          'Lobby renders cleanly on ${size.width.toInt()}x${size.height.toInt()} with 0 overflows',
+          (tester) async {
         await tester.binding.setSurfaceSize(size);
         addTearDown(() => tester.binding.setSurfaceSize(null));
 
-        await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: CasinoLobbyScreen())));
+        await tester.pumpWidget(
+            const ProviderScope(child: MaterialApp(home: CasinoLobbyScreen())));
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.byType(CasinoLobbyScreen), findsOneWidget);
@@ -58,7 +61,9 @@ void main() {
       final builder = entry.value;
 
       for (final size in landscapeSizes) {
-        testWidgets('$name table renders cleanly on ${size.width.toInt()}x${size.height.toInt()} with 0 overflows', (tester) async {
+        testWidgets(
+            '$name table renders cleanly on ${size.width.toInt()}x${size.height.toInt()} with 0 overflows',
+            (tester) async {
           await tester.binding.setSurfaceSize(size);
           addTearDown(() => tester.binding.setSurfaceSize(null));
 

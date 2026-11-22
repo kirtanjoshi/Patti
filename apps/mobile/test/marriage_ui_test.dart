@@ -8,7 +8,8 @@ import 'package:patii/features/games/marriage/widgets/marriage_meld_drawer.dart'
 
 void main() {
   group('Marriage Logic Tests', () {
-    test('SpecialCardsInfo computes Tiplu, Poplu, Jhiplu, Alter with Ace wrap', () {
+    test('SpecialCardsInfo computes Tiplu, Poplu, Jhiplu, Alter with Ace wrap',
+        () {
       // Cut Joker is Jack of Clubs (11C)
       const cutJoker = Card(suit: Suit.C, rank: 11, deck: 0, id: '11C');
       final info = SpecialCardsInfo.fromMaal(cutJoker);
@@ -90,7 +91,8 @@ void main() {
   });
 
   group('Marriage Widget Tests', () {
-    testWidgets('MarriageTableScreen renders landscape table, seats, center piles and hand without overflow (852x393)',
+    testWidgets(
+        'MarriageTableScreen renders landscape table, seats, center piles and hand without overflow (852x393)',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -115,7 +117,8 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
     });
 
-    testWidgets('MarriageTableScreen renders without overflow on small landscape (640x360)',
+    testWidgets(
+        'MarriageTableScreen renders without overflow on small landscape (640x360)',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -138,7 +141,8 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
     });
 
-    testWidgets('Auto Group populates meld slots and allows Seeing Maal in drawer',
+    testWidgets(
+        'Auto Group populates meld slots and allows Seeing Maal in drawer',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));

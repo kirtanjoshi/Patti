@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/audio_settings_sheet.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/coin_counter.dart';
 
@@ -65,8 +66,11 @@ class LobbyTopBar extends StatelessWidget {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        username.isNotEmpty ? username.characters.first.toUpperCase() : 'P',
-                        style: PatiiTypography.display(fontSize: 17, fontWeight: FontWeight.w800),
+                        username.isNotEmpty
+                            ? username.characters.first.toUpperCase()
+                            : 'P',
+                        style: PatiiTypography.display(
+                            fontSize: 17, fontWeight: FontWeight.w800),
                       ),
                     ),
                   ],
@@ -84,16 +88,32 @@ class LobbyTopBar extends StatelessWidget {
                   username,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: PatiiTypography.display(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: PatiiTypography.display(
+                      fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 Text(
                   'lobby.level_short'.tr(args: ['$vipLevel']),
-                  style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textSecondary),
+                  style: PatiiTypography.body(
+                      fontSize: 12, color: PatiiColors.textSecondary),
                 ),
               ],
             ),
           ),
-          CoinCounter(coins: coins, showPlusButton: true, onPlusTap: onAddCoins),
+          CoinCounter(
+              coins: coins, showPlusButton: true, onPlusTap: onAddCoins),
+          Semantics(
+            button: true,
+            label: 'Audio Settings',
+            child: Pressable(
+              onPressed: () => AudioSettingsSheet.show(context),
+              child: const SizedBox(
+                width: 40,
+                height: 48,
+                child: Icon(Icons.volume_up_rounded,
+                    color: PatiiColors.textSecondary, size: 21),
+              ),
+            ),
+          ),
           Semantics(
             button: true,
             label: 'lobby.dev_gallery'.tr(),
@@ -102,7 +122,8 @@ class LobbyTopBar extends StatelessWidget {
               child: const SizedBox(
                 width: 44,
                 height: 48,
-                child: Icon(Icons.tune_rounded, color: PatiiColors.textSecondary, size: 22),
+                child: Icon(Icons.tune_rounded,
+                    color: PatiiColors.textSecondary, size: 22),
               ),
             ),
           ),

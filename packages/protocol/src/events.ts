@@ -45,7 +45,7 @@ export const RoomCreateSchema = z.object({
 });
 
 export const RoomJoinSchema = z.object({
-  code: z.string().length(6),
+  code: z.string().min(4).max(6),
 });
 
 export const RoomLeaveSchema = z.object({
@@ -82,6 +82,7 @@ export const RoomParticipantSchema = z.object({
 
 export const RoomStateSchema = z.object({
   code: z.string().length(6),
+  pin: z.string().optional(),
   gameId: GameIdEnum,
   hostUserId: z.string(),
   rules: z.record(z.unknown()),
@@ -108,6 +109,16 @@ export const SocialRoomInviteSchema = z.object({
   hostUserId: z.string(),
   hostName: z.string(),
   hostAvatarUrl: z.string().nullable().optional(),
+});
+
+export const SocialShakeSchema = z.object({
+  gameId: GameIdEnum.optional(),
+});
+
+export const SocialShakeMatchedSchema = z.object({
+  code: z.string().length(6),
+  pin: z.string(),
+  gameId: GameIdEnum,
 });
 
 export const SocialPresenceStatusEnum = z.enum(['online', 'in_room', 'in_table', 'offline']);

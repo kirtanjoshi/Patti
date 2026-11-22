@@ -79,15 +79,21 @@ class QuickPlayHero extends StatelessWidget {
                       Widget c = Transform.rotate(
                         angle: -0.32 + i * 0.26,
                         alignment: Alignment.bottomCenter,
-                        child: PlayingCard(card: _fan[i], width: 70, height: 100),
+                        child:
+                            PlayingCard(card: _fan[i], width: 70, height: 100),
                       );
                       if (!reduceMotion) {
                         c = c
                             .animate()
                             .fadeIn(delay: (200 + i * 90).ms, duration: 250.ms)
-                            .moveY(begin: 40, end: 0, duration: 520.ms, curve: Curves.easeOutBack);
+                            .moveY(
+                                begin: 40,
+                                end: 0,
+                                duration: 520.ms,
+                                curve: Curves.easeOutBack);
                       }
-                      return Positioned(left: 14.0 + i * 28, top: i == 1 ? 0 : 8, child: c);
+                      return Positioned(
+                          left: 14.0 + i * 28, top: i == 1 ? 0 : 8, child: c);
                     }(),
                 ],
               ),
@@ -99,20 +105,26 @@ class QuickPlayHero extends StatelessWidget {
                 children: [
                   Text(
                     'lobby.featured'.tr().toUpperCase(),
-                    style: PatiiTypography.eyebrow(color: Colors.white.withValues(alpha: 0.7)),
+                    style: PatiiTypography.eyebrow(
+                        color: Colors.white.withValues(alpha: 0.7)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     gameTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: PatiiTypography.display(fontSize: 24, fontWeight: FontWeight.w800, height: 1.15),
+                    style: PatiiTypography.display(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15),
                   ),
                   Text(
                     gameMeta,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: PatiiTypography.body(fontSize: 13, color: Colors.white.withValues(alpha: 0.75)),
+                    style: PatiiTypography.body(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.75)),
                   ),
                   const Spacer(),
                   GoldButton(
@@ -123,8 +135,11 @@ class QuickPlayHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'lobby.playing_now'.tr(args: [NumberFormat('#,###').format(playingNow)]),
-                    style: PatiiTypography.body(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.6)),
+                    'lobby.playing_now'
+                        .tr(args: [NumberFormat('#,###').format(playingNow)]),
+                    style: PatiiTypography.body(
+                        fontSize: 11.5,
+                        color: Colors.white.withValues(alpha: 0.6)),
                   ),
                 ],
               ),

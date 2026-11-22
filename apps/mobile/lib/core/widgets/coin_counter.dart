@@ -95,7 +95,8 @@ class CoinCounter extends StatelessWidget {
           TweenAnimationBuilder<double>(
             // begin is only used on first build (no count-up from 0 on every
             // screen open); later changes animate from the current value.
-            tween: Tween<double>(begin: coins.toDouble(), end: coins.toDouble()),
+            tween:
+                Tween<double>(begin: coins.toDouble(), end: coins.toDouble()),
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeOutCubic,
             builder: (context, val, child) {
@@ -124,7 +125,8 @@ class CoinCounter extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: PatiiColors.goldButtonGradient,
                   ),
-                  child: Icon(Icons.add_rounded, size: fontSize, color: const Color(0xFF241A05)),
+                  child: Icon(Icons.add_rounded,
+                      size: fontSize, color: const Color(0xFF241A05)),
                 ),
               ),
             ),

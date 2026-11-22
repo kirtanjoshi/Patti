@@ -51,9 +51,11 @@ class DeepLinkService {
     // 2. patii://friend/PT-K8M2  or  https://patii.app/f/PT-K8M2
     if (uri.scheme == 'patii') {
       if (uri.host == 'room' || uri.pathSegments.contains('room')) {
-        roomCode = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : uri.host;
+        roomCode =
+            uri.pathSegments.isNotEmpty ? uri.pathSegments.last : uri.host;
       } else if (uri.host == 'friend' || uri.pathSegments.contains('friend')) {
-        friendCode = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : uri.host;
+        friendCode =
+            uri.pathSegments.isNotEmpty ? uri.pathSegments.last : uri.host;
       }
     } else if (uri.host.contains('patii.app') ||
         uri.host.contains('onrender.com') ||

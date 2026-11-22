@@ -7,8 +7,10 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { SocialService } from './social.service.js';
 import { NearbyService } from './nearby.service.js';
 import { AuthService } from '../auth/auth.service.js';
@@ -99,16 +101,20 @@ export class SocialController {
 
   @Post('nearby/location')
   async updateNearbyLocation(
+    @Req() req: Request,
     @Headers('authorization') authHeader: string | undefined,
     @Body() body: UpdateNearbyLocationDto,
   ) {
     const userId = this.extractUserId(authHeader);
-    this.nearbyService.updateLocation(userId, body.latitude, body.longitude, body.isVisible ?? true);
+    const clientIp =
+      req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
+    this.nearbyService.updateLocation(userId, body.latitude, body.longitude, body.isVisible ?? true, clientIp);
     return { success: true };
   }
 
   @Get('nearby')
   async getNearbyPlayers(
+    @Req() req: Request,
     @Headers('authorization') authHeader: string | undefined,
     @Query('lat') lat?: string,
     @Query('lon') lon?: string,
@@ -118,8 +124,10 @@ export class SocialController {
     const parsedLat = lat ? parseFloat(lat) : undefined;
     const parsedLon = lon ? parseFloat(lon) : undefined;
     const parsedRadius = radiusKm ? Math.min(50, Math.max(0.5, parseFloat(radiusKm))) : 10;
+    const clientIp =
+      req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
 
-    return this.nearbyService.getNearbyPlayers(userId, parsedLat, parsedLon, parsedRadius);
+    return this.nearbyService.getNearbyPlayers(userId, parsedLat, parsedLon, parsedRadius, clientIp);
   }
 
   @Post('nearby/visibility')

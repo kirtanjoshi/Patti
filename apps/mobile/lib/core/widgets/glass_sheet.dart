@@ -32,7 +32,8 @@ class GlassPanel extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: customBgColor ?? PatiiColors.navyElevated.withValues(alpha: 0.82),
+            color: customBgColor ??
+                PatiiColors.navyElevated.withValues(alpha: 0.82),
             borderRadius: radius,
             border: customBorder ??
                 Border.all(
@@ -66,7 +67,8 @@ class GlassSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: maxHeight != null ? BoxConstraints(maxHeight: maxHeight!) : null,
+      constraints:
+          maxHeight != null ? BoxConstraints(maxHeight: maxHeight!) : null,
       decoration: BoxDecoration(
         color: PatiiColors.navySurface.withValues(alpha: 0.90),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
@@ -89,7 +91,8 @@ class GlassSheet extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -121,7 +124,8 @@ class GlassSheet extends StatelessWidget {
                         ),
                         if (onClose != null)
                           IconButton(
-                            icon: const Icon(Icons.close, size: 20, color: PatiiColors.textSecondary),
+                            icon: const Icon(Icons.close,
+                                size: 20, color: PatiiColors.textSecondary),
                             onPressed: onClose,
                           ),
                       ],

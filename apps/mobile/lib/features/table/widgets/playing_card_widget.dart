@@ -57,6 +57,29 @@ class PlayingCardWidget extends StatelessWidget {
 
   bool get isRed => card.suit == Suit.H || card.suit == Suit.D;
 
+  /// Asset path for high-resolution realistic card graphics.
+  String get assetPath {
+    final effectiveRank = switch (card.rank) {
+      0 => 0,
+      14 => 1,
+      _ => card.rank,
+    };
+    final suitCode = switch (card.suit) {
+      Suit.S => 'S',
+      Suit.H => 'H',
+      Suit.D => 'D',
+      Suit.C => 'C',
+      Suit.X => 'X',
+    };
+    if (card.rank == 0 || suitCode == 'X') {
+      return 'assets/images/cards/0X.png';
+    }
+    return 'assets/images/cards/$effectiveRank$suitCode.png';
+  }
+
+  /// Default back design asset path.
+  static const String backAssetPath = 'assets/images/cards/card_back.png';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -80,7 +103,9 @@ class PlayingCardWidget extends StatelessWidget {
               color: isFaceDown ? colorScheme.secondary : colorScheme.surface,
               borderRadius: BorderRadius.circular(6.0),
               border: Border.all(
-                color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.outlineVariant,
                 width: isSelected ? 2.0 : 1.0,
               ),
               boxShadow: [
@@ -91,109 +116,148 @@ class PlayingCardWidget extends StatelessWidget {
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(4.0),
-            child: isFaceDown
-                ? Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.grid_view_rounded,
-                            size: 18,
-                            color: colorScheme.onSecondary.withValues(alpha: 0.7),
-                          ),
-                          if (badgeText != null) ...[
-                            const SizedBox(height: 2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary,
-                                borderRadius: BorderRadius.circular(4),
+            padding: EdgeInsets.zero,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5.0),
+              child: isFaceDown
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildFallbackBack(colorScheme),
+                        Image.asset(
+                          backAssetPath,
+                          fit: BoxFit.fill,
+                          filterQuality: FilterQuality.medium,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox.shrink(),
+                        ),
+                      ],
+                    )
+                  : Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              _buildFallbackFace(theme, cardColor),
+                              Image.asset(
+                                assetPath,
+                                fit: BoxFit.fill,
+                                filterQuality: FilterQuality.medium,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const SizedBox.shrink(),
                               ),
-                              child: Text(
-                                badgeText!,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.onPrimary,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                            ],
+                          ),
+                        ),
+                        if (badgeText != null)
+                          Positioned(
+                            bottom: 2,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 3, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  badgeText!,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.onPrimaryContainer,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                          ],
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                  )
-                : Stack(
-                    children: [
-                      Positioned.fill(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.center,
-                          child: Padding(
-                            padding: const EdgeInsets.all(2.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Align(
-                                  alignment: Alignment.topLeft,
-                                  child: Text(
-                                    rankLabel,
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      color: cardColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  suitSymbol,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: cardColor,
-                                  ),
-                                ),
-                                Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Text(
-                                    rankLabel,
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      color: cardColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (badgeText != null)
-                        Positioned(
-                          bottom: 2,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(
-                                badgeText!,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackBack(ColorScheme colorScheme) {
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.grid_view_rounded,
+              size: 18,
+              color: colorScheme.onSecondary.withValues(alpha: 0.7),
+            ),
+            if (badgeText != null) ...[
+              const SizedBox(height: 2),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  badgeText!,
+                  style: TextStyle(
+                    color: colorScheme.onPrimary,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackFace(ThemeData theme, Color cardColor) {
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.all(2.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  rankLabel,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: cardColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Text(
+                suitSymbol,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: cardColor,
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Text(
+                  rankLabel,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: cardColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/services.dart';
+import '../services/audio_service.dart';
+import 'audio_settings_sheet.dart';
 import 'coin_counter.dart';
 import 'package:patii_engine/patii_engine.dart' as engine;
 import '../theme/colors.dart';
@@ -49,10 +51,12 @@ class _TableShellState extends State<TableShell> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    AudioService.instance.playTableMusic();
   }
 
   @override
   void dispose() {
+    AudioService.instance.playLobbyMusic();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -72,7 +76,8 @@ class _TableShellState extends State<TableShell> {
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.logout_rounded, color: PatiiColors.crimsonLight),
         title: Text('callbreak.leave'.tr(), textAlign: TextAlign.center),
-        content: Text('callbreak.leave_confirm'.tr(), textAlign: TextAlign.center),
+        content:
+            Text('callbreak.leave_confirm'.tr(), textAlign: TextAlign.center),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           GhostButton(
@@ -185,7 +190,8 @@ class _TableShellState extends State<TableShell> {
                                   child: SuitIcon(
                                     suit: trump,
                                     size: 11,
-                                    color: trump == engine.Suit.H || trump == engine.Suit.D
+                                    color: trump == engine.Suit.H ||
+                                            trump == engine.Suit.D
                                         ? PatiiColors.suitRed
                                         : PatiiColors.suitBlack,
                                   ),
@@ -202,6 +208,12 @@ class _TableShellState extends State<TableShell> {
                           value: CoinCounter.formatCoins(widget.pot!),
                         ),
                       ],
+                      const SizedBox(width: 6),
+                      HudIconButton(
+                        icon: Icons.volume_up_rounded,
+                        semanticLabel: 'Audio Settings',
+                        onPressed: () => AudioSettingsSheet.show(context),
+                      ),
                       const SizedBox(width: 6),
                       HudIconButton(
                         icon: Icons.question_mark_rounded,
@@ -244,9 +256,16 @@ class HudChip extends StatelessWidget {
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.black.withValues(alpha: 0.42),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: PatiiColors.hairline),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -254,7 +273,9 @@ class HudChip extends StatelessWidget {
               if (leading != null) leading!,
               if (label != null) ...[
                 const SizedBox(width: 6),
-                Text(label!, style: PatiiTypography.eyebrow(fontSize: 9.5, color: PatiiColors.textSecondary)),
+                Text(label!,
+                    style: PatiiTypography.eyebrow(
+                        fontSize: 9.5, color: PatiiColors.textSecondary)),
               ],
               if (value != null) ...[
                 const SizedBox(width: 6),
@@ -299,9 +320,16 @@ class HudIconButton extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.black.withValues(alpha: 0.42),
             shape: BoxShape.circle,
-            border: Border.all(color: PatiiColors.hairline),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
+              ),
+            ],
           ),
           child: Icon(icon, size: 19, color: PatiiColors.textPrimary),
         ),

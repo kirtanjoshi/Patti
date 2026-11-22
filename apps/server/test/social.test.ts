@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { prisma } from '@patii/db';
 import { SocialService } from '../src/modules/social/social.service.js';
 import { NearbyService } from '../src/modules/social/nearby.service.js';
 import { InviteRedirectController } from '../src/modules/invites/invite-redirect.controller.js';
@@ -46,6 +47,55 @@ describe('NearbyService (Haversine & Privacy Coarse Location)', () => {
     // After setting visibility false, user is removed from active map
     nearbyService.updateLocation('user_b', 27.7050, 85.3080, true);
     // User B should not see hidden User A
+  });
+
+  it('detects same Wi-Fi network and prioritizes it at the top of nearby players', async () => {
+    const freshNearbyService = new NearbyService(socialService);
+
+    // Mock prisma queries
+    vi.spyOn(prisma.user, 'findMany').mockResolvedValue([
+      {
+        id: 'user_far_wifi',
+        displayName: 'Far Wifi Player',
+        friendCode: 'WIFI01',
+        avatarId: 1,
+        avatarUrl: null,
+        level: 3,
+        rating: 1300,
+      },
+      {
+        id: 'user_close_other_ip',
+        displayName: 'Close Cell Player',
+        friendCode: 'CELL01',
+        avatarId: 2,
+        avatarUrl: null,
+        level: 2,
+        rating: 1200,
+      },
+    ] as any);
+
+    vi.spyOn(prisma.friendship, 'findMany').mockResolvedValue([]);
+
+    // Candidate 1: 5 km away, but same Wi-Fi IP '192.168.1.100'
+    freshNearbyService.updateLocation('user_far_wifi', 27.7500, 85.3500, true, '192.168.1.100');
+
+    // Candidate 2: 100 meters away, but different IP '10.0.0.5'
+    freshNearbyService.updateLocation('user_close_other_ip', 27.7045, 85.3078, true, '10.0.0.5');
+
+    // My user: IP '192.168.1.100'
+    const results = await freshNearbyService.getNearbyPlayers('user_me', 27.7042, 85.3075, 10, '192.168.1.100');
+
+    expect(results).toHaveLength(2);
+    // Same Wi-Fi candidate must be at index 0 despite greater physical distance
+    expect(results[0]!.userId).toBe('user_far_wifi');
+    expect(results[0]!.isSameWifi).toBe(true);
+    expect(results[0]!.distanceMeters).toBe(0);
+    expect(results[0]!.distanceText).toBe('Same Wi-Fi Network');
+
+    // Different IP candidate is second
+    expect(results[1]!.userId).toBe('user_close_other_ip');
+    expect(results[1]!.isSameWifi).toBe(false);
+    expect(results[1]!.distanceMeters).toBeGreaterThan(0);
   });
 });
 

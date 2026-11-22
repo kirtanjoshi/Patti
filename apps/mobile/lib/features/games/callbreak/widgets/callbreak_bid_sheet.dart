@@ -108,7 +108,8 @@ class _CallbreakBidSheetState extends State<CallbreakBidSheet> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: PatiiColors.gold.withValues(alpha: 0.5),
+                                    color:
+                                        PatiiColors.gold.withValues(alpha: 0.5),
                                     blurRadius: 8,
                                     spreadRadius: 1,
                                   ),

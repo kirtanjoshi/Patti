@@ -83,8 +83,7 @@ class MarriageMeldTray extends StatelessWidget {
                       const BoxConstraints(minWidth: 48, minHeight: 48),
                   child: IconButton(
                     tooltip: 'marriage.auto_group'.tr(),
-                    icon: Icon(Icons.auto_fix_high,
-                        color: colorScheme.primary),
+                    icon: Icon(Icons.auto_fix_high, color: colorScheme.primary),
                     onPressed: onAutoGroup,
                   ),
                 ),
@@ -171,7 +170,8 @@ class MarriageMeldTray extends StatelessWidget {
                     color: canSeeMaal
                         ? colorScheme.primary
                         : colorScheme.onSurfaceVariant,
-                    fontWeight: canSeeMaal ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        canSeeMaal ? FontWeight.bold : FontWeight.normal,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -183,7 +183,8 @@ class MarriageMeldTray extends StatelessWidget {
                   button: true,
                   label: 'marriage.see_maal'.tr(),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 120, minHeight: 48),
+                    constraints:
+                        const BoxConstraints(minWidth: 120, minHeight: 48),
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: colorScheme.primary,
@@ -203,7 +204,8 @@ class MarriageMeldTray extends StatelessWidget {
                   button: true,
                   label: 'marriage.declare'.tr(),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 120, minHeight: 48),
+                    constraints:
+                        const BoxConstraints(minWidth: 120, minHeight: 48),
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: colorScheme.primary,
@@ -288,7 +290,9 @@ class MarriageMeldTray extends StatelessWidget {
 
         return Semantics(
           button: true,
-          label: '${'marriage.slot_title'.tr(args: ['${slot.id + 1}'])}: $statusLabel',
+          label: '${'marriage.slot_title'.tr(args: [
+                '${slot.id + 1}'
+              ])}: $statusLabel',
           child: GestureDetector(
             onTap: () {
               if (selectedCard != null && !slot.isFull) {
@@ -314,7 +318,8 @@ class MarriageMeldTray extends StatelessWidget {
                 children: [
                   // Status badge row
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 4.0, vertical: 2.0),
                     decoration: BoxDecoration(
                       color: statusBgColor,
                       borderRadius: BorderRadius.circular(4.0),
@@ -346,7 +351,8 @@ class MarriageMeldTray extends StatelessWidget {
                         : ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: slot.cards.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 4.0),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 4.0),
                             itemBuilder: (context, cardIdx) {
                               final card = slot.cards[cardIdx];
                               return Semantics(
@@ -356,7 +362,8 @@ class MarriageMeldTray extends StatelessWidget {
                                   card: card,
                                   width: 38.0,
                                   height: 60.0,
-                                  onTap: () => onCardRemoved?.call(slot.id, card),
+                                  onTap: () =>
+                                      onCardRemoved?.call(slot.id, card),
                                 ),
                               );
                             },

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/audio_service.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/theme/colors.dart';
@@ -15,6 +16,7 @@ import '../auth/google_auth_sheet.dart';
 import '../changelog/changelog_dialog.dart';
 import '../economy/daily_reward_dialog.dart';
 import '../friends/friends_screen.dart';
+import '../friends/widgets/shake_match_dialog.dart';
 import '../games/callbreak/callbreak_table_screen.dart';
 import '../games/dhumbal/dhumbal_table_screen.dart';
 import '../games/jutpatti/jutpatti_table_screen.dart';
@@ -50,6 +52,8 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
   void initState() {
     super.initState();
     _lockToPortrait();
+    AudioService.instance.init();
+    AudioService.instance.playLobbyMusic();
     _subscribeToInvites();
     _checkFirstLaunchChangelog();
   }
@@ -68,9 +72,11 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
   }
 
   void _subscribeToInvites() {
-    _inviteSub = ref.read(socketServiceProvider).roomInviteStream.listen((invite) {
+    _inviteSub =
+        ref.read(socketServiceProvider).roomInviteStream.listen((invite) {
       if (!mounted) return;
       HapticFeedback.heavyImpact();
+      AudioService.instance.playYourTurnChime();
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -81,11 +87,13 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
           ),
           title: Row(
             children: [
-              const Icon(Icons.mark_chat_unread_rounded, color: PatiiColors.gold),
+              const Icon(Icons.mark_chat_unread_rounded,
+                  color: PatiiColors.gold),
               const SizedBox(width: 8),
               Text(
                 'Table Invite',
-                style: PatiiTypography.display(fontSize: 18, color: PatiiColors.goldLight),
+                style: PatiiTypography.display(
+                    fontSize: 18, color: PatiiColors.goldLight),
               ),
             ],
           ),
@@ -96,22 +104,26 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('actions.cancel'.tr(), style: const TextStyle(color: PatiiColors.textMuted)),
+              child: Text('actions.cancel'.tr(),
+                  style: const TextStyle(color: PatiiColors.textMuted)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: PatiiColors.gold,
                 foregroundColor: PatiiColors.navy,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () {
                 Navigator.pop(ctx);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => RoomScreen(initialCode: invite.code)),
+                  MaterialPageRoute(
+                      builder: (_) => RoomScreen(initialCode: invite.code)),
                 );
               },
-              child: const Text('Join Table', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Join Table',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -139,7 +151,8 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
       setState(() {
         _coins += 50; // Refresh bonus
       });
-      ToastBanner.show(context, 'Synced with Patii game servers', icon: Icons.sync_rounded);
+      ToastBanner.show(context, 'Synced with Patii game servers',
+          icon: Icons.sync_rounded);
     }
   }
 
@@ -240,7 +253,8 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
         onlineCount: 690,
         fannedCardSuits: ['♣', '★', '♣'],
         fannedCardRanks: ['4', 'J', '6'],
-        onTap: () => _navigateToGame(const RummyTableScreen(isJokerVariant: true)),
+        onTap: () =>
+            _navigateToGame(const RummyTableScreen(isJokerVariant: true)),
       ),
     ];
   }
@@ -272,7 +286,8 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                   shape: BoxShape.circle,
                   color: PatiiColors.info.withValues(alpha: 0.16),
                 ),
-                child: const Icon(Icons.group_add_rounded, color: PatiiColors.info, size: 18),
+                child: const Icon(Icons.group_add_rounded,
+                    color: PatiiColors.info, size: 18),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -284,20 +299,107 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                       'lobby.private_room'.tr(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: PatiiTypography.display(fontSize: 13, fontWeight: FontWeight.w700),
+                      style: PatiiTypography.display(
+                          fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'lobby.private_room_sub'.tr(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textSecondary),
+                      style: PatiiTypography.body(
+                          fontSize: 12, color: PatiiColors.textSecondary),
                     ),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _shakeToMatchBanner() {
+    return Pressable(
+      onPressed: () => ShakeMatchDialog.show(context),
+      child: Container(
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2E1B4E), Color(0xFF16233B)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: PatiiColors.gold.withValues(alpha: 0.35),
+            width: 1.1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: PatiiColors.gold.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: PatiiColors.gold.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.vibration_rounded,
+                  color: PatiiColors.gold, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Shake to Match Nearby',
+                    style: PatiiTypography.display(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: PatiiColors.goldLight,
+                    ),
+                  ),
+                  Text(
+                    'Tap or shake your device to find nearby players',
+                    style: PatiiTypography.body(
+                      fontSize: 10.5,
+                      color: PatiiColors.textMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                gradient: PatiiColors.goldButtonGradient,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'SHAKE',
+                style: PatiiTypography.body(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: PatiiColors.navy,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -317,10 +419,8 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
       onPlay: featured.onTap,
     );
     if (!reduceMotion) {
-      hero = hero
-          .animate()
-          .fadeIn(duration: 350.ms)
-          .moveY(begin: 12, end: 0, duration: 450.ms, curve: Curves.easeOutCubic);
+      hero = hero.animate().fadeIn(duration: 350.ms).moveY(
+          begin: 12, end: 0, duration: 450.ms, curve: Curves.easeOutCubic);
     }
 
     return Scaffold(
@@ -329,17 +429,20 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
         children: [
           // Ambient backdrop: ink with a crimson + blue glow behind the header.
           const Positioned.fill(
-            child: DecoratedBox(decoration: BoxDecoration(gradient: PatiiColors.backdrop)),
+            child: DecoratedBox(
+                decoration: BoxDecoration(gradient: PatiiColors.backdrop)),
           ),
           Positioned(
             top: -140,
             left: -100,
-            child: _Glow(color: PatiiColors.crimson.withValues(alpha: 0.28), size: 380),
+            child: _Glow(
+                color: PatiiColors.crimson.withValues(alpha: 0.28), size: 380),
           ),
           Positioned(
             top: -80,
             right: -160,
-            child: _Glow(color: PatiiColors.chipBlue.withValues(alpha: 0.20), size: 360),
+            child: _Glow(
+                color: PatiiColors.chipBlue.withValues(alpha: 0.20), size: 360),
           ),
 
           SafeArea(
@@ -357,10 +460,12 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                     child: LobbyTopBar(
                       coins: ref.watch(authProvider).user?.coins ?? _coins,
                       vipLevel: ref.watch(authProvider).user?.level ?? 3,
-                      username: ref.watch(authProvider).user?.displayName ?? 'Patii Player',
+                      username: ref.watch(authProvider).user?.displayName ??
+                          'Patii Player',
                       onAddCoins: _openDailyReward,
                       onAvatarTap: () => GoogleAuthSheet.show(context),
-                      onOpenGallery: () => Navigator.pushNamed(context, '/dev/gallery'),
+                      onOpenGallery: () =>
+                          Navigator.pushNamed(context, '/dev/gallery'),
                     ),
                   ),
                   SliverPadding(
@@ -374,10 +479,16 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                         children: [
                           Expanded(child: _privateRoomTile()),
                           const SizedBox(width: 12),
-                          Expanded(child: DailyBonusBanner(onClaim: _openDailyReward)),
+                          Expanded(
+                              child:
+                                  DailyBonusBanner(onClaim: _openDailyReward)),
                         ],
                       ),
                     ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                    sliver: SliverToBoxAdapter(child: _shakeToMatchBanner()),
                   ),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
@@ -391,13 +502,15 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                               'lobby.all_games'.tr(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: PatiiTypography.display(fontSize: 18, fontWeight: FontWeight.w700),
+                              style: PatiiTypography.display(
+                                  fontSize: 18, fontWeight: FontWeight.w700),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'lobby.games_count'.tr(args: ['${games.length}']),
-                            style: PatiiTypography.body(fontSize: 12.5, color: PatiiColors.textMuted),
+                            style: PatiiTypography.body(
+                                fontSize: 12.5, color: PatiiColors.textMuted),
                           ),
                         ],
                       ),
@@ -442,7 +555,9 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                     MaterialPageRoute(builder: (_) => const FriendsScreen()),
                   );
                 } else if (index == 2) {
-                  ToastBanner.show(context, 'Leaderboard: You are ranked #42 in Nepal', icon: Icons.emoji_events_rounded);
+                  ToastBanner.show(
+                      context, 'Leaderboard: You are ranked #42 in Nepal',
+                      icon: Icons.emoji_events_rounded);
                 } else if (index == 3) {
                   GoogleAuthSheet.show(context);
                 }

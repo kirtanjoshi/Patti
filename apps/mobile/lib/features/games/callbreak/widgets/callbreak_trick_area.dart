@@ -45,7 +45,8 @@ class CallbreakTrickArea extends StatelessWidget {
         _ => Offset.zero,
       };
 
-  static Offset _rest(int seat) => Offset(_dir(seat).dx * 34, _dir(seat).dy * 22);
+  static Offset _rest(int seat) =>
+      Offset(_dir(seat).dx * 34, _dir(seat).dy * 22);
 
   static double _tilt(int seat) => switch (seat) {
         1 => -0.10,
@@ -87,24 +88,36 @@ class CallbreakTrickArea extends StatelessWidget {
             ),
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: winningSeat == null ? 0 : 1),
-            duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 520),
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 520),
             curve: Curves.easeInCubic,
             builder: (context, t, _) {
-              final sweep = winningSeat == null ? Offset.zero : _dir(winningSeat!) * 170 * t;
+              final sweep = winningSeat == null
+                  ? Offset.zero
+                  : _dir(winningSeat!) * 170 * t;
               return Opacity(
                 opacity: (1 - t * 0.9).clamp(0.0, 1.0),
                 child: Stack(
                   alignment: Alignment.center,
                   clipBehavior: Clip.none,
                   children: playedCards.map((played) {
-                    Widget card = PlayingCard.table(card: played.card, width: 50, height: 70);
+                    Widget card = PlayingCard.table(
+                        card: played.card, width: 50, height: 70);
                     if (!reduceMotion) {
                       final from = _dir(played.seat) * 140;
                       card = card
                           .animate(key: ValueKey(played.card.id))
-                          .move(begin: from, end: Offset.zero, duration: 280.ms, curve: Curves.easeOutCubic)
+                          .move(
+                              begin: from,
+                              end: Offset.zero,
+                              duration: 280.ms,
+                              curve: Curves.easeOutCubic)
                           // rotate() is in turns: ~15-20 degrees of spin-in.
-                          .rotate(begin: _tilt(played.seat) * 0.5, end: 0, duration: 280.ms)
+                          .rotate(
+                              begin: _tilt(played.seat) * 0.5,
+                              end: 0,
+                              duration: 280.ms)
                           .fadeIn(duration: 120.ms);
                     }
                     return Transform.translate(
@@ -112,7 +125,8 @@ class CallbreakTrickArea extends StatelessWidget {
                       offset: Offset.lerp(_rest(played.seat), sweep, t)!,
                       child: Transform.scale(
                         scale: 1 - 0.4 * t,
-                        child: Transform.rotate(angle: _tilt(played.seat), child: card),
+                        child: Transform.rotate(
+                            angle: _tilt(played.seat), child: card),
                       ),
                     );
                   }).toList(),

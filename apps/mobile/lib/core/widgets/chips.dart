@@ -59,29 +59,29 @@ class CasinoChip extends StatelessWidget {
               : Colors.white.withValues(alpha: 0.85),
         ),
         child: Center(
-        child: Container(
-          width: size * 0.72,
-          height: size * 0.72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: denomination.textColor.withValues(alpha: 0.4),
-              width: 1.0,
+          child: Container(
+            width: size * 0.72,
+            height: size * 0.72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: denomination.textColor.withValues(alpha: 0.4),
+                width: 1.0,
+              ),
             ),
-          ),
-          child: Center(
-            child: Text(
-              denomination.value >= 1000
-                  ? '${denomination.value ~/ 1000}k'
-                  : '${denomination.value}',
-              style: PatiiTypography.display(
-                fontSize: size * 0.28,
-                fontWeight: FontWeight.w900,
-                color: denomination.textColor,
+            child: Center(
+              child: Text(
+                denomination.value >= 1000
+                    ? '${denomination.value ~/ 1000}k'
+                    : '${denomination.value}',
+                style: PatiiTypography.display(
+                  fontSize: size * 0.28,
+                  fontWeight: FontWeight.w900,
+                  color: denomination.textColor,
+                ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -185,7 +185,8 @@ class _ChipTossState extends State<ChipToss>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _animation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
 
     _controller.forward().then((_) {
       widget.onComplete();
@@ -206,8 +207,11 @@ class _ChipTossState extends State<ChipToss>
         final t = _animation.value;
         // Parabolic arc for toss effect
         final arcY = -40.0 * 4 * t * (1 - t);
-        final currentX = widget.startOffset.dx + (widget.endOffset.dx - widget.startOffset.dx) * t;
-        final currentY = widget.startOffset.dy + (widget.endOffset.dy - widget.startOffset.dy) * t + arcY;
+        final currentX = widget.startOffset.dx +
+            (widget.endOffset.dx - widget.startOffset.dx) * t;
+        final currentY = widget.startOffset.dy +
+            (widget.endOffset.dy - widget.startOffset.dy) * t +
+            arcY;
 
         return Positioned(
           left: currentX - 14.0,

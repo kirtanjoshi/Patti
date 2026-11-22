@@ -44,14 +44,14 @@ class KittiArrangeBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape ||
-            constraints.maxWidth > 340;
+        final isLandscape =
+            MediaQuery.of(context).orientation == Orientation.landscape ||
+                constraints.maxWidth > 340;
 
         final slotWidgets = List.generate(3, (index) {
           final slotCards = index < slots.length ? slots[index] : <Card>[];
-          final evaluation = slotCards.length == 3
-              ? KittiEvaluator.evaluate(slotCards)
-              : null;
+          final evaluation =
+              slotCards.length == 3 ? KittiEvaluator.evaluate(slotCards) : null;
 
           return _buildSlotContainer(
             context: context,
@@ -66,20 +66,24 @@ class KittiArrangeBoard extends StatelessWidget {
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: slotWidgets.map((w) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: w,
-              ),
-            )).toList(),
+            children: slotWidgets
+                .map((w) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: w,
+                      ),
+                    ))
+                .toList(),
           );
         } else {
           return Column(
             mainAxisSize: MainAxisSize.min,
-            children: slotWidgets.map((w) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: w,
-            )).toList(),
+            children: slotWidgets
+                .map((w) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: w,
+                    ))
+                .toList(),
           );
         }
       },
@@ -139,11 +143,13 @@ class KittiArrangeBoard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 1.0),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4.0, vertical: 1.0),
                           decoration: BoxDecoration(
                             color: PatiiColors.success.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(6.0),
-                            border: Border.all(color: PatiiColors.success, width: 0.8),
+                            border: Border.all(
+                                color: PatiiColors.success, width: 0.8),
                           ),
                           child: Text(
                             evaluation.labelKey.tr(),
@@ -181,28 +187,28 @@ class KittiArrangeBoard extends StatelessWidget {
                     ],
                   ],
                 ),
-                  const SizedBox(height: 4.0),
+                const SizedBox(height: 4.0),
 
-                  // 3 Card Slots
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (cardIndex) {
-                      final hasCard = cardIndex < cards.length;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                        child: hasCard
-                            ? _buildFilledCard(cards[cardIndex], slotIndex)
-                            : _buildEmptyPlaceholder(slotIndex),
-                      );
-                    }),
-                  ),
-                ],
-              ),
+                // 3 Card Slots
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(3, (cardIndex) {
+                    final hasCard = cardIndex < cards.length;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                      child: hasCard
+                          ? _buildFilledCard(cards[cardIndex], slotIndex)
+                          : _buildEmptyPlaceholder(slotIndex),
+                    );
+                  }),
+                ),
+              ],
             ),
-          );
-        },
-      );
-    }
+          ),
+        );
+      },
+    );
+  }
 
   Widget _buildFilledCard(Card card, int slotIndex) {
     return GestureDetector(

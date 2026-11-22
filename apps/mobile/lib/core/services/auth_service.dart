@@ -128,7 +128,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final refreshToken = data['refreshToken'] as String?;
         final userId = data['userId'] as String;
         final name = data['displayName'] as String? ?? displayName;
-        final friendCode = data['friendCode'] as String? ?? 'PT-${Random().nextInt(9000) + 1000}';
+        final friendCode = data['friendCode'] as String? ??
+            'PT-${Random().nextInt(9000) + 1000}';
 
         final user = UserAccount(
           userId: userId,
@@ -151,7 +152,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return await _fallbackLocalGuest(displayName);
       }
     } catch (e) {
-      debugPrint('Guest login network failure: $e. Falling back to local guest.');
+      debugPrint(
+          'Guest login network failure: $e. Falling back to local guest.');
       final displayName = nickname?.trim().isNotEmpty == true
           ? nickname!.trim()
           : 'Player #${Random().nextInt(9000) + 1000}';
@@ -191,14 +193,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (idToken != null) {
         return await loginGoogle(idToken);
       }
-      state = state.copyWith(isLoading: false, error: 'Could not retrieve Google ID token');
+      state = state.copyWith(
+          isLoading: false, error: 'Could not retrieve Google ID token');
       return false;
     } catch (e) {
       debugPrint('Google Sign-In error: $e');
       if (kDebugMode) {
         return await loginGoogle('mock-google-token:player@gmail.com');
       }
-      state = state.copyWith(isLoading: false, error: 'Google sign-in error: $e');
+      state =
+          state.copyWith(isLoading: false, error: 'Google sign-in error: $e');
       return false;
     }
   }
@@ -300,7 +304,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final updatedUser = state.user?.copyWith(
           isGuest: false,
-          displayName: data['displayName'] as String? ?? state.user?.displayName,
+          displayName:
+              data['displayName'] as String? ?? state.user?.displayName,
           avatarUrl: data['avatarUrl'] as String? ?? state.user?.avatarUrl,
         );
         if (updatedUser != null) {
@@ -317,7 +322,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       displayName: '${state.user?.displayName} (Linked)',
     );
     if (updatedUser != null) {
-      await _persistSession(state.token ?? 'mock_token', state.refreshToken, updatedUser);
+      await _persistSession(
+          state.token ?? 'mock_token', state.refreshToken, updatedUser);
       state = state.copyWith(isLoading: false, user: updatedUser);
     }
     return true;
@@ -363,7 +369,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   static const String _dailyClaimDateKey = 'patii_daily_claim_date';
   static const String _dailyStreakCountKey = 'patii_daily_streak_count';
-  static const List<int> dailyRewards = [500, 750, 1000, 1250, 1500, 2000, 3000];
+  static const List<int> dailyRewards = [
+    500,
+    750,
+    1000,
+    1250,
+    1500,
+    2000,
+    3000
+  ];
 
   Future<int> getDailyStreak() async {
     final prefs = await SharedPreferences.getInstance();
@@ -374,14 +388,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final prefs = await SharedPreferences.getInstance();
     final lastDate = prefs.getString(_dailyClaimDateKey);
     final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     return lastDate == todayStr;
   }
 
   Future<int> claimDailyReward() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final lastDate = prefs.getString(_dailyClaimDateKey);
 
     if (lastDate == todayStr) {
@@ -389,7 +405,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     final yesterday = now.subtract(const Duration(days: 1));
-    final yesterdayStr = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+    final yesterdayStr =
+        '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
 
     int currentStreak = prefs.getInt(_dailyStreakCountKey) ?? 0;
     int nextStreak;

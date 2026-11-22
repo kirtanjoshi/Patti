@@ -44,7 +44,9 @@ class SeatWidget extends StatelessWidget {
             color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(8.0),
             border: Border.all(
-              color: isHighlighted ? colorScheme.primary : colorScheme.outlineVariant,
+              color: isHighlighted
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant,
               width: isHighlighted ? 2.5 : 1.0,
             ),
           ),
@@ -54,11 +56,15 @@ class SeatWidget extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: isWinner ? colorScheme.primary : colorScheme.secondary,
+                backgroundColor:
+                    isWinner ? colorScheme.primary : colorScheme.secondary,
                 child: isWinner
-                    ? Icon(Icons.emoji_events, size: 18, color: colorScheme.onPrimary)
+                    ? Icon(Icons.emoji_events,
+                        size: 18, color: colorScheme.onPrimary)
                     : Text(
-                        displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                        displayName.isNotEmpty
+                            ? displayName[0].toUpperCase()
+                            : '?',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: colorScheme.onSecondary,
                           fontWeight: FontWeight.bold,
@@ -81,7 +87,8 @@ class SeatWidget extends StatelessWidget {
                       ),
                       if (isBot) ...[
                         const SizedBox(width: 4.0),
-                        Icon(Icons.smart_toy, size: 14, color: colorScheme.outline),
+                        Icon(Icons.smart_toy,
+                            size: 14, color: colorScheme.outline),
                       ],
                     ],
                   ),

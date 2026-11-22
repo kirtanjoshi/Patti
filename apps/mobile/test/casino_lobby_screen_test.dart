@@ -9,7 +9,8 @@ import 'package:patii/features/lobby/widgets/lobby_top_bar.dart';
 
 void main() {
   group('Casino Lobby Screen Tests', () {
-    testWidgets('Renders complete CasinoLobbyScreen on 393x852 standard phone', (tester) async {
+    testWidgets('Renders complete CasinoLobbyScreen on 393x852 standard phone',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(393, 852));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -34,7 +35,9 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('Renders CasinoLobbyScreen on 360x640 small screen without overflow', (tester) async {
+    testWidgets(
+        'Renders CasinoLobbyScreen on 360x640 small screen without overflow',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -54,7 +57,9 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('Renders CasinoLobbyScreen on 600x960 tablet portrait without overflow', (tester) async {
+    testWidgets(
+        'Renders CasinoLobbyScreen on 600x960 tablet portrait without overflow',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(600, 960));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -74,7 +79,8 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('Bottom navigation tab selection changes active index', (tester) async {
+    testWidgets('Bottom navigation tab selection changes active index',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(393, 852));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 

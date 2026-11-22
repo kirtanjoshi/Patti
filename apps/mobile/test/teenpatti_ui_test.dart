@@ -13,14 +13,16 @@ import 'package:patii/features/games/teenpatti/widgets/teenpatti_pot_center.dart
 
 void main() {
   group('TeenPattiEvaluator Tests', () {
-    test('evaluates Trail, Pure Sequence, Sequence, Color, Pair, and High Card', () {
+    test('evaluates Trail, Pure Sequence, Sequence, Color, Pair, and High Card',
+        () {
       // 1. Trail (Three of a Kind)
       final trail = [
         const Card(suit: Suit.S, rank: 1, deck: 0, id: 'AS'),
         const Card(suit: Suit.H, rank: 1, deck: 0, id: 'AH'),
         const Card(suit: Suit.D, rank: 1, deck: 0, id: 'AD'),
       ];
-      expect(TeenPattiEvaluator.evaluateScore(trail), greaterThanOrEqualTo(600000));
+      expect(TeenPattiEvaluator.evaluateScore(trail),
+          greaterThanOrEqualTo(600000));
 
       // 2. Pure Sequence (Straight Flush)
       final pureSeq = [
@@ -119,7 +121,9 @@ void main() {
   });
 
   group('TeenPattiTableScreen Widget Tests', () {
-    testWidgets('renders Teen Patti table on 852x393 landscape without overflow', (tester) async {
+    testWidgets(
+        'renders Teen Patti table on 852x393 landscape without overflow',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -152,7 +156,9 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     });
 
-    testWidgets('renders Teen Patti table on 640x360 compact landscape without overflow', (tester) async {
+    testWidgets(
+        'renders Teen Patti table on 640x360 compact landscape without overflow',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(640, 360));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -171,7 +177,8 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     });
 
-    testWidgets('Tap See Cards reveals 3 cards and flips to Seen mode', (tester) async {
+    testWidgets('Tap See Cards reveals 3 cards and flips to Seen mode',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(852, 393));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 

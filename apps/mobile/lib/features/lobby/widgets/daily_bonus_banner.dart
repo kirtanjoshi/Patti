@@ -58,9 +58,13 @@ class _DailyBonusBannerState extends State<DailyBonusBanner> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: PatiiColors.goldButtonGradient,
-        boxShadow: [BoxShadow(color: PatiiColors.gold.withValues(alpha: 0.35), blurRadius: 12)],
+        boxShadow: [
+          BoxShadow(
+              color: PatiiColors.gold.withValues(alpha: 0.35), blurRadius: 12)
+        ],
       ),
-      child: const Icon(Icons.redeem_rounded, color: Color(0xFF241A05), size: 20),
+      child:
+          const Icon(Icons.redeem_rounded, color: Color(0xFF241A05), size: 20),
     );
     if (!reduceMotion) {
       gift = gift
@@ -83,7 +87,10 @@ class _DailyBonusBannerState extends State<DailyBonusBanner> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [PatiiColors.gold.withValues(alpha: 0.16), PatiiColors.navySurface],
+              colors: [
+                PatiiColors.gold.withValues(alpha: 0.16),
+                PatiiColors.navySurface
+              ],
             ),
             border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.3)),
           ),
@@ -100,7 +107,8 @@ class _DailyBonusBannerState extends State<DailyBonusBanner> {
                       'lobby.daily_bonus'.tr(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: PatiiTypography.display(fontSize: 13, fontWeight: FontWeight.w700),
+                      style: PatiiTypography.display(
+                          fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(

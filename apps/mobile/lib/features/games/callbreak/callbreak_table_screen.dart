@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patii_engine/patii_engine.dart' as engine;
 import '../../../../core/models/user_model.dart';
+import '../../../../core/services/audio_service.dart';
 import '../../../../core/services/socket_service.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/spacing.dart';
@@ -102,6 +103,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
 
     _resultSub = socket.tableResultStream.listen((data) {
       if (!mounted) return;
+      AudioService.instance.playWinJingle();
       ToastBanner.show(
         context,
         'Round complete! Well played.',
@@ -172,6 +174,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
   }
 
   void _onBidConfirmed(int bid) {
+    AudioService.instance.playChip();
     if (widget.tableId != null) {
       ref.read(socketServiceProvider).sendMove(
         widget.tableId!,
@@ -199,6 +202,12 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
   void _onPlayCard(engine.Card card) {
     if (phase != 'playing' || currentTurnSeat != widget.mySeat) return;
 
+    if (card.suit == engine.Suit.S) {
+      AudioService.instance.playSpecialHand();
+    } else {
+      AudioService.instance.playCardSnap();
+    }
+
     if (widget.tableId != null) {
       ref.read(socketServiceProvider).sendMove(
         widget.tableId!,
@@ -220,11 +229,13 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
       // Simulate bot responses in sequence (offline demo)
       Future.delayed(const Duration(milliseconds: 500), () {
         if (!mounted) return;
+        AudioService.instance.playCardSnap();
         setState(() {
           playedTrick.add(
             const PlayedTrickCard(
               seat: 1,
-              card: engine.Card(suit: engine.Suit.H, rank: 4, deck: 0, id: '4H0'),
+              card:
+                  engine.Card(suit: engine.Suit.H, rank: 4, deck: 0, id: '4H0'),
             ),
           );
           currentTurnSeat = 2;
@@ -232,11 +243,13 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
 
         Future.delayed(const Duration(milliseconds: 500), () {
           if (!mounted) return;
+          AudioService.instance.playCardSnap();
           setState(() {
             playedTrick.add(
               const PlayedTrickCard(
                 seat: 2,
-                card: engine.Card(suit: engine.Suit.H, rank: 8, deck: 0, id: '8H0'),
+                card: engine.Card(
+                    suit: engine.Suit.H, rank: 8, deck: 0, id: '8H0'),
               ),
             );
             currentTurnSeat = 3;
@@ -244,11 +257,13 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
 
           Future.delayed(const Duration(milliseconds: 500), () {
             if (!mounted) return;
+            AudioService.instance.playCardSnap();
             setState(() {
               playedTrick.add(
                 const PlayedTrickCard(
                   seat: 3,
-                  card: engine.Card(suit: engine.Suit.S, rank: 2, deck: 0, id: '2S0'),
+                  card: engine.Card(
+                      suit: engine.Suit.S, rank: 2, deck: 0, id: '2S0'),
                 ),
               );
             });
@@ -271,14 +286,22 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
       if (pt.card.suit == engine.Suit.S && bestCard.suit != engine.Suit.S) {
         bestCard = pt.card;
         winningSeat = pt.seat;
-      } else if (pt.card.suit == bestCard.suit && pt.card.rank > bestCard.rank) {
+      } else if (pt.card.suit == bestCard.suit &&
+          pt.card.rank > bestCard.rank) {
         bestCard = pt.card;
         winningSeat = pt.seat;
       }
     }
 
+    if (winningSeat == widget.mySeat) {
+      AudioService.instance.playPotCollect();
+    } else {
+      AudioService.instance.playCardSlide();
+    }
+
     setState(() => trickWinner = winningSeat);
-    final winnerName = winningSeat == widget.mySeat ? 'You' : _displayNameForSeat(winningSeat);
+    final winnerName =
+        winningSeat == widget.mySeat ? 'You' : _displayNameForSeat(winningSeat);
     ToastBanner.show(
       context,
       '$winnerName won the trick!',
@@ -365,9 +388,8 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
     final isMyTurn = phase == 'playing' && currentTurnSeat == widget.mySeat;
     final isBiddingTurn = phase == 'bidding' &&
         (widget.tableId == null || currentTurnSeat == widget.mySeat);
-    final playableIds = isMyTurn
-        ? myHand.map((c) => c.id).toSet()
-        : const <String>{};
+    final playableIds =
+        isMyTurn ? myHand.map((c) => c.id).toSet() : const <String>{};
 
     final westSeat = (widget.mySeat + 1) % 4;
     final northSeat = (widget.mySeat + 2) % 4;

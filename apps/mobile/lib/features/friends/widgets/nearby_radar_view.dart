@@ -12,6 +12,7 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/toast_banner.dart';
+import 'nearby_player_card.dart';
 import 'radar_dome_widget.dart';
 
 /// Visually compelling Sonar Radar Scanner and Nearby Players Discovery
@@ -56,18 +57,20 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     try {
       if (token != null) {
         // Broadcast location (Kathmandu central default: 27.7172, 85.3240)
-        await http.post(
-          Uri.parse(ApiConst.nearbyLocation),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'latitude': 27.7172,
-            'longitude': 85.3240,
-            'isVisible': _isDiscoverable,
-          }),
-        ).timeout(const Duration(seconds: 3));
+        await http
+            .post(
+              Uri.parse(ApiConst.nearbyLocation),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                'latitude': 27.7172,
+                'longitude': 85.3240,
+                'isVisible': _isDiscoverable,
+              }),
+            )
+            .timeout(const Duration(seconds: 3));
 
         // Query active nearby players
         final res = await http.get(
@@ -84,7 +87,8 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
           if (mounted) {
             setState(() {
               _nearbyPlayers = data
-                  .map((p) => NearbyPlayerModel.fromJson(Map<String, dynamic>.from(p as Map)))
+                  .map((p) => NearbyPlayerModel.fromJson(
+                      Map<String, dynamic>.from(p as Map)))
                   .toList();
             });
           }
@@ -108,21 +112,25 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     final token = ref.read(authProvider).token;
     if (token != null) {
       try {
-        await http.post(
-          Uri.parse(ApiConst.nearbyVisibility),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({'isVisible': value}),
-        ).timeout(const Duration(seconds: 3));
+        await http
+            .post(
+              Uri.parse(ApiConst.nearbyVisibility),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({'isVisible': value}),
+            )
+            .timeout(const Duration(seconds: 3));
       } catch (_) {}
     }
 
     if (mounted) {
       ToastBanner.show(
         context,
-        value ? 'You are now visible on the radar' : 'Location hidden from radar',
+        value
+            ? 'You are now visible on the radar'
+            : 'Location hidden from radar',
         icon: value ? Icons.visibility_rounded : Icons.visibility_off_rounded,
       );
     }
@@ -204,10 +212,19 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                   backgroundColor: PatiiColors.navySurface,
                   onRefresh: _fetchNearbyPlayers,
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _nearbyPlayers.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, idx) => _buildNearbyCard(_nearbyPlayers[idx]),
+                    itemBuilder: (ctx, idx) {
+                      final p = _nearbyPlayers[idx];
+                      return NearbyPlayerCard(
+                        player: p,
+                        isSelected: _selectedPlayer?.userId == p.userId,
+                        onAddFriend: () => _sendFriendRequest(p),
+                        onInvite: () => _inviteToTable(p),
+                      );
+                    },
                   ),
                 ),
         ),
@@ -235,7 +252,8 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                   shape: BoxShape.circle,
                   color: PatiiColors.gold.withValues(alpha: 0.16),
                 ),
-                child: const Icon(Icons.radar_rounded, color: PatiiColors.gold, size: 18),
+                child: const Icon(Icons.radar_rounded,
+                    color: PatiiColors.gold, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -244,11 +262,13 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                   children: [
                     Text(
                       'Discoverable Nearby',
-                      style: PatiiTypography.display(fontSize: 13, fontWeight: FontWeight.bold),
+                      style: PatiiTypography.display(
+                          fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'Allow local card players to discover and invite you',
-                      style: PatiiTypography.body(fontSize: 10.5, color: PatiiColors.textMuted),
+                      style: PatiiTypography.body(
+                          fontSize: 10.5, color: PatiiColors.textMuted),
                     ),
                   ],
                 ),
@@ -267,7 +287,8 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
             children: [
               Text(
                 'Radius: ${_radiusKm.toInt()} km',
-                style: PatiiTypography.body(fontSize: 11.5, color: PatiiColors.textSecondary),
+                style: PatiiTypography.body(
+                    fontSize: 11.5, color: PatiiColors.textSecondary),
               ),
               Row(
                 children: [1.0, 5.0, 10.0].map((r) {
@@ -279,7 +300,9 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                       selected: isSel,
                       selectedColor: PatiiColors.gold,
                       labelStyle: TextStyle(
-                        color: isSel ? PatiiColors.navy : PatiiColors.textSecondary,
+                        color: isSel
+                            ? PatiiColors.navy
+                            : PatiiColors.textSecondary,
                         fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                       ),
@@ -325,152 +348,17 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                   : _nearbyPlayers.isEmpty
                       ? 'No other players detected within ${_radiusKm.toInt()} km'
                       : '${_nearbyPlayers.length} card players detected in range',
-              style: PatiiTypography.body(fontSize: 11.5, color: PatiiColors.goldLight),
+              style: PatiiTypography.body(
+                  fontSize: 11.5, color: PatiiColors.goldLight),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: PatiiColors.gold, size: 18),
+            icon: const Icon(Icons.refresh_rounded,
+                color: PatiiColors.gold, size: 18),
             onPressed: _fetchNearbyPlayers,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
             tooltip: 'Rescan',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNearbyCard(NearbyPlayerModel p) {
-    final isSel = _selectedPlayer?.userId == p.userId;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isSel ? PatiiColors.navyElevated : PatiiColors.navySurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isSel ? PatiiColors.gold : PatiiColors.hairline,
-          width: isSel ? 1.5 : 1.0,
-        ),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: PatiiColors.gold.withValues(alpha: 0.2),
-            child: Text(
-              p.displayName.isNotEmpty ? p.displayName[0].toUpperCase() : '?',
-              style: PatiiTypography.display(fontSize: 15, color: PatiiColors.goldLight),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        p.displayName,
-                        style: PatiiTypography.body(fontSize: 14, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: PatiiColors.navyElevated,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Lv ${p.level}',
-                        style: PatiiTypography.body(fontSize: 9, color: PatiiColors.gold),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.place_rounded, color: PatiiColors.gold, size: 12),
-                    const SizedBox(width: 2),
-                    Text(
-                      p.distanceText,
-                      style: PatiiTypography.body(fontSize: 11, color: PatiiColors.textMuted),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: PatiiColors.hairline,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        p.currentGame != null ? 'Playing ${p.currentGame}' : 'In Lobby',
-                        style: PatiiTypography.body(
-                          fontSize: 11,
-                          color: p.currentGame != null ? const Color(0xFF00E5FF) : PatiiColors.success,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            children: [
-              SizedBox(
-                height: 28,
-                child: Pressable(
-                  onPressed: () => _sendFriendRequest(p),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: PatiiColors.goldButtonGradient,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '+ Friend',
-                      style: PatiiTypography.body(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                        color: PatiiColors.navy,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                height: 24,
-                child: Pressable(
-                  onPressed: () => _inviteToTable(p),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: PatiiColors.navyElevated,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: PatiiColors.hairline),
-                    ),
-                    child: Text(
-                      'Invite',
-                      style: PatiiTypography.body(fontSize: 9.5, color: PatiiColors.textSecondary),
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -491,20 +379,24 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: PatiiColors.gold.withValues(alpha: 0.1),
-                  border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.25)),
+                  border: Border.all(
+                      color: PatiiColors.gold.withValues(alpha: 0.25)),
                 ),
-                child: const Icon(Icons.people_outline_rounded, size: 30, color: PatiiColors.gold),
+                child: const Icon(Icons.people_outline_rounded,
+                    size: 30, color: PatiiColors.gold),
               ),
               const SizedBox(height: 14),
               Text(
                 'Be the First in Your Area!',
-                style: PatiiTypography.display(fontSize: 16, fontWeight: FontWeight.bold),
+                style: PatiiTypography.display(
+                    fontSize: 16, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
                 'Your radar is actively broadcasting. Invite friends nearby on WhatsApp or Viber to challenge them!',
-                style: PatiiTypography.body(fontSize: 12, color: PatiiColors.textMuted),
+                style: PatiiTypography.body(
+                    fontSize: 12, color: PatiiColors.textMuted),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 18),
@@ -529,7 +421,8 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.share_rounded, size: 16, color: PatiiColors.navy),
+                        const Icon(Icons.share_rounded,
+                            size: 16, color: PatiiColors.navy),
                         const SizedBox(width: 8),
                         Text(
                           'Share Invite Link',

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import {
+  GameId,
   QueueJoinSchema,
   RoomAddBotSchema,
   RoomCreateSchema,
@@ -18,6 +19,7 @@ import {
   RoomLeaveSchema,
   RoomStartSchema,
   SocialRoomInvitePayload,
+  SocialShakeMatchedPayload,
   TableMoveSchema,
   TableResyncSchema,
 } from '@patii/protocol';
@@ -26,6 +28,16 @@ import { MatchmakingService } from '../modules/matchmaking/matchmaking.service.j
 import { AuthService } from '../modules/auth/auth.service.js';
 import { RoomsService } from '../modules/rooms/rooms.service.js';
 import { SocialService } from '../modules/social/social.service.js';
+
+interface PendingShake {
+  socket: Socket;
+  userId: string;
+  displayName: string;
+  gameId: string;
+  clientIp: string;
+  timestamp: number;
+  timeoutId?: NodeJS.Timeout;
+}
 
 @WebSocketGateway({
   namespace: '/game',
@@ -36,6 +48,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server!: Server;
 
   private readonly userSockets = new Map<string, Set<Socket>>();
+  private readonly pendingShakes = new Map<string, PendingShake>();
 
   constructor(
     private readonly tableService: TableService,
@@ -82,6 +95,29 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.to(`room:${room.code}`).emit('room:state', this.roomsService.toRoomStatePayload(room));
         }
       } catch {}
+    }
+
+    // Clean up any pending shake for this socket
+    for (const [uid, pending] of this.pendingShakes.entries()) {
+      if (pending.socket.id === client.id) {
+        if (pending.timeoutId) clearTimeout(pending.timeoutId);
+        this.pendingShakes.delete(uid);
+      }
+    }
+  }
+
+  private extractSocketIp(client: Socket): string {
+    const forwarded = client.handshake?.headers?.['x-forwarded-for'];
+    return (forwarded ? forwarded.toString().split(',')[0]?.trim() : client.handshake?.address) || '';
+  }
+
+  private cleanExpiredShakes(): void {
+    const now = Date.now();
+    for (const [uid, pending] of this.pendingShakes.entries()) {
+      if (now - pending.timestamp > 6000) {
+        if (pending.timeoutId) clearTimeout(pending.timeoutId);
+        this.pendingShakes.delete(uid);
+      }
     }
   }
 
@@ -313,6 +349,116 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
     } catch {}
+  }
+
+  @SubscribeMessage('social:shake')
+  handleSocialShake(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: unknown,
+  ): void {
+    const userId = client.data.user?.userId ?? `guest_${client.id}`;
+    const displayName = client.data.user?.name ?? 'Player';
+    const clientIp = this.extractSocketIp(client);
+
+    // Clean expired requests (> 6 seconds old)
+    this.cleanExpiredShakes();
+
+    // Cancel existing pending shake for this user
+    const existing = this.pendingShakes.get(userId);
+    if (existing) {
+      if (existing.timeoutId) clearTimeout(existing.timeoutId);
+      this.pendingShakes.delete(userId);
+    }
+
+    const requestedGameId = (
+      typeof data === 'object' && data !== null && 'gameId' in data && typeof (data as any).gameId === 'string'
+    )
+      ? (data as any).gameId
+      : 'callbreak';
+
+    // Look for another pending shake within 6 seconds (preferring same gameId or same clientIp if available, otherwise any pending shaker)
+    const now = Date.now();
+    let bestMatch: PendingShake | null = null;
+    let bestScore = -1;
+
+    for (const pending of this.pendingShakes.values()) {
+      if (pending.userId === userId) continue;
+      if (now - pending.timestamp > 6000) continue;
+
+      const score = (pending.gameId === requestedGameId ? 2 : 0) +
+        (clientIp && pending.clientIp && clientIp === pending.clientIp ? 1 : 0);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = pending;
+      }
+    }
+
+    if (bestMatch) {
+      if (bestMatch.timeoutId) clearTimeout(bestMatch.timeoutId);
+      this.pendingShakes.delete(bestMatch.userId);
+
+      const targetGameId = (bestMatch.gameId === requestedGameId
+        ? requestedGameId
+        : (requestedGameId || bestMatch.gameId || 'callbreak')) as GameId;
+
+      try {
+        const room = this.roomsService.createRoom(
+          userId,
+          targetGameId,
+          {},
+          0,
+          4,
+          'medium',
+          15,
+          displayName,
+        );
+
+        this.roomsService.joinRoom(room.code, bestMatch.userId, bestMatch.displayName);
+        client.data.roomCode = room.code;
+        bestMatch.socket.data.roomCode = room.code;
+
+        client.join(`room:${room.code}`);
+        bestMatch.socket.join(`room:${room.code}`);
+
+        this.socialService.setPresence(userId, 'in_room', room.gameId);
+        this.socialService.setPresence(bestMatch.userId, 'in_room', room.gameId);
+
+        const matchedPayload: SocialShakeMatchedPayload = {
+          code: room.code,
+          pin: room.pin,
+          gameId: room.gameId,
+        };
+
+        client.emit('social:shake_matched', matchedPayload);
+        bestMatch.socket.emit('social:shake_matched', matchedPayload);
+
+        const roomState = this.roomsService.toRoomStatePayload(room);
+        client.emit('room:state', roomState);
+        bestMatch.socket.emit('room:state', roomState);
+      } catch (err: any) {
+        client.emit('error', { code: 'INTERNAL_ERROR', message: err.message });
+      }
+    } else {
+      // Store current user in pending shakes queue with current timestamp
+      const timeoutId = setTimeout(() => {
+        const p = this.pendingShakes.get(userId);
+        if (p && p.socket.id === client.id) {
+          this.pendingShakes.delete(userId);
+          client.emit('social:shake_timeout', { message: 'No players found nearby. Try again!' });
+        }
+      }, 6000);
+
+      this.pendingShakes.set(userId, {
+        socket: client,
+        userId,
+        displayName,
+        gameId: requestedGameId,
+        clientIp,
+        timestamp: now,
+        timeoutId,
+      });
+    }
   }
 
   @SubscribeMessage('queue:join')

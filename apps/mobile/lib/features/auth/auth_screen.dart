@@ -94,13 +94,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: PatiiColors.gold,
               foregroundColor: PatiiColors.navy,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () async {
               Navigator.pop(ctx);
               await _handleGuestLogin(_nicknameController.text);
             },
-            child: Text('actions.play'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('actions.play'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -141,7 +143,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         children: [
           // Background gradient & soft ambient glow
           const Positioned.fill(
-            child: DecoratedBox(decoration: BoxDecoration(gradient: PatiiColors.backdrop)),
+            child: DecoratedBox(
+                decoration: BoxDecoration(gradient: PatiiColors.backdrop)),
           ),
           Positioned(
             top: -100,
@@ -152,7 +155,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [PatiiColors.crimson.withValues(alpha: 0.35), Colors.transparent],
+                  colors: [
+                    PatiiColors.crimson.withValues(alpha: 0.35),
+                    Colors.transparent
+                  ],
                 ),
               ),
             ),
@@ -166,7 +172,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [PatiiColors.gold.withValues(alpha: 0.25), Colors.transparent],
+                  colors: [
+                    PatiiColors.gold.withValues(alpha: 0.25),
+                    Colors.transparent
+                  ],
                 ),
               ),
             ),
@@ -175,7 +184,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Column(
@@ -187,7 +197,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         height: 90,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [PatiiColors.goldLight, PatiiColors.goldDark],
+                            colors: [
+                              PatiiColors.goldLight,
+                              PatiiColors.goldDark
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -237,7 +250,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       if (authState.isLoading)
                         const Padding(
                           padding: EdgeInsets.all(24.0),
-                          child: CircularProgressIndicator(color: PatiiColors.gold),
+                          child: CircularProgressIndicator(
+                              color: PatiiColors.gold),
                         )
                       else ...[
                         // 1. Primary Action: Continue with Google
@@ -269,7 +283,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.shield_outlined, size: 14, color: PatiiColors.textMuted),
+                          const Icon(Icons.shield_outlined,
+                              size: 14, color: PatiiColors.textMuted),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(

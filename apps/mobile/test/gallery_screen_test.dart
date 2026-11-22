@@ -7,7 +7,9 @@ import 'package:patii/features/dev/gallery_screen.dart';
 
 void main() {
   group('Design System & Gallery Screen Tests', () {
-    testWidgets('Renders PlayingCard in face, back, and court card modes without overflow', (tester) async {
+    testWidgets(
+        'Renders PlayingCard in face, back, and court card modes without overflow',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: PatiiTheme.casinoDarkTheme,
@@ -16,13 +18,16 @@ void main() {
               child: Row(
                 children: [
                   PlayingCard(
-                    card: engine.Card(suit: engine.Suit.S, rank: 1, deck: 0, id: 'AS'),
+                    card: engine.Card(
+                        suit: engine.Suit.S, rank: 1, deck: 0, id: 'AS'),
                   ),
                   PlayingCard(
-                    card: engine.Card(suit: engine.Suit.H, rank: 13, deck: 0, id: 'KH'),
+                    card: engine.Card(
+                        suit: engine.Suit.H, rank: 13, deck: 0, id: 'KH'),
                   ),
                   PlayingCard(
-                    card: engine.Card(suit: engine.Suit.S, rank: 1, deck: 0, id: 'BACK'),
+                    card: engine.Card(
+                        suit: engine.Suit.S, rank: 1, deck: 0, id: 'BACK'),
                     isFaceDown: true,
                   ),
                 ],
@@ -37,10 +42,12 @@ void main() {
       expect(find.text('K'), findsWidgets);
     });
 
-    testWidgets('Renders CardHand 13-card fan without overflow', (tester) async {
+    testWidgets('Renders CardHand 13-card fan without overflow',
+        (tester) async {
       final hand = List.generate(
         13,
-        (i) => engine.Card(suit: engine.Suit.S, rank: (i % 13) + 1, deck: 0, id: 'card_$i'),
+        (i) => engine.Card(
+            suit: engine.Suit.S, rank: (i % 13) + 1, deck: 0, id: 'card_$i'),
       );
 
       await tester.pumpWidget(
@@ -59,7 +66,8 @@ void main() {
       expect(find.byType(PlayingCard), findsNWidgets(13));
     });
 
-    testWidgets('Renders PlayerSeat with timer ring, dealer chip and bot badge', (tester) async {
+    testWidgets('Renders PlayerSeat with timer ring, dealer chip and bot badge',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: PatiiTheme.casinoDarkTheme,
@@ -80,7 +88,8 @@ void main() {
 
       expect(find.text('Sita'), findsOneWidget);
       expect(find.text('D'), findsOneWidget);
-      expect(find.byIcon(Icons.smart_toy_rounded), findsOneWidget); // bot avatar replaces the 'BOT' text badge
+      expect(find.byIcon(Icons.smart_toy_rounded),
+          findsOneWidget); // bot avatar replaces the 'BOT' text badge
       expect(find.text('Bid 3 · Won 2'), findsOneWidget);
     });
 
@@ -109,7 +118,8 @@ void main() {
       expect(find.text('Danger'), findsOneWidget);
     });
 
-    testWidgets('Renders complete GalleryScreen without errors or overflows', (tester) async {
+    testWidgets('Renders complete GalleryScreen without errors or overflows',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 2400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -125,7 +135,8 @@ void main() {
       expect(find.text('1. Typography Tokens'), findsOneWidget);
       expect(find.text('3. Buttons (Gold CTA, Ghost, Danger)'), findsOneWidget);
       expect(find.text('4. Playing Cards (States & Styles)'), findsOneWidget);
-      expect(find.text('5. Overlapping Card Hand (Callbreak 13-Card Fan)'), findsOneWidget);
+      expect(find.text('5. Overlapping Card Hand (Callbreak 13-Card Fan)'),
+          findsOneWidget);
       expect(find.text('7. Casino Chips & Stacks'), findsOneWidget);
     });
   });

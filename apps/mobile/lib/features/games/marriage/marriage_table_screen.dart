@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patii_engine/patii_engine.dart';
+import '../../../../core/services/audio_service.dart';
 import '../../../../core/widgets/buttons.dart';
 import '../../../../core/widgets/card_hand.dart';
 import '../../../../core/widgets/player_seat.dart';
@@ -82,29 +83,34 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
   void _onDrawStock() {
     if (currentTurnSeat != 0 || turnPhase != 'draw') return;
     if (stockPile.isEmpty) return;
+    AudioService.instance.playCardSlide();
     setState(() {
       final drawn = stockPile.removeLast();
       myHand.add(drawn);
       turnPhase = 'discard';
       selectedCardId = drawn.id;
     });
-    ToastBanner.show(context, 'marriage.phase_discard'.tr(), icon: Icons.arrow_upward);
+    ToastBanner.show(context, 'marriage.phase_discard'.tr(),
+        icon: Icons.arrow_upward);
   }
 
   void _onDrawDiscard() {
     if (currentTurnSeat != 0 || turnPhase != 'draw') return;
     if (discardPile.isEmpty) return;
+    AudioService.instance.playCardSlide();
     setState(() {
       final drawn = discardPile.removeLast();
       myHand.add(drawn);
       turnPhase = 'discard';
       selectedCardId = drawn.id;
     });
-    ToastBanner.show(context, 'marriage.phase_discard'.tr(), icon: Icons.arrow_upward);
+    ToastBanner.show(context, 'marriage.phase_discard'.tr(),
+        icon: Icons.arrow_upward);
   }
 
   void _onDiscardCard(Card card) {
     if (currentTurnSeat != 0 || turnPhase != 'discard') return;
+    AudioService.instance.playCardSnap();
     setState(() {
       myHand.removeWhere((c) => c.id == card.id);
       discardPile.add(card);
@@ -141,6 +147,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
     final slot = meldSlots[slotIdx];
     if (slot.isFull) return;
 
+    AudioService.instance.playCardSlide();
     setState(() {
       myHand.removeWhere((c) => c.id == card.id);
       meldSlots[slotIdx] = slot.copyWith(cards: [...slot.cards, card]);
@@ -153,6 +160,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
     if (slotIdx == -1) return;
     final slot = meldSlots[slotIdx];
 
+    AudioService.instance.playCardSlide();
     setState(() {
       final updated = List<Card>.from(slot.cards)
         ..removeWhere((c) => c.id == card.id);
@@ -163,6 +171,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
 
   void _onAutoGroup() {
     _onClearTray();
+    AudioService.instance.playShuffle();
     setState(() {
       if (activeMeldType == MeldType.pure) {
         final combinations = findAutoGroupPureCombinations(myHand);
@@ -174,7 +183,8 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
         }
       }
     });
-    ToastBanner.show(context, 'Auto grouped pure sequences!', icon: Icons.auto_fix_high);
+    ToastBanner.show(context, 'Auto grouped pure sequences!',
+        icon: Icons.auto_fix_high);
   }
 
   void _onClearTray() {
@@ -187,6 +197,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
   }
 
   void _onSeeMaal() {
+    AudioService.instance.playSpecialHand();
     setState(() => isMaalSeen = true);
     ToastBanner.show(
       context,
@@ -196,15 +207,16 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
   }
 
   void _onDeclare() {
+    AudioService.instance.playWinJingle();
     showMarriageDeclareDialog(context);
   }
 
   void _toggleSort() {
+    AudioService.instance.playShuffle();
     setState(() {
       isSortedBySuit = !isSortedBySuit;
-      myHand = isSortedBySuit
-          ? sortCardsBySuit(myHand)
-          : sortCardsByRank(myHand);
+      myHand =
+          isSortedBySuit ? sortCardsBySuit(myHand) : sortCardsByRank(myHand);
     });
   }
 
@@ -312,9 +324,12 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
                   children: [
                     // Sort Button
                     ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      constraints:
+                          const BoxConstraints(minWidth: 48, minHeight: 48),
                       child: GhostButton(
-                        label: isSortedBySuit ? 'marriage.sort_suit'.tr() : 'marriage.sort_rank'.tr(),
+                        label: isSortedBySuit
+                            ? 'marriage.sort_suit'.tr()
+                            : 'marriage.sort_rank'.tr(),
                         icon: Icons.sort_rounded,
                         height: 36,
                         onPressed: _toggleSort,
@@ -324,7 +339,8 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
                     // Discard Button (when eligible)
                     if (canDiscard && selectedCard != null)
                       ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                        constraints:
+                            const BoxConstraints(minWidth: 48, minHeight: 48),
                         child: DangerButton(
                           label: 'marriage.discard'.tr(),
                           icon: Icons.arrow_upward,
@@ -344,9 +360,8 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
                 child: CardHand(
                   cards: myHand,
                   selectedCardId: selectedCardId,
-                  playableCardIds: canDiscard
-                      ? myHand.map((c) => c.id).toSet()
-                      : const {},
+                  playableCardIds:
+                      canDiscard ? myHand.map((c) => c.id).toSet() : const {},
                   wildOrMaalCardId: isMaalSeen ? cutJoker.id : null,
                   cardWidth: tableWidth < 700 ? 46.0 : 54.0,
                   cardHeight: tableWidth < 700 ? 68.0 : 80.0,

@@ -21,7 +21,11 @@ class LobbyBottomNav extends StatelessWidget {
     const navItems = [
       (Icons.style_outlined, Icons.style, 'lobby.nav_home'),
       (Icons.people_alt_outlined, Icons.people_alt, 'lobby.nav_friends'),
-      (Icons.emoji_events_outlined, Icons.emoji_events, 'lobby.nav_leaderboard'),
+      (
+        Icons.emoji_events_outlined,
+        Icons.emoji_events,
+        'lobby.nav_leaderboard'
+      ),
       (Icons.person_outline, Icons.person, 'lobby.nav_profile'),
     ];
 
@@ -63,9 +67,12 @@ class LobbyBottomNav extends StatelessWidget {
                       ),
                       Row(
                         children: List.generate(navItems.length, (index) {
-                          final (iconInactive, iconActive, labelKey) = navItems[index];
+                          final (iconInactive, iconActive, labelKey) =
+                              navItems[index];
                           final isSelected = index == currentIndex;
-                          final color = isSelected ? PatiiColors.goldLight : PatiiColors.textMuted;
+                          final color = isSelected
+                              ? PatiiColors.goldLight
+                              : PatiiColors.textMuted;
                           return Expanded(
                             child: Semantics(
                               button: true,
@@ -79,8 +86,14 @@ class LobbyBottomNav extends StatelessWidget {
                                   children: [
                                     AnimatedScale(
                                       scale: isSelected ? 1.08 : 1.0,
-                                      duration: const Duration(milliseconds: 200),
-                                      child: Icon(isSelected ? iconActive : iconInactive, size: 22, color: color),
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      child: Icon(
+                                          isSelected
+                                              ? iconActive
+                                              : iconInactive,
+                                          size: 22,
+                                          color: color),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
@@ -89,7 +102,9 @@ class LobbyBottomNav extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: PatiiTypography.body(
                                         fontSize: 11,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
                                         color: color,
                                         height: 1.1,
                                       ),

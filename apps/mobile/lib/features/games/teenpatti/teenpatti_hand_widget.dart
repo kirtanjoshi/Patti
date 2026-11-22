@@ -30,7 +30,8 @@ class TeenPattiHandWidget extends StatelessWidget {
         // Hand rank badge or "See Cards" toggle button
         if (isSeen)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
             margin: const EdgeInsets.only(bottom: 8.0),
             decoration: BoxDecoration(
               color: colorScheme.primaryContainer,

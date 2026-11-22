@@ -36,7 +36,10 @@ class KittiActionBar extends StatelessWidget {
         color: PatiiColors.navyElevated.withValues(alpha: 0.86),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: PatiiColors.hairline),
-        boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 6))],
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 6))
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

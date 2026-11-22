@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:patii_engine/patii_engine.dart' as engine;
+import '../../../../core/services/audio_service.dart';
 import '../../../../core/widgets/player_seat.dart';
 import '../../../../core/widgets/table_shell.dart';
 import 'kitti_action_bar.dart';
@@ -69,6 +70,11 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
   void _startNewDeal({bool isFirstDeal = false}) {
     _arrangeTimer?.cancel();
     _cancelBotTimers();
+    AudioService.instance.playShuffle();
+    final dealTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) AudioService.instance.playDeal();
+    });
+    _botTimers.add(dealTimer);
 
     final deck = _generateDeck();
     myRawCards = deck.sublist(0, 9);
@@ -147,6 +153,7 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
   }
 
   void _applyBestArrangement() {
+    AudioService.instance.playShuffle();
     final best = KittiEvaluator.bestArrangement(myRawCards);
     if (best.length == 3) {
       setState(() {
@@ -162,6 +169,7 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
   }
 
   void _confirmArrangement() {
+    AudioService.instance.playCardSnap();
     _arrangeTimer?.cancel();
     _cancelBotTimers();
 
@@ -191,6 +199,7 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
 
   void _onFold() {
     KittiDialogs.showFoldConfirm(context, () {
+      AudioService.instance.playCardFold();
       _arrangeTimer?.cancel();
       setState(() {
         players[0] = players[0].copyWith(isFolded: true);
@@ -255,6 +264,15 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
     final isKitti = overallWinner == null;
     isCarryover = isKitti;
 
+    if (overallWinner == 0) {
+      AudioService.instance.playWinJingle();
+      AudioService.instance.playPotCollect();
+    } else if (overallWinner != null) {
+      AudioService.instance.playLoseStinger();
+    } else {
+      AudioService.instance.playChipMulti();
+    }
+
     roundSummary = KittiRoundSummary(
       winnerSeat: overallWinner,
       isKittiCarryover: isKitti,
@@ -265,6 +283,7 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
   }
 
   void _onUnassignedCardTap(engine.Card card) {
+    AudioService.instance.playCardSlide();
     setState(() {
       if (selectedCard?.id == card.id) {
         selectedCard = null;
@@ -308,13 +327,16 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
   }
 
   bool get _isAllSlotsFilled =>
-      mySlots[0].length == 3 && mySlots[1].length == 3 && mySlots[2].length == 3;
+      mySlots[0].length == 3 &&
+      mySlots[1].length == 3 &&
+      mySlots[2].length == 3;
 
   @override
   Widget build(BuildContext context) {
     return TableShell(
       gameTitle: 'Kitti',
-      roundInfo: '${'table.round'.tr()} $currentDeal · ${'table.pot'.tr()}: $pot',
+      roundInfo:
+          '${'table.round'.tr()} $currentDeal · ${'table.pot'.tr()}: $pot',
       pot: pot,
       onRulesTap: () => KittiDialogs.showRules(context),
       onLeave: () => KittiDialogs.showLeaveConfirm(context),
@@ -336,7 +358,9 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
                     isBot: true,
                     infoPillText: players[2].isReady
                         ? 'Ready'
-                        : (players[2].isFolded ? 'Folded' : '$_remainingSeconds s'),
+                        : (players[2].isFolded
+                            ? 'Folded'
+                            : '$_remainingSeconds s'),
                   ),
                 ),
               ),
@@ -350,7 +374,9 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
                   isBot: true,
                   infoPillText: players[1].isReady
                       ? 'Ready'
-                      : (players[1].isFolded ? 'Folded' : '$_remainingSeconds s'),
+                      : (players[1].isFolded
+                          ? 'Folded'
+                          : '$_remainingSeconds s'),
                 ),
               ),
 
@@ -363,7 +389,9 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
                   isBot: true,
                   infoPillText: players[3].isReady
                       ? 'Ready'
-                      : (players[3].isFolded ? 'Folded' : '$_remainingSeconds s'),
+                      : (players[3].isFolded
+                          ? 'Folded'
+                          : '$_remainingSeconds s'),
                 ),
               ),
 
@@ -385,7 +413,8 @@ class _KittiTableScreenState extends ConsumerState<KittiTableScreen> {
                             if (mySlots[slotIdx].length < 3) {
                               setState(() {
                                 mySlots[slotIdx].add(card);
-                                unassignedCards.removeWhere((c) => c.id == card.id);
+                                unassignedCards
+                                    .removeWhere((c) => c.id == card.id);
                               });
                             }
                           },

@@ -72,14 +72,16 @@ class _TeenPattiPotWidgetState extends State<TeenPattiPotWidget>
     final colorScheme = theme.colorScheme;
 
     return Semantics(
-      label: '${'teenpatti.pot'.tr()}: ${widget.pot}, ${'teenpatti.current_stake'.tr()}: ${widget.currentStake}',
+      label:
+          '${'teenpatti.pot'.tr()}: ${widget.pot}, ${'teenpatti.current_stake'.tr()}: ${widget.currentStake}',
       child: Stack(
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
           // Main Pot and Stake Pill Container
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(24.0),
@@ -120,7 +122,9 @@ class _TeenPattiPotWidgetState extends State<TeenPattiPotWidget>
                     TweenAnimationBuilder<double>(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOut,
-                      tween: Tween<double>(begin: widget.pot.toDouble(), end: widget.pot.toDouble()),
+                      tween: Tween<double>(
+                          begin: widget.pot.toDouble(),
+                          end: widget.pot.toDouble()),
                       builder: (context, value, child) {
                         return Text(
                           '${'teenpatti.pot'.tr()}: ${value.toInt()}',
@@ -153,7 +157,8 @@ class _TeenPattiPotWidgetState extends State<TeenPattiPotWidget>
                 child: ScaleTransition(
                   scale: _scaleAnimation,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 4.0),
                     decoration: BoxDecoration(
                       color: colorScheme.primary,
                       borderRadius: BorderRadius.circular(12.0),

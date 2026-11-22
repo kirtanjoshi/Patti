@@ -7,6 +7,7 @@ export interface NearbyLocationEntry {
   readonly longitude: number;
   readonly isVisible: boolean;
   readonly updatedAt: number;
+  readonly clientIp?: string;
 }
 
 export interface NearbyPlayerSummary {
@@ -19,6 +20,7 @@ export interface NearbyPlayerSummary {
   readonly rating: number;
   readonly distanceMeters: number;
   readonly distanceText: string;
+  readonly isSameWifi: boolean;
   readonly presence: UserPresence;
   readonly isFriend: boolean;
   readonly hasPendingRequest: boolean;
@@ -59,7 +61,13 @@ export class NearbyService {
     return `~${km} km away`;
   }
 
-  public updateLocation(userId: string, latitude: number, longitude: number, isVisible = true): void {
+  public updateLocation(
+    userId: string,
+    latitude: number,
+    longitude: number,
+    isVisible = true,
+    clientIp?: string,
+  ): void {
     // Round to 3 decimal places for coarse privacy protection (~110m resolution)
     const coarseLat = Math.round(latitude * 1000) / 1000;
     const coarseLon = Math.round(longitude * 1000) / 1000;
@@ -69,6 +77,7 @@ export class NearbyService {
       longitude: coarseLon,
       isVisible,
       updatedAt: Date.now(),
+      clientIp: clientIp || this.locationStore.get(userId)?.clientIp,
     });
   }
 
@@ -92,12 +101,16 @@ export class NearbyService {
     latitude?: number,
     longitude?: number,
     radiusKm = 10,
+    clientIp?: string,
   ): Promise<NearbyPlayerSummary[]> {
     const now = Date.now();
+    const existing = this.locationStore.get(userId);
+    const effectiveIp = clientIp || existing?.clientIp;
+
     const myLocation =
       latitude !== undefined && longitude !== undefined
-        ? { latitude, longitude }
-        : this.locationStore.get(userId);
+        ? { latitude, longitude, clientIp: effectiveIp }
+        : existing;
 
     if (!myLocation) {
       return [];
@@ -105,16 +118,18 @@ export class NearbyService {
 
     // Keep my location updated if passed
     if (latitude !== undefined && longitude !== undefined) {
-      this.updateLocation(userId, latitude, longitude, true);
+      this.updateLocation(userId, latitude, longitude, true, effectiveIp);
     }
 
-    const candidateEntries: { otherUserId: string; distance: number }[] = [];
+    const candidateEntries: { otherUserId: string; distance: number; isSameWifi: boolean }[] = [];
     const maxDistanceMeters = radiusKm * 1000;
 
     for (const [otherUserId, loc] of this.locationStore.entries()) {
       if (otherUserId === userId) continue;
       if (!loc.isVisible) continue;
       if (now - loc.updatedAt > LOCATION_TTL_MS) continue;
+
+      const isSameWifi = Boolean(effectiveIp && loc.clientIp && loc.clientIp === effectiveIp);
 
       const dist = this.calculateDistanceMeters(
         myLocation.latitude,
@@ -123,8 +138,12 @@ export class NearbyService {
         loc.longitude,
       );
 
-      if (dist <= maxDistanceMeters) {
-        candidateEntries.push({ otherUserId, distance: dist });
+      if (isSameWifi || dist <= maxDistanceMeters) {
+        candidateEntries.push({
+          otherUserId,
+          distance: isSameWifi ? 0 : dist,
+          isSameWifi,
+        });
       }
     }
 
@@ -132,8 +151,13 @@ export class NearbyService {
       return [];
     }
 
-    // Sort closest first
-    candidateEntries.sort((a, b) => a.distance - b.distance);
+    // Sort: isSameWifi players always appear at the top, then closest first
+    candidateEntries.sort((a, b) => {
+      if (a.isSameWifi !== b.isSameWifi) {
+        return a.isSameWifi ? -1 : 1;
+      }
+      return a.distance - b.distance;
+    });
 
     const otherUserIds = candidateEntries.map((c) => c.otherUserId);
 
@@ -187,7 +211,8 @@ export class NearbyService {
         level: u?.level ?? 1,
         rating: u?.rating ?? 1200,
         distanceMeters: candidate.distance,
-        distanceText: this.formatDistance(candidate.distance),
+        distanceText: candidate.isSameWifi ? 'Same Wi-Fi Network' : this.formatDistance(candidate.distance),
+        isSameWifi: candidate.isSameWifi,
         presence: this.socialService.getPresence(candidate.otherUserId),
         isFriend: rel.isFriend,
         hasPendingRequest: rel.hasPendingRequest,

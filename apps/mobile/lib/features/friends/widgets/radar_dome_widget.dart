@@ -76,7 +76,8 @@ class RadarDomeWidget extends StatelessWidget {
               top: 12,
               left: 14,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: PatiiColors.navy.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(12),
@@ -195,17 +196,38 @@ class RadarDomeWidget extends StatelessWidget {
     if (players.isEmpty) return const [];
 
     return players.map((player) {
-
       // Deterministic angle & distance based on player ID and distance
       final angle = (player.userId.hashCode % 360) * (math.pi / 180);
       final maxDistanceMeters = radiusKm * 1000;
-      final fraction = (player.distanceMeters / maxDistanceMeters).clamp(0.25, 0.88);
+      // If player is on same Wi-Fi, position in inner ring (0.33)
+      final fraction = player.isSameWifi
+          ? 0.33
+          : (player.distanceMeters / maxDistanceMeters).clamp(0.42, 0.88);
 
       final radarRadius = 88.0; // Half height constrained radius
       final dx = math.cos(angle) * (radarRadius * fraction);
       final dy = math.sin(angle) * (radarRadius * fraction);
 
       final isSelected = selectedPlayer?.userId == player.userId;
+      final isSameWifi = player.isSameWifi;
+
+      final borderColor = isSelected
+          ? Colors.white
+          : isSameWifi
+              ? const Color(0xFF00E676)
+              : PatiiColors.goldLight;
+
+      final glowColor = isSameWifi
+          ? const Color(0xFF00E676)
+          : isSelected
+              ? PatiiColors.gold
+              : const Color(0xFF00E5FF);
+
+      final bgColor = isSelected
+          ? (isSameWifi ? const Color(0xFF00E676) : PatiiColors.gold)
+          : isSameWifi
+              ? const Color(0xFF072218)
+              : PatiiColors.navySurface;
 
       return Transform.translate(
         offset: Offset(dx, dy),
@@ -216,31 +238,40 @@ class RadarDomeWidget extends StatelessWidget {
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? PatiiColors.gold : PatiiColors.navySurface,
+              color: bgColor,
               border: Border.all(
-                color: isSelected ? Colors.white : PatiiColors.goldLight,
-                width: isSelected ? 2 : 1.2,
+                color: borderColor,
+                width: isSelected || isSameWifi ? 2 : 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: (isSelected ? PatiiColors.gold : const Color(0xFF00E5FF))
-                      .withValues(alpha: 0.6),
-                  blurRadius: isSelected ? 12 : 6,
-                  spreadRadius: isSelected ? 2 : 1,
+                  color: glowColor.withValues(alpha: isSameWifi ? 0.75 : 0.6),
+                  blurRadius: isSelected ? 12 : (isSameWifi ? 10 : 6),
+                  spreadRadius: isSelected ? 2 : (isSameWifi ? 1.5 : 1),
                 ),
               ],
             ),
             child: CircleAvatar(
               radius: isSelected ? 13 : 10,
-              backgroundColor: PatiiColors.navyElevated,
-              child: Text(
-                player.displayName.isNotEmpty ? player.displayName[0].toUpperCase() : '?',
-                style: TextStyle(
-                  fontSize: isSelected ? 11 : 9,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? PatiiColors.gold : Colors.white,
-                ),
-              ),
+              backgroundColor: isSameWifi
+                  ? const Color(0xFF064E3B)
+                  : PatiiColors.navyElevated,
+              child: isSameWifi
+                  ? Icon(
+                      Icons.wifi_rounded,
+                      size: isSelected ? 13 : 11,
+                      color: isSelected ? Colors.white : const Color(0xFF00E676),
+                    )
+                  : Text(
+                      player.displayName.isNotEmpty
+                          ? player.displayName[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontSize: isSelected ? 11 : 9,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? PatiiColors.gold : Colors.white,
+                      ),
+                    ),
             ),
           ),
         ),

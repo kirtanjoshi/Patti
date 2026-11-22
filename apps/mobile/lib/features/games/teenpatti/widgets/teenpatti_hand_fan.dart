@@ -38,17 +38,20 @@ class TeenPattiHandFan extends StatelessWidget {
           child: isSeen
               ? Container(
                   key: const ValueKey('rank'),
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0, vertical: 3.0),
                   margin: const EdgeInsets.only(bottom: 6.0),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: PatiiColors.gold.withValues(alpha: 0.5)),
+                    border: Border.all(
+                        color: PatiiColors.gold.withValues(alpha: 0.5)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.stars, size: 13, color: PatiiColors.gold),
+                      const Icon(Icons.stars,
+                          size: 13, color: PatiiColors.gold),
                       const SizedBox(width: 5),
                       Text(
                         handRank,
@@ -94,7 +97,8 @@ class TeenPattiHandFan extends StatelessWidget {
                   final fanAngle = (index - 1) * 0.12;
 
                   return Padding(
-                    padding: EdgeInsets.only(top: index == 1 ? 0 : 6, left: 1, right: 1),
+                    padding: EdgeInsets.only(
+                        top: index == 1 ? 0 : 6, left: 1, right: 1),
                     child: Transform(
                       alignment: Alignment.center,
                       transform: Matrix4.identity()

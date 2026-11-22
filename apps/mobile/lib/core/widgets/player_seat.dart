@@ -43,16 +43,30 @@ class PlayerSeat extends StatefulWidget {
 class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
   late final AnimationController _countdown;
   late final AnimationController _pulse;
+  int? _lastTickSecond;
 
   @override
   void initState() {
     super.initState();
-    _countdown = AnimationController(vsync: this, value: 1.0);
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _countdown = AnimationController(vsync: this, value: 1.0)
+      ..addListener(_onCountdownTick);
+    _pulse = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1400));
     if (widget.isCurrentTurn) _startTurn();
   }
 
+  void _onCountdownTick() {
+    if (!widget.isCurrentTurn || widget.isBot) return;
+    final total = math.max(1, widget.totalTurnSeconds);
+    final remaining = (_countdown.value * total).ceil();
+    if (remaining <= 5 && remaining > 0 && remaining != _lastTickSecond) {
+      _lastTickSecond = remaining;
+      AudioService.instance.playCountdownTick(urgent: remaining <= 2);
+    }
+  }
+
   void _startTurn() {
+    _lastTickSecond = null;
     final total = math.max(1, widget.totalTurnSeconds);
     final remaining = widget.remainingSeconds.clamp(0, total);
     _countdown.value = remaining / total;
@@ -61,6 +75,7 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
   }
 
   void _stopTurn() {
+    _lastTickSecond = null;
     _countdown.stop();
     _countdown.value = 1.0;
     _pulse.stop();
@@ -135,7 +150,8 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                       builder: (context, _) {
                         final p = _countdown.value;
                         final color = p < 0.34
-                            ? Color.lerp(PatiiColors.crimsonLight, PatiiColors.gold, p / 0.34)!
+                            ? Color.lerp(PatiiColors.crimsonLight,
+                                PatiiColors.gold, p / 0.34)!
                             : PatiiColors.gold;
                         final glow = reduceMotion ? 0.5 : _pulse.value;
                         return Container(
@@ -146,7 +162,8 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                             boxShadow: [
                               if (active)
                                 BoxShadow(
-                                  color: color.withValues(alpha: 0.25 + 0.25 * glow),
+                                  color: color.withValues(
+                                      alpha: 0.25 + 0.25 * glow),
                                   blurRadius: 10 + 8 * glow,
                                   spreadRadius: 1,
                                 ),
@@ -178,7 +195,9 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                           ],
                         ),
                         border: Border.all(
-                          color: active ? Colors.transparent : Colors.white.withValues(alpha: 0.18),
+                          color: active
+                              ? Colors.transparent
+                              : Colors.white.withValues(alpha: 0.18),
                           width: 1.5,
                         ),
                         boxShadow: [
@@ -191,21 +210,24 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                       ),
                       child: ClipOval(
                         child: widget.avatarUrl != null
-                            ? Image.network(widget.avatarUrl!, fit: BoxFit.cover)
+                            ? Image.network(widget.avatarUrl!,
+                                fit: BoxFit.cover)
                             : widget.isBot
-                                ? Icon(Icons.smart_toy_rounded, size: size * 0.5, color: Colors.white)
+                                ? Icon(Icons.smart_toy_rounded,
+                                    size: size * 0.5, color: Colors.white)
                                 : Center(
-                                child: Text(
-                                  widget.displayName.isNotEmpty
-                                      ? widget.displayName.characters.first.toUpperCase()
-                                      : 'P',
-                                  style: PatiiTypography.display(
-                                    fontSize: size * 0.42,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                                    child: Text(
+                                      widget.displayName.isNotEmpty
+                                          ? widget.displayName.characters.first
+                                              .toUpperCase()
+                                          : 'P',
+                                      style: PatiiTypography.display(
+                                        fontSize: size * 0.42,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                       ),
                     ),
 
@@ -217,7 +239,8 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                           shape: BoxShape.circle,
                           color: Colors.black.withValues(alpha: 0.55),
                         ),
-                        child: const Icon(Icons.close_rounded, color: PatiiColors.danger, size: 22),
+                        child: const Icon(Icons.close_rounded,
+                            color: PatiiColors.danger, size: 22),
                       ),
 
                     if (widget.isDealer)
@@ -236,7 +259,6 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
-
                   ],
                 ),
               ),
@@ -251,8 +273,18 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                   style: PatiiTypography.body(
                     fontSize: 12.5,
                     fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    color: active ? PatiiColors.goldLight : PatiiColors.textPrimary,
+                    color: active
+                        ? PatiiColors.goldLight
+                        : PatiiColors.textPrimary,
                     height: 1.15,
+                  ).copyWith(
+                    shadows: const [
+                      Shadow(
+                        color: Colors.black87,
+                        blurRadius: 3,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -260,11 +292,24 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                 const SizedBox(height: 2),
                 Container(
                   constraints: const BoxConstraints(maxWidth: 110),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.38),
+                    color: Colors.black.withValues(alpha: 0.48),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: PatiiColors.hairline, width: 0.8),
+                    border: Border.all(
+                      color: active
+                          ? PatiiColors.gold.withValues(alpha: 0.4)
+                          : PatiiColors.hairline,
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: Text(
                     widget.infoPillText!,
@@ -273,7 +318,9 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
                     style: PatiiTypography.body(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: widget.isFolded ? PatiiColors.danger : PatiiColors.textSecondary,
+                      color: widget.isFolded
+                          ? PatiiColors.danger
+                          : PatiiColors.textSecondary,
                       height: 1.2,
                     ),
                   ),
@@ -296,13 +343,20 @@ class _CornerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 18,
-      height: 18,
+      width: 19,
+      height: 19,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        border: Border.all(color: PatiiColors.navy, width: 1.5),
+        border: Border.all(color: PatiiColors.goldDark, width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.40),
+            blurRadius: 3,
+            offset: const Offset(0, 1.5),
+          ),
+        ],
       ),
       child: child,
     );
@@ -349,5 +403,7 @@ class _TurnTimerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TurnTimerPainter old) =>
-      progress != old.progress || isActive != old.isActive || color != old.color;
+      progress != old.progress ||
+      isActive != old.isActive ||
+      color != old.color;
 }

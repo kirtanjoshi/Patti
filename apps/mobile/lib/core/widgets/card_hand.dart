@@ -13,8 +13,10 @@ import 'playing_card.dart';
 class CardHand extends StatelessWidget {
   final List<engine.Card> cards;
   final String? selectedCardId;
+  final Set<String> selectedCardIds;
   final Set<String> playableCardIds;
   final String? wildOrMaalCardId;
+  final String? Function(engine.Card card)? cardBadgeBuilder;
   final ValueChanged<engine.Card>? onCardTap;
   final ValueChanged<engine.Card>? onCardPlay;
   final void Function(int oldIndex, int newIndex)? onReorder;
@@ -26,8 +28,10 @@ class CardHand extends StatelessWidget {
     super.key,
     required this.cards,
     this.selectedCardId,
+    this.selectedCardIds = const {},
     this.playableCardIds = const {},
     this.wildOrMaalCardId,
+    this.cardBadgeBuilder,
     this.onCardTap,
     this.onCardPlay,
     this.onReorder,
@@ -72,36 +76,54 @@ class CardHand extends StatelessWidget {
             clipBehavior: Clip.none,
             children: List.generate(n, (index) {
               final card = cards[index];
-              final isSelected = card.id == selectedCardId;
-              final isPlayable = playableCardIds.isEmpty || playableCardIds.contains(card.id);
+              final isSelected =
+                  card.id == selectedCardId || selectedCardIds.contains(card.id);
+              final isPlayable =
+                  playableCardIds.isEmpty || playableCardIds.contains(card.id);
               final isMaal = card.id == wildOrMaalCardId;
+              final badge = cardBadgeBuilder?.call(card) ?? (isMaal ? 'MAAL' : null);
 
-              final normPos = n > 1 ? (index - (n - 1) / 2.0) / ((n - 1) / 2.0) : 0.0;
+              final normPos =
+                  n > 1 ? (index - (n - 1) / 2.0) / ((n - 1) / 2.0) : 0.0;
               final angleRad = normPos * (arc * math.pi / 180.0);
               final arcY = normPos * normPos * cardHeight * 0.07;
 
               Widget child = Transform.rotate(
                 angle: angleRad,
                 alignment: Alignment.bottomCenter,
-                child: GestureDetector(
-                  onVerticalDragEnd: (details) {
-                    final v = details.primaryVelocity;
-                    if (v != null && v < -200 && isPlayable) {
-                      AudioService.instance.playCardSnap();
-                      onCardPlay?.call(card);
-                    }
-                  },
-                  child: PlayingCard(
-                    card: card,
-                    isSelected: isSelected,
-                    isPlayable: isPlayable,
-                    width: cardWidth,
-                    height: cardHeight,
-                    badgeText: isMaal ? 'MAAL' : null,
-                    onTap: () {
-                      AudioService.instance.hapticCardPlay();
-                      onCardTap?.call(card);
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular((cardWidth * 0.11).clamp(4.0, 9.0)),
+                    boxShadow: [
+                      // Delicate contact shadow onto the preceding card in fan
+                      if (n > 1 && index > 0 && !isSelected)
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          blurRadius: 4.0,
+                          offset: const Offset(-2.0, 1.0),
+                        ),
+                    ],
+                  ),
+                  child: GestureDetector(
+                    onVerticalDragEnd: (details) {
+                      final v = details.primaryVelocity;
+                      if (v != null && v < -200 && isPlayable) {
+                        AudioService.instance.playCardSnap();
+                        onCardPlay?.call(card);
+                      }
                     },
+                    child: PlayingCard(
+                      card: card,
+                      isSelected: isSelected,
+                      isPlayable: isPlayable,
+                      width: cardWidth,
+                      height: cardHeight,
+                      badgeText: badge,
+                      onTap: () {
+                        AudioService.instance.playCardSlide();
+                        onCardTap?.call(card);
+                      },
+                    ),
                   ),
                 ),
               );
@@ -120,7 +142,8 @@ class CardHand extends StatelessWidget {
                     opacity: (t * 2).clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(0, -cardHeight * 0.6 * (1 - t)),
-                      child: Transform.scale(scale: 0.85 + 0.15 * t, child: dealt),
+                      child:
+                          Transform.scale(scale: 0.85 + 0.15 * t, child: dealt),
                     ),
                   ),
                 );
@@ -128,7 +151,9 @@ class CardHand extends StatelessWidget {
 
               return AnimatedPositioned(
                 key: ValueKey(card.id),
-                duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 260),
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
                 left: startX + index * dx,
                 top: lift + arcY,
