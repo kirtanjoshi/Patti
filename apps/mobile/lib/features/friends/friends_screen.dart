@@ -1,19 +1,18 @@
-import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
-import '../../core/constants/api_const.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/services/socket_service.dart';
+import '../../core/services/social_provider.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/toast_banner.dart';
+import '../room/room_screen.dart';
 import 'widgets/friend_share_banner.dart';
 import 'widgets/friend_tiles.dart';
+import 'widgets/invite_to_room_sheet.dart';
 import 'widgets/nearby_radar_view.dart';
 import 'widgets/shake_match_dialog.dart';
 
@@ -28,17 +27,15 @@ class FriendsScreen extends ConsumerStatefulWidget {
 
 class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   final TextEditingController _codeController = TextEditingController();
-  bool _isLoading = false;
+  bool _isSendingRequest = false;
   int _subTab = 0; // 0: My Friends, 1: Nearby Radar
-
-  // Real friends list loaded dynamically from backend
-  List<FriendModel> _friends = [];
-  final List<FriendModel> _pendingRequests = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchFriends();
+    Future.microtask(() {
+      ref.read(socialProvider.notifier).fetchFriends(showLoading: true);
+    });
   }
 
   @override
@@ -48,28 +45,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   }
 
   Future<void> _fetchFriends() async {
-    final token = ref.read(authProvider).token;
-    if (token == null) return;
-
-    try {
-      final response = await http.get(
-        Uri.parse(ApiConst.friends),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 4));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final rawFriends = data['friends'] as List<dynamic>? ?? [];
-        if (mounted && rawFriends.isNotEmpty) {
-          setState(() {
-            _friends = rawFriends
-                .map((f) =>
-                    FriendModel.fromJson(Map<String, dynamic>.from(f as Map)))
-                .toList();
-          });
-        }
-      }
-    } catch (_) {}
+    await ref.read(socialProvider.notifier).fetchFriends();
   }
 
   Future<void> _sendFriendRequest() async {
@@ -84,66 +60,78 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       code = code.split('friend/').last;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isSendingRequest = true);
     HapticFeedback.selectionClick();
 
-    // Optimistic addition
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
+    final err = await ref.read(socialProvider.notifier).sendFriendRequest(code);
+    if (!mounted) return;
+    setState(() => _isSendingRequest = false);
+
+    if (err == null) {
       _codeController.clear();
-      setState(() => _isLoading = false);
       ToastBanner.show(
         context,
         'friends.request_sent'.tr(),
         icon: Icons.person_add_alt_1_rounded,
       );
+    } else {
+      ToastBanner.show(
+        context,
+        err,
+        icon: Icons.info_outline_rounded,
+      );
     }
   }
 
-  void _acceptRequest(FriendModel request) {
-    setState(() {
-      _pendingRequests.removeWhere((r) => r.userId == request.userId);
-      _friends.insert(
-        0,
-        FriendModel(
-          userId: request.userId,
-          displayName: request.displayName,
-          friendCode: request.friendCode,
-          isOnline: true,
-        ),
-      );
-    });
+  Future<void> _acceptRequest(FriendModel request) async {
+    final err = await ref
+        .read(socialProvider.notifier)
+        .respondToRequest(request, accept: true);
+    if (!mounted) return;
     ToastBanner.show(
       context,
-      'friends.request_accepted'.tr(),
-      icon: Icons.check_circle_rounded,
+      err ?? 'friends.request_accepted'.tr(),
+      icon: err != null ? Icons.error_outline_rounded : Icons.check_circle_rounded,
     );
   }
 
-  void _declineRequest(FriendModel request) {
-    setState(() {
-      _pendingRequests.removeWhere((r) => r.userId == request.userId);
-    });
+  Future<void> _declineRequest(FriendModel request) async {
+    final err = await ref
+        .read(socialProvider.notifier)
+        .respondToRequest(request, accept: false);
+    if (!mounted) return;
+    if (err != null) {
+      ToastBanner.show(context, err, icon: Icons.error_outline_rounded);
+    }
   }
 
   void _inviteToPlay(FriendModel friend) {
-    final socket = ref.read(socketServiceProvider);
-    socket.inviteFriendToRoom('PAT777', friend.userId);
-    ToastBanner.show(
+    InviteToRoomHelper.inviteFriend(
       context,
-      'Invited ${friend.displayName} to play!',
-      icon: Icons.send_rounded,
+      ref,
+      userId: friend.userId,
+      displayName: friend.displayName,
+    );
+  }
+
+  void _openCreateRoom() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const RoomScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final social = ref.watch(socialProvider);
     final user = authState.user;
     final friendCode = user?.friendCode ?? 'PT-7777';
 
-    final onlineFriends = _friends.where((f) => f.isOnline).toList();
-    final offlineFriends = _friends.where((f) => !f.isOnline).toList();
+    final friends = social.friends;
+    final incomingRequests = social.incomingRequests;
+    final outgoingRequests = social.outgoingRequests;
+    final onlineFriends = friends.where((f) => f.isOnline).toList();
+    final offlineFriends = friends.where((f) => !f.isOnline).toList();
 
     return Scaffold(
       backgroundColor: PatiiColors.navy,
@@ -212,7 +200,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'My Friends (${_friends.length})',
+                            'My Friends (${friends.length})',
                             style: PatiiTypography.body(
                               fontSize: 12,
                               fontWeight: _subTab == 0
@@ -290,7 +278,68 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   FriendShareBanner(friendCode: friendCode),
                   const SizedBox(height: 12),
 
-                  // 2. Shake to Match Quick Action Banner
+                  // 2. Create Room & Shake to Match Quick Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Pressable(
+                          onPressed: _openCreateRoom,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: PatiiColors.navySurface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: PatiiColors.info.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        PatiiColors.info.withValues(alpha: 0.16),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.meeting_room_rounded,
+                                      color: PatiiColors.info, size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Create Room',
+                                        style: PatiiTypography.display(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: PatiiColors.textPrimary,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Start a table & invite',
+                                        style: PatiiTypography.body(
+                                          fontSize: 10.5,
+                                          color: PatiiColors.textMuted,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   _buildShakeMatchBanner(),
                   const SizedBox(height: 16),
 
@@ -298,8 +347,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   _buildAddFriendCard(),
                   const SizedBox(height: 20),
 
-                  // 3. Pending Requests
-                  if (_pendingRequests.isNotEmpty) ...[
+                  // 4. Incoming Friend Requests
+                  if (incomingRequests.isNotEmpty) ...[
                     Text(
                       'friends.pending_requests'.tr(),
                       style: PatiiTypography.display(
@@ -309,14 +358,80 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    ..._pendingRequests.map(
+                    ...incomingRequests.map(
                       (req) => PendingFriendRequestTile(
                         request: req,
                         onAccept: () => _acceptRequest(req),
                         onDecline: () => _declineRequest(req),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 5. Outgoing Sent Requests
+                  if (outgoingRequests.isNotEmpty) ...[
+                    Text(
+                      'Sent Requests (${outgoingRequests.length})',
+                      style: PatiiTypography.display(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: PatiiColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...outgoingRequests.map(
+                      (req) => Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: PatiiColors.navySurface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: PatiiColors.hairline),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: PatiiColors.navyElevated,
+                              child: Text(
+                                req.displayName.isNotEmpty
+                                    ? req.displayName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                    color: PatiiColors.goldLight,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                req.displayName,
+                                style: PatiiTypography.body(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: PatiiColors.navyElevated,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Pending',
+                                style: PatiiTypography.body(
+                                    fontSize: 10.5,
+                                    color: PatiiColors.goldLight),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
 
                   // 4. Online Friends
@@ -474,7 +589,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          _isLoading
+          _isSendingRequest
               ? const SizedBox(
                   width: 20,
                   height: 20,

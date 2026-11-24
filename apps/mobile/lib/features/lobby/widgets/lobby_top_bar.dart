@@ -116,13 +116,13 @@ class LobbyTopBar extends StatelessWidget {
           ),
           Semantics(
             button: true,
-            label: 'lobby.dev_gallery'.tr(),
+            label: 'Settings',
             child: Pressable(
               onPressed: onOpenGallery,
               child: const SizedBox(
                 width: 44,
                 height: 48,
-                child: Icon(Icons.tune_rounded,
+                child: Icon(Icons.settings_rounded,
                     color: PatiiColors.textSecondary, size: 22),
               ),
             ),

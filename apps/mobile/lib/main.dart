@@ -10,6 +10,7 @@ import 'features/dev/gallery_screen.dart';
 import 'features/friends/friends_screen.dart';
 import 'features/lobby/casino_lobby_screen.dart';
 import 'features/room/room_screen.dart';
+import 'features/settings/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,6 +97,7 @@ class _PatiiAppState extends ConsumerState<PatiiApp> {
         '/lobby': (context) => const CasinoLobbyScreen(),
         '/dev/gallery': (context) => const GalleryScreen(),
         '/friends': (context) => const FriendsScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }

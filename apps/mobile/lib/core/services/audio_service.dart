@@ -48,10 +48,26 @@ class AudioService extends ChangeNotifier {
   final List<AudioPlayer> _sfxPool = [];
   int _nextVoiceIndex = 0;
   AudioPlayer? _bgmPlayer;
+  int _activeTableCount = 0;
 
   // --- Debounce Timers ---
   int _lastButtonClickTime = 0;
   int _lastCardSlideTime = 0;
+  int _lastTurnChimeTime = 0;
+  final Map<String, int> _lastAssetPlayTime = {};
+
+  static final AudioContext _noFocusAudioContext = AudioContext(
+    android: const AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      stayAwake: false,
+      contentType: AndroidContentType.sonification,
+      usageType: AndroidUsageType.game,
+      audioFocus: AndroidAudioFocus.none,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.ambient,
+    ),
+  );
 
   bool get soundEnabled => _soundEnabled;
   bool get musicEnabled => _musicEnabled;
@@ -64,6 +80,8 @@ class AudioService extends ChangeNotifier {
     try {
       while (_sfxPool.length <= index && _sfxPool.length < _voicePoolSize) {
         final p = AudioPlayer();
+        p.setAudioContext(_noFocusAudioContext).catchError((_) {});
+        p.setReleaseMode(ReleaseMode.stop).catchError((_) {});
         _sfxPool.add(p);
       }
       if (index < _sfxPool.length) {
@@ -77,7 +95,12 @@ class AudioService extends ChangeNotifier {
 
   AudioPlayer? _getBgmPlayer() {
     try {
-      _bgmPlayer ??= AudioPlayer();
+      if (_bgmPlayer == null) {
+        final p = AudioPlayer();
+        p.setAudioContext(_noFocusAudioContext).catchError((_) {});
+        p.setReleaseMode(ReleaseMode.loop).catchError((_) {});
+        _bgmPlayer = p;
+      }
       return _bgmPlayer;
     } catch (_) {
       return null;
@@ -175,16 +198,27 @@ class AudioService extends ChangeNotifier {
 
   // --- Internal Polyphonic Sound Dispatch ---
 
-  Future<void> _playSound(String assetName, {double volumeScale = 1.0}) async {
+  Future<void> _playSound(
+    String assetName, {
+    double volumeScale = 1.0,
+    int minIntervalMs = 55,
+  }) async {
     if (!_soundEnabled || _sfxVolume <= 0.0) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final lastTime = _lastAssetPlayTime[assetName] ?? 0;
+    if (now - lastTime < minIntervalMs) return;
+    _lastAssetPlayTime[assetName] = now;
+
     try {
       final player = _getSfxPlayer(_nextVoiceIndex);
       _nextVoiceIndex = (_nextVoiceIndex + 1) % _voicePoolSize;
       if (player == null) return;
 
-      await player.stop();
       await player.setVolume((_sfxVolume * volumeScale).clamp(0.0, 1.0));
-      await player.play(AssetSource('audio/$assetName'));
+      await player.play(
+        AssetSource('audio/$assetName'),
+        mode: PlayerMode.lowLatency,
+      );
     } catch (_) {
       // Gracefully silent in environments without audio device / test headless
     }
@@ -192,15 +226,29 @@ class AudioService extends ChangeNotifier {
 
   // --- Music (BGM) Channel ---
 
+  Future<void> enterTable() async {
+    _activeTableCount++;
+    await playTableMusic();
+  }
+
+  Future<void> exitTable() async {
+    if (_activeTableCount > 0) {
+      _activeTableCount--;
+    }
+    if (_activeTableCount == 0) {
+      await playLobbyMusic();
+    }
+  }
+
   Future<void> playLobbyMusic() async {
     if (_currentTrack == PatiiBgmTrack.lobby) return;
     _currentTrack = PatiiBgmTrack.lobby;
+    if (!_isInitialized) await init();
     if (!_musicEnabled) return;
     try {
       final bgm = _getBgmPlayer();
       if (bgm == null) return;
       await bgm.setReleaseMode(ReleaseMode.loop);
-      await bgm.stop();
       await bgm.setVolume(_musicVolume);
       await bgm.play(AssetSource('audio/lobby_ambient.wav'));
     } catch (_) {}
@@ -209,13 +257,13 @@ class AudioService extends ChangeNotifier {
   Future<void> playTableMusic() async {
     if (_currentTrack == PatiiBgmTrack.table) return;
     _currentTrack = PatiiBgmTrack.table;
+    if (!_isInitialized) await init();
     if (!_musicEnabled) return;
     try {
       final bgm = _getBgmPlayer();
       if (bgm == null) return;
       await bgm.setReleaseMode(ReleaseMode.loop);
-      await bgm.stop();
-      await bgm.setVolume(_musicVolume * 0.75); // Sits gently beneath game SFX
+      await bgm.setVolume((_musicVolume * 0.45).clamp(0.0, 1.0));
       await bgm.play(AssetSource('audio/table_ambient.wav'));
     } catch (_) {}
   }
@@ -306,8 +354,11 @@ class AudioService extends ChangeNotifier {
   // --- Sound Effects: Game State & Turns ---
 
   Future<void> playYourTurnChime() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastTurnChimeTime < 2500) return;
+    _lastTurnChimeTime = now;
     hapticYourTurn();
-    await _playSound('your_turn.wav', volumeScale: 1.0);
+    await _playSound('your_turn.wav', volumeScale: 0.9);
   }
 
   Future<void> playCountdownTick({bool urgent = false}) async {

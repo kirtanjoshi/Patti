@@ -88,14 +88,42 @@ class FriendModel {
   });
 
   factory FriendModel.fromJson(Map<String, dynamic> json) {
+    final presence = json['presence'] as Map<String, dynamic>?;
+    final presenceStatus = presence?['status'] as String?;
+    final isOnline = presenceStatus != null
+        ? presenceStatus != 'offline'
+        : (json['isOnline'] as bool? ?? false);
+    final currentGame =
+        presence?['gameId'] as String? ?? json['currentGame'] as String?;
+
     return FriendModel(
       userId: json['userId'] as String? ?? json['id'] as String? ?? '',
       displayName: json['displayName'] as String? ?? 'Player',
       friendCode: json['friendCode'] as String? ?? '',
       avatarUrl: json['avatarUrl'] as String?,
       status: json['status'] as String? ?? 'accepted',
-      isOnline: json['isOnline'] as bool? ?? false,
-      currentGame: json['currentGame'] as String?,
+      isOnline: isOnline,
+      currentGame: currentGame,
+    );
+  }
+
+  FriendModel copyWith({
+    String? userId,
+    String? displayName,
+    String? friendCode,
+    String? avatarUrl,
+    String? status,
+    bool? isOnline,
+    String? currentGame,
+  }) {
+    return FriendModel(
+      userId: userId ?? this.userId,
+      displayName: displayName ?? this.displayName,
+      friendCode: friendCode ?? this.friendCode,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      status: status ?? this.status,
+      isOnline: isOnline ?? this.isOnline,
+      currentGame: currentGame ?? this.currentGame,
     );
   }
 }
@@ -178,6 +206,13 @@ class RoomStateModel {
   }
 }
 
+enum NearbyFriendStatus {
+  none,
+  outgoingPending,
+  incomingPending,
+  accepted,
+}
+
 class NearbyPlayerModel {
   final String userId;
   final String displayName;
@@ -191,7 +226,9 @@ class NearbyPlayerModel {
   final String? currentGame;
   final bool isFriend;
   final bool hasPendingRequest;
+  final NearbyFriendStatus friendStatus;
   final bool isSameWifi;
+  final bool isConnected;
 
   const NearbyPlayerModel({
     required this.userId,
@@ -206,11 +243,74 @@ class NearbyPlayerModel {
     this.currentGame,
     this.isFriend = false,
     this.hasPendingRequest = false,
+    this.friendStatus = NearbyFriendStatus.none,
     this.isSameWifi = false,
+    this.isConnected = false,
   });
+
+  NearbyPlayerModel copyWith({
+    String? userId,
+    String? displayName,
+    String? friendCode,
+    String? avatarUrl,
+    int? level,
+    int? rating,
+    int? distanceMeters,
+    String? distanceText,
+    bool? isOnline,
+    String? currentGame,
+    bool? isFriend,
+    bool? hasPendingRequest,
+    NearbyFriendStatus? friendStatus,
+    bool? isSameWifi,
+    bool? isConnected,
+  }) {
+    return NearbyPlayerModel(
+      userId: userId ?? this.userId,
+      displayName: displayName ?? this.displayName,
+      friendCode: friendCode ?? this.friendCode,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      level: level ?? this.level,
+      rating: rating ?? this.rating,
+      distanceMeters: distanceMeters ?? this.distanceMeters,
+      distanceText: distanceText ?? this.distanceText,
+      isOnline: isOnline ?? this.isOnline,
+      currentGame: currentGame ?? this.currentGame,
+      isFriend: isFriend ?? this.isFriend,
+      hasPendingRequest: hasPendingRequest ?? this.hasPendingRequest,
+      friendStatus: friendStatus ?? this.friendStatus,
+      isSameWifi: isSameWifi ?? this.isSameWifi,
+      isConnected: isConnected ?? this.isConnected,
+    );
+  }
 
   factory NearbyPlayerModel.fromJson(Map<String, dynamic> json) {
     final presence = json['presence'] as Map<String, dynamic>?;
+    final isFriend = json['isFriend'] as bool? ?? false;
+    final hasPending = json['hasPendingRequest'] as bool? ?? false;
+    final rawStatus = json['friendStatus'] as String?;
+
+    NearbyFriendStatus friendStatus;
+    switch (rawStatus) {
+      case 'accepted':
+        friendStatus = NearbyFriendStatus.accepted;
+        break;
+      case 'outgoing_pending':
+        friendStatus = NearbyFriendStatus.outgoingPending;
+        break;
+      case 'incoming_pending':
+        friendStatus = NearbyFriendStatus.incomingPending;
+        break;
+      default:
+        if (isFriend) {
+          friendStatus = NearbyFriendStatus.accepted;
+        } else if (hasPending) {
+          friendStatus = NearbyFriendStatus.outgoingPending;
+        } else {
+          friendStatus = NearbyFriendStatus.none;
+        }
+    }
+
     return NearbyPlayerModel(
       userId: json['userId'] as String? ?? '',
       displayName: json['displayName'] as String? ?? 'Player',
@@ -222,9 +322,13 @@ class NearbyPlayerModel {
       distanceText: json['distanceText'] as String? ?? '',
       isOnline: presence != null ? presence['status'] != 'offline' : true,
       currentGame: presence?['gameId'] as String?,
-      isFriend: json['isFriend'] as bool? ?? false,
-      hasPendingRequest: json['hasPendingRequest'] as bool? ?? false,
+      isFriend: isFriend || friendStatus == NearbyFriendStatus.accepted,
+      hasPendingRequest: hasPending ||
+          friendStatus == NearbyFriendStatus.outgoingPending ||
+          friendStatus == NearbyFriendStatus.incomingPending,
+      friendStatus: friendStatus,
       isSameWifi: json['isSameWifi'] as bool? ?? false,
+      isConnected: json['isConnected'] as bool? ?? false,
     );
   }
 }

@@ -32,6 +32,8 @@ class UpdateNearbyLocationDto {
   latitude!: number;
   longitude!: number;
   isVisible?: boolean;
+  localIp?: string;
+  localSubnet?: string;
 }
 
 class ToggleNearbyVisibilityDto {
@@ -106,9 +108,18 @@ export class SocialController {
     @Body() body: UpdateNearbyLocationDto,
   ) {
     const userId = this.extractUserId(authHeader);
-    const clientIp =
+    const rawIp =
       req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
-    this.nearbyService.updateLocation(userId, body.latitude, body.longitude, body.isVisible ?? true, clientIp);
+    const clientIp = NearbyService.normalizeIp(rawIp);
+    const localSubnet = body.localSubnet || NearbyService.extractSubnet(body.localIp);
+    this.nearbyService.updateLocation(
+      userId,
+      body.latitude,
+      body.longitude,
+      body.isVisible ?? true,
+      clientIp,
+      localSubnet,
+    );
     return { success: true };
   }
 
@@ -119,15 +130,26 @@ export class SocialController {
     @Query('lat') lat?: string,
     @Query('lon') lon?: string,
     @Query('radiusKm') radiusKm?: string,
+    @Query('localIp') localIp?: string,
+    @Query('localSubnet') localSubnet?: string,
   ) {
     const userId = this.extractUserId(authHeader);
     const parsedLat = lat ? parseFloat(lat) : undefined;
     const parsedLon = lon ? parseFloat(lon) : undefined;
     const parsedRadius = radiusKm ? Math.min(50, Math.max(0.5, parseFloat(radiusKm))) : 10;
-    const clientIp =
+    const rawIp =
       req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || '';
+    const clientIp = NearbyService.normalizeIp(rawIp);
+    const resolvedSubnet = localSubnet || NearbyService.extractSubnet(localIp);
 
-    return this.nearbyService.getNearbyPlayers(userId, parsedLat, parsedLon, parsedRadius, clientIp);
+    return this.nearbyService.getNearbyPlayers(
+      userId,
+      parsedLat,
+      parsedLon,
+      parsedRadius,
+      clientIp,
+      resolvedSubnet,
+    );
   }
 
   @Post('nearby/visibility')

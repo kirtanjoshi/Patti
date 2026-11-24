@@ -164,17 +164,24 @@ export class DhumbalGameModule
 
       let drawnCard: Card;
       let newStock = [...state.stock];
+      let currentDiscards = [...state.discardPile];
+
+      if (newStock.length === 0 && currentDiscards.length > 1) {
+        const top = currentDiscards.pop()!;
+        newStock = currentDiscards;
+        currentDiscards = [top];
+      }
 
       if (move.drawSource === 'stock' && newStock.length > 0) {
         drawnCard = newStock.pop()!;
       } else {
-        drawnCard = state.discardPile[state.discardPile.length - 1]!;
+        drawnCard = currentDiscards.pop() ?? move.discardCards[0]!;
       }
 
       remainingHand.push(drawnCard);
 
       const newHands = state.hands.map((h, idx) => (idx === seat ? remainingHand : h));
-      const newDiscards = [...state.discardPile, ...move.discardCards];
+      const newDiscards = [...currentDiscards, ...move.discardCards];
       const nextSeat = ((seat + 1) % state.players.length) as SeatIndex;
 
       return {
@@ -240,9 +247,14 @@ export class DhumbalGameModule
   autoMove(state: DhumbalState, player: PlayerId): DhumbalMove {
     const seat = state.players.indexOf(player);
     const hand = state.hands[seat]!;
+    const handVal = calculateDhumbalHandValue(hand, state.rules.cardValuesStyle);
+    if (handVal <= state.rules.callThreshold) {
+      return { type: 'callJhyap' };
+    }
+    const sortedDesc = [...hand].sort((a, b) => b.rank - a.rank);
     return {
       type: 'playTurn',
-      discardCards: [hand[0]!],
+      discardCards: [sortedDesc[0]!],
       drawSource: 'stock',
     };
   }

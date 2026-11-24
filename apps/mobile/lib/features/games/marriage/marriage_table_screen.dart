@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,7 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
   MeldType activeMeldType = MeldType.pure;
   String? selectedCardId;
   bool isSortedBySuit = true;
+  Timer? _botTimer;
 
   // The hidden cut joker (Maal)
   final Card cutJoker =
@@ -80,7 +82,23 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
     );
   }
 
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    super.dispose();
+  }
+
+  void _ensureStockNotEmpty() {
+    if (stockPile.length <= 2 && discardPile.length > 1) {
+      final top = discardPile.removeLast();
+      final recycled = List<Card>.from(discardPile)..shuffle();
+      discardPile = [top];
+      stockPile.insertAll(0, recycled);
+    }
+  }
+
   void _onDrawStock() {
+    _ensureStockNotEmpty();
     if (currentTurnSeat != 0 || turnPhase != 'draw') return;
     if (stockPile.isEmpty) return;
     AudioService.instance.playCardSlide();
@@ -117,27 +135,34 @@ class _MarriageTableScreenState extends ConsumerState<MarriageTableScreen> {
       selectedCardId = null;
       turnPhase = 'draw';
       currentTurnSeat = 1;
+    });
+    _runBotTurns();
+  }
 
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (!mounted) return;
-        setState(() => currentTurnSeat = 2);
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (!mounted) return;
-          setState(() => currentTurnSeat = 3);
-          Future.delayed(const Duration(milliseconds: 600), () {
-            if (!mounted) return;
-            setState(() {
-              currentTurnSeat = 0;
-              turnPhase = 'draw';
-            });
-            ToastBanner.show(
-              context,
-              'marriage.phase_draw'.tr(),
-              icon: Icons.touch_app,
-            );
-          });
+  void _runBotTurns() {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 520), () {
+      if (!mounted) return;
+      _ensureStockNotEmpty();
+      if (stockPile.isNotEmpty) {
+        discardPile.add(stockPile.removeAt(0));
+      }
+      AudioService.instance.playCardSlide();
+
+      if (currentTurnSeat < 3) {
+        setState(() => currentTurnSeat = currentTurnSeat + 1);
+        _runBotTurns();
+      } else {
+        setState(() {
+          currentTurnSeat = 0;
+          turnPhase = 'draw';
         });
-      });
+        ToastBanner.show(
+          context,
+          'marriage.phase_draw'.tr(),
+          icon: Icons.touch_app,
+        );
+      }
     });
   }
 

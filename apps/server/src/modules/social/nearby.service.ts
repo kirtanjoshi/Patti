@@ -8,7 +8,10 @@ export interface NearbyLocationEntry {
   readonly isVisible: boolean;
   readonly updatedAt: number;
   readonly clientIp?: string;
+  readonly localSubnet?: string;
 }
+
+export type NearbyFriendStatus = 'none' | 'outgoing_pending' | 'incoming_pending' | 'accepted';
 
 export interface NearbyPlayerSummary {
   readonly userId: string;
@@ -24,6 +27,7 @@ export interface NearbyPlayerSummary {
   readonly presence: UserPresence;
   readonly isFriend: boolean;
   readonly hasPendingRequest: boolean;
+  readonly friendStatus: NearbyFriendStatus;
 }
 
 const LOCATION_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for privacy
@@ -61,23 +65,46 @@ export class NearbyService {
     return `~${km} km away`;
   }
 
+  public static normalizeIp(ip?: string): string {
+    if (!ip) return '';
+    let clean = ip.trim().toLowerCase();
+    if (clean.startsWith('::ffff:')) {
+      clean = clean.substring(7);
+    }
+    return clean;
+  }
+
+  public static extractSubnet(localIp?: string): string {
+    if (!localIp) return '';
+    const clean = NearbyService.normalizeIp(localIp);
+    const parts = clean.split('.');
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1]}.${parts[2]}`;
+    }
+    return '';
+  }
+
   public updateLocation(
     userId: string,
     latitude: number,
     longitude: number,
     isVisible = true,
     clientIp?: string,
+    localSubnet?: string,
   ): void {
     // Round to 3 decimal places for coarse privacy protection (~110m resolution)
     const coarseLat = Math.round(latitude * 1000) / 1000;
     const coarseLon = Math.round(longitude * 1000) / 1000;
+    const normIp = NearbyService.normalizeIp(clientIp);
+    const prev = this.locationStore.get(userId);
 
     this.locationStore.set(userId, {
       latitude: coarseLat,
       longitude: coarseLon,
       isVisible,
       updatedAt: Date.now(),
-      clientIp: clientIp || this.locationStore.get(userId)?.clientIp,
+      clientIp: normIp || prev?.clientIp,
+      localSubnet: localSubnet || prev?.localSubnet,
     });
   }
 
@@ -102,14 +129,16 @@ export class NearbyService {
     longitude?: number,
     radiusKm = 10,
     clientIp?: string,
+    localSubnet?: string,
   ): Promise<NearbyPlayerSummary[]> {
     const now = Date.now();
     const existing = this.locationStore.get(userId);
-    const effectiveIp = clientIp || existing?.clientIp;
+    const effectiveIp = NearbyService.normalizeIp(clientIp) || existing?.clientIp || '';
+    const effectiveSubnet = localSubnet || existing?.localSubnet || '';
 
     const myLocation =
       latitude !== undefined && longitude !== undefined
-        ? { latitude, longitude, clientIp: effectiveIp }
+        ? { latitude, longitude, clientIp: effectiveIp, localSubnet: effectiveSubnet }
         : existing;
 
     if (!myLocation) {
@@ -118,7 +147,7 @@ export class NearbyService {
 
     // Keep my location updated if passed
     if (latitude !== undefined && longitude !== undefined) {
-      this.updateLocation(userId, latitude, longitude, true, effectiveIp);
+      this.updateLocation(userId, latitude, longitude, true, effectiveIp, effectiveSubnet);
     }
 
     const candidateEntries: { otherUserId: string; distance: number; isSameWifi: boolean }[] = [];
@@ -129,7 +158,9 @@ export class NearbyService {
       if (!loc.isVisible) continue;
       if (now - loc.updatedAt > LOCATION_TTL_MS) continue;
 
-      const isSameWifi = Boolean(effectiveIp && loc.clientIp && loc.clientIp === effectiveIp);
+      const samePublicIp = Boolean(effectiveIp && loc.clientIp && loc.clientIp === effectiveIp);
+      const sameLocalSubnet = Boolean(effectiveSubnet && loc.localSubnet && loc.localSubnet === effectiveSubnet);
+      const isSameWifi = samePublicIp || sameLocalSubnet;
 
       const dist = this.calculateDistanceMeters(
         myLocation.latitude,
@@ -187,20 +218,36 @@ export class NearbyService {
       },
     });
 
-    const friendStatusMap = new Map<string, { isFriend: boolean; hasPendingRequest: boolean }>();
+    const friendStatusMap = new Map<
+      string,
+      { isFriend: boolean; hasPendingRequest: boolean; friendStatus: NearbyFriendStatus }
+    >();
     for (const f of friendships) {
       const otherId = f.userId === userId ? f.friendId : f.userId;
       if (f.status === 'accepted') {
-        friendStatusMap.set(otherId, { isFriend: true, hasPendingRequest: false });
+        friendStatusMap.set(otherId, {
+          isFriend: true,
+          hasPendingRequest: false,
+          friendStatus: 'accepted',
+        });
       } else if (f.status === 'pending') {
-        friendStatusMap.set(otherId, { isFriend: false, hasPendingRequest: true });
+        const isOutgoing = f.userId === userId;
+        friendStatusMap.set(otherId, {
+          isFriend: false,
+          hasPendingRequest: true,
+          friendStatus: isOutgoing ? 'outgoing_pending' : 'incoming_pending',
+        });
       }
     }
 
     const results: NearbyPlayerSummary[] = [];
     for (const candidate of candidateEntries) {
       const u = userMap.get(candidate.otherUserId);
-      const rel = friendStatusMap.get(candidate.otherUserId) ?? { isFriend: false, hasPendingRequest: false };
+      const rel = friendStatusMap.get(candidate.otherUserId) ?? {
+        isFriend: false,
+        hasPendingRequest: false,
+        friendStatus: 'none' as NearbyFriendStatus,
+      };
 
       results.push({
         userId: candidate.otherUserId,
@@ -216,6 +263,7 @@ export class NearbyService {
         presence: this.socialService.getPresence(candidate.otherUserId),
         isFriend: rel.isFriend,
         hasPendingRequest: rel.hasPendingRequest,
+        friendStatus: rel.friendStatus,
       });
     }
 

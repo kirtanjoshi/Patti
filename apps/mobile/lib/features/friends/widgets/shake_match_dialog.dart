@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/user_model.dart';
+import '../../../core/services/social_provider.dart';
 import '../../../core/services/socket_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/toast_banner.dart';
 import '../../room/room_screen.dart';
 
 /// Modal dialog for 'Shake to Match' near-field player discovery.
@@ -40,10 +43,15 @@ class _ShakeMatchDialogState extends ConsumerState<ShakeMatchDialog>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   StreamSubscription? _shakeSubscription;
+  StreamSubscription? _timeoutSubscription;
   bool _isSearching = false;
   bool _isMatched = false;
+  bool _timedOut = false;
   String? _matchedRoomCode;
   String? _matchedPlayerName;
+  String? _matchedUserId;
+  String? _matchedFriendCode;
+  bool _isSendingFriendRequest = false;
 
   @override
   void initState() {
@@ -63,26 +71,36 @@ class _ShakeMatchDialogState extends ConsumerState<ShakeMatchDialog>
     _shakeSubscription = socketService.shakeMatchedStream.listen((data) {
       if (!mounted) return;
       final code = data['code'] as String? ?? 'PAT777';
-      final friendName =
-          data['matchedWith'] as String? ?? 'Nearby Card Player';
+      final matchedUser = data['matchedUser'] is Map
+          ? Map<String, dynamic>.from(data['matchedUser'] as Map)
+          : null;
+      final peerUserId = matchedUser?['userId'] as String?;
+      final friendCode = matchedUser?['friendCode'] as String?;
+      final friendName = matchedUser?['displayName'] as String? ??
+          data['matchedWith'] as String? ??
+          'Nearby Card Player';
+
+      if (peerUserId != null && peerUserId.isNotEmpty) {
+        ref.read(socialProvider.notifier).markDeviceConnected(peerUserId);
+      }
 
       HapticFeedback.heavyImpact();
       setState(() {
         _isSearching = false;
         _isMatched = true;
+        _timedOut = false;
         _matchedRoomCode = code;
         _matchedPlayerName = friendName;
+        _matchedUserId = peerUserId;
+        _matchedFriendCode = friendCode;
       });
+    });
 
-      // Show success state briefly then navigate to RoomScreen
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (!mounted) return;
-        Navigator.of(context, rootNavigator: true).pop();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => RoomScreen(initialCode: code),
-          ),
-        );
+    _timeoutSubscription = socketService.shakeTimeoutStream.listen((_) {
+      if (!mounted || _isMatched) return;
+      setState(() {
+        _isSearching = false;
+        _timedOut = true;
       });
     });
   }
@@ -92,14 +110,51 @@ class _ShakeMatchDialogState extends ConsumerState<ShakeMatchDialog>
     setState(() {
       _isSearching = true;
       _isMatched = false;
+      _timedOut = false;
     });
     ref.read(socketServiceProvider).shakeToMatch(widget.gameId);
+  }
+
+  Future<void> _sendFriendRequest() async {
+    final target = _matchedFriendCode?.isNotEmpty == true
+        ? _matchedFriendCode!
+        : (_matchedUserId ?? '');
+    if (target.isEmpty) return;
+
+    setState(() => _isSendingFriendRequest = true);
+    final err = await ref.read(socialProvider.notifier).sendFriendRequest(
+          target,
+          knownUserId: _matchedUserId,
+          knownDisplayName: _matchedPlayerName,
+          knownFriendCode: _matchedFriendCode,
+        );
+    if (!mounted) return;
+    setState(() => _isSendingFriendRequest = false);
+
+    ToastBanner.show(
+      context,
+      err ?? 'Friend request sent to ${_matchedPlayerName ?? 'player'}!',
+      icon: err != null ? Icons.info_outline_rounded : Icons.person_add_rounded,
+    );
+  }
+
+  void _enterMatchedRoom() {
+    final code = _matchedRoomCode;
+    Navigator.of(context, rootNavigator: true).pop();
+    if (code != null && code.isNotEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RoomScreen(initialCode: code),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _shakeSubscription?.cancel();
+    _timeoutSubscription?.cancel();
     super.dispose();
   }
 
@@ -273,7 +328,7 @@ class _ShakeMatchDialogState extends ConsumerState<ShakeMatchDialog>
             // Status Text
             if (_isMatched) ...[
               Text(
-                'Friend Found!',
+                'Devices Connected!',
                 style: PatiiTypography.display(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -282,24 +337,118 @@ class _ShakeMatchDialogState extends ConsumerState<ShakeMatchDialog>
               ),
               const SizedBox(height: 4),
               Text(
-                'Matched with $_matchedPlayerName',
+                'Connected with ${_matchedPlayerName ?? "Nearby Player"}',
                 style: PatiiTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: PatiiColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
-                'Entering table (${_matchedRoomCode ?? ""})...',
+                'You can add them as a friend or jump straight into room ${_matchedRoomCode ?? ""}.',
                 style: PatiiTypography.body(
                   fontSize: 11.5,
                   color: PatiiColors.textMuted,
                 ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Builder(
+                builder: (context) {
+                  final social = ref.watch(socialProvider);
+                  final peerId = _matchedUserId ?? '';
+                  final friendStatus = peerId.isNotEmpty
+                      ? social.friendStatusFor(peerId)
+                      : NearbyFriendStatus.none;
+
+                  if (friendStatus == NearbyFriendStatus.accepted) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E676).withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF00E676)
+                                .withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_rounded,
+                              size: 16, color: Color(0xFF00E676)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Already Friends',
+                            style: TextStyle(
+                              color: Color(0xFF00E676),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (friendStatus == NearbyFriendStatus.outgoingPending) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: PatiiColors.navySurface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: PatiiColors.hairline),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.hourglass_top_rounded,
+                              size: 16, color: PatiiColors.gold),
+                          SizedBox(width: 6),
+                          Text(
+                            'Friend Request Sent',
+                            style: TextStyle(
+                              color: PatiiColors.goldLight,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    width: double.infinity,
+                    child: GoldButton(
+                      label: _isSendingFriendRequest
+                          ? 'Sending Request...'
+                          : 'Add Friend',
+                      icon: Icons.person_add_alt_1_rounded,
+                      height: 46,
+                      isEnabled: !_isSendingFriendRequest &&
+                          (_matchedUserId != null ||
+                              _matchedFriendCode != null),
+                      onPressed: _sendFriendRequest,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: GhostButton(
+                  label: 'Enter Room (${_matchedRoomCode ?? ""})',
+                  icon: Icons.meeting_room_rounded,
+                  height: 44,
+                  onPressed: _enterMatchedRoom,
+                ),
               ),
             ] else ...[
               Text(
-                'Shake Phone or Tap Button',
+                _timedOut ? 'No Devices Found' : 'Shake Phone or Tap Button',
                 style: PatiiTypography.display(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -309,22 +458,22 @@ class _ShakeMatchDialogState extends ConsumerState<ShakeMatchDialog>
               ),
               const SizedBox(height: 6),
               Text(
-                'Shake your phone or tap the button to match with nearby friends!',
+                _timedOut
+                    ? 'Make sure both phones shake at the same time on the same Wi-Fi.'
+                    : 'Shake your phone or tap the button to connect with a nearby player!',
                 style: PatiiTypography.body(
                   fontSize: 12,
                   color: PatiiColors.textMuted,
                 ),
                 textAlign: TextAlign.center,
               ),
-            ],
-            const SizedBox(height: 26),
-
-            // Action Button
-            if (!_isMatched) ...[
+              const SizedBox(height: 26),
               SizedBox(
                 width: double.infinity,
                 child: GoldButton(
-                  label: _isSearching ? 'SEARCHING NEARBY...' : 'SHAKE TO MATCH',
+                  label: _isSearching
+                      ? 'SEARCHING NEARBY...'
+                      : 'SHAKE TO CONNECT',
                   icon: Icons.vibration_rounded,
                   height: 48,
                   onPressed: _triggerShakeSearch,

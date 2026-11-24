@@ -309,8 +309,26 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
         return;
       }
 
+      final active = _activePlayers;
+      // If only 2 players remain and either You are already packed OR pot/bet threshold reached, trigger Show!
+      if (active.length == 2) {
+        final myPacked = _myState.isPacked;
+        final highBets = bot.totalBet >= _bootAmount * 6 || _pot >= _bootAmount * 20;
+        if (myPacked || highBets || math.Random().nextDouble() < 0.25) {
+          _onShow();
+          return;
+        }
+      }
+
+      final packChance = _myState.isPacked ? 0.35 : 0.14;
       final shouldPack =
-          math.Random().nextDouble() < 0.10 && _activePlayers.length > 2;
+          math.Random().nextDouble() < packChance && active.length > 2;
+
+      if (shouldPack) {
+        AudioService.instance.playCardFold();
+      } else {
+        AudioService.instance.playChip();
+      }
 
       setState(() {
         if (shouldPack) {
@@ -343,8 +361,10 @@ class _TeenPattiTableScreenState extends State<TeenPattiTableScreen> {
   void _showWinnerDialog(int winnerSeat) {
     final winner = _players[winnerSeat];
     if (winner.isMe) {
-      AudioService.instance.playWinJingle();
       AudioService.instance.playPotCollect();
+      Future.delayed(const Duration(milliseconds: 220), () {
+        if (mounted) AudioService.instance.playWinJingle();
+      });
     } else {
       AudioService.instance.playLoseStinger();
     }

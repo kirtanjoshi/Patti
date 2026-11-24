@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
 import '../../../core/services/audio_service.dart';
@@ -37,6 +38,7 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
   int pot = 600;
   String? selectedCardId;
   bool isSortedBySuit = true;
+  Timer? _botTimer;
 
   // Joker Card (for Joker Rummy)
   final Card cutJoker =
@@ -47,6 +49,14 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
     const Card(suit: Suit.H, rank: 9, deck: 0, id: '9H1'),
     const Card(suit: Suit.D, rank: 2, deck: 0, id: '2D1'),
     const Card(suit: Suit.C, rank: 11, deck: 0, id: 'JC1'),
+    const Card(suit: Suit.S, rank: 4, deck: 0, id: '4S1'),
+    const Card(suit: Suit.H, rank: 8, deck: 0, id: '8H1'),
+    const Card(suit: Suit.D, rank: 10, deck: 0, id: '10D1'),
+    const Card(suit: Suit.C, rank: 6, deck: 0, id: '6C1'),
+    const Card(suit: Suit.S, rank: 12, deck: 0, id: 'QS1'),
+    const Card(suit: Suit.D, rank: 3, deck: 0, id: '3D1'),
+    const Card(suit: Suit.H, rank: 6, deck: 0, id: '6H1'),
+    const Card(suit: Suit.C, rank: 9, deck: 0, id: '9C1'),
   ];
 
   List<Card> discardPile = [
@@ -69,7 +79,23 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
     const Card(suit: Suit.C, rank: 4, deck: 0, id: '4C0'), // Unmatched
   ];
 
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    super.dispose();
+  }
+
+  void _ensureStockNotEmpty() {
+    if (stockPile.length <= 2 && discardPile.length > 1) {
+      final top = discardPile.removeLast();
+      final recycled = List<Card>.from(discardPile)..shuffle();
+      discardPile = [top];
+      stockPile.insertAll(0, recycled);
+    }
+  }
+
   void _onDrawStock() {
+    _ensureStockNotEmpty();
     if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) {
       return;
     }
@@ -108,24 +134,30 @@ class _RummyTableScreenState extends State<RummyTableScreen> {
       selectedCardId = null;
       turnPhase = 'draw';
       currentTurnSeat = 1;
+    });
+    _runBotTurns();
+  }
 
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (!mounted) return;
-        setState(() => currentTurnSeat = 2);
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (!mounted) return;
-          setState(() => currentTurnSeat = 3);
-          Future.delayed(const Duration(milliseconds: 600), () {
-            if (!mounted) return;
-            setState(() {
-              currentTurnSeat = 0;
-              turnPhase = 'draw';
-            });
-            ToastBanner.show(context, 'Your turn to draw',
-                icon: Icons.touch_app);
-          });
+  void _runBotTurns() {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 520), () {
+      if (!mounted) return;
+      _ensureStockNotEmpty();
+      if (stockPile.isNotEmpty) {
+        discardPile.add(stockPile.removeAt(0));
+      }
+      AudioService.instance.playCardSlide();
+
+      if (currentTurnSeat < 3) {
+        setState(() => currentTurnSeat = currentTurnSeat + 1);
+        _runBotTurns();
+      } else {
+        setState(() {
+          currentTurnSeat = 0;
+          turnPhase = 'draw';
         });
-      });
+        ToastBanner.show(context, 'Your turn to draw', icon: Icons.touch_app);
+      }
     });
   }
 

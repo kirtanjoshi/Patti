@@ -33,6 +33,7 @@ def save_wav(name: str, audio: np.ndarray, peak_db: float = -1.5):
     print(f"Generated {name:<20} | {dur:5.2f}s | {size:7d} bytes")
 
 def envelope(t, attack, decay, sustain_level=0.0, release=0.0):
+
     """Generates standard ADSR envelope array."""
     env = np.zeros_like(t)
     total_dur = t[-1]
@@ -454,26 +455,32 @@ def gen_lobby_ambient():
     return np.column_stack((left * 0.7, right * 0.7))
 
 def gen_table_ambient():
-    # 8.0s seamless quiet casino table room tone
-    dur = 8.0
+    # 12.0s warm, ultra-soft ambient table pad (no harsh white noise or 55Hz hum)
+    dur = 12.0
     t = np.linspace(0, dur, int(SAMPLE_RATE * dur), endpoint=False)
-    # Deep warm room resonance (55Hz and 110Hz)
-    sub = (np.sin(2 * np.pi * 55 * t) + 0.3 * np.sin(2 * np.pi * 110 * t)) * 0.08
-    # Subtle felt / vinyl warmth
-    noise = np.random.uniform(-1, 1, len(t)) * 0.02
-    left = sub + noise
-    right = sub + noise * 0.95
-    
+    # Soft warm major-9th pad frequencies (C4, E4, G4, D5) with gentle slow breathing
+    breath = 0.65 + 0.35 * np.sin(2 * np.pi * (t / dur))
+    pad_l = (
+        np.sin(2 * np.pi * 261.63 * t) * 0.45 +
+        np.sin(2 * np.pi * 329.63 * t) * 0.30 +
+        np.sin(2 * np.pi * 392.00 * t) * 0.25
+    ) * breath
+    pad_r = (
+        np.sin(2 * np.pi * 261.63 * t) * 0.40 +
+        np.sin(2 * np.pi * 392.00 * t) * 0.30 +
+        np.sin(2 * np.pi * 587.33 * t) * 0.20
+    ) * breath
+
     # Seamless loop crossfade
-    xfade_samples = int(1.0 * SAMPLE_RATE)
+    xfade_samples = int(1.5 * SAMPLE_RATE)
     fade_in = np.linspace(0, 1, xfade_samples)
     fade_out = 1.0 - fade_in
-    left[:xfade_samples] = left[:xfade_samples] * fade_in + left[-xfade_samples:] * fade_out
-    right[:xfade_samples] = right[:xfade_samples] * fade_in + right[-xfade_samples:] * fade_out
-    left[-xfade_samples:] = left[:xfade_samples]
-    right[-xfade_samples:] = right[:xfade_samples]
-    
-    return np.column_stack((left * 0.4, right * 0.4))
+    pad_l[:xfade_samples] = pad_l[:xfade_samples] * fade_in + pad_l[-xfade_samples:] * fade_out
+    pad_r[:xfade_samples] = pad_r[:xfade_samples] * fade_in + pad_r[-xfade_samples:] * fade_out
+    pad_l[-xfade_samples:] = pad_l[:xfade_samples]
+    pad_r[-xfade_samples:] = pad_r[:xfade_samples]
+
+    return np.column_stack((pad_l, pad_r))
 
 # ==============================================================================
 # MAIN BATCH GENERATOR
@@ -484,26 +491,26 @@ def main():
     print("PATII SOUND DESIGN ENGINE - GENERATING ASSETS")
     print("=" * 60)
     
-    save_wav("card_snap.wav", gen_card_snap())
-    save_wav("card_slide.wav", gen_card_slide())
-    save_wav("deal.wav", gen_deal())
-    save_wav("shuffle.wav", gen_shuffle())
-    save_wav("card_fold.wav", gen_card_fold())
-    save_wav("chip.wav", gen_chip())
-    save_wav("chip_single.wav", gen_chip())
-    save_wav("chip_multi.wav", gen_chip_multi())
-    save_wav("pot_collect.wav", gen_pot_collect())
-    save_wav("your_turn.wav", gen_your_turn())
-    save_wav("countdown_tick.wav", gen_countdown_tick())
-    save_wav("countdown_urgent.wav", gen_countdown_urgent())
-    save_wav("button_click.wav", gen_button_click())
-    save_wav("special_hand.wav", gen_special_hand())
-    save_wav("error_buzz.wav", gen_error_buzz())
-    save_wav("win_jingle.wav", gen_win_jingle())
-    save_wav("lose_stinger.wav", gen_lose_stinger())
-    save_wav("coins_collect.wav", gen_coins_collect())
-    save_wav("lobby_ambient.wav", gen_lobby_ambient())
-    save_wav("table_ambient.wav", gen_table_ambient())
+    save_wav("card_snap.wav", gen_card_snap(), peak_db=-4.5)
+    save_wav("card_slide.wav", gen_card_slide(), peak_db=-8.5)
+    save_wav("deal.wav", gen_deal(), peak_db=-5.5)
+    save_wav("shuffle.wav", gen_shuffle(), peak_db=-5.5)
+    save_wav("card_fold.wav", gen_card_fold(), peak_db=-7.0)
+    save_wav("chip.wav", gen_chip(), peak_db=-5.0)
+    save_wav("chip_single.wav", gen_chip(), peak_db=-5.0)
+    save_wav("chip_multi.wav", gen_chip_multi(), peak_db=-4.5)
+    save_wav("pot_collect.wav", gen_pot_collect(), peak_db=-4.5)
+    save_wav("your_turn.wav", gen_your_turn(), peak_db=-5.0)
+    save_wav("countdown_tick.wav", gen_countdown_tick(), peak_db=-10.0)
+    save_wav("countdown_urgent.wav", gen_countdown_urgent(), peak_db=-6.5)
+    save_wav("button_click.wav", gen_button_click(), peak_db=-12.0)
+    save_wav("special_hand.wav", gen_special_hand(), peak_db=-4.5)
+    save_wav("error_buzz.wav", gen_error_buzz(), peak_db=-6.0)
+    save_wav("win_jingle.wav", gen_win_jingle(), peak_db=-3.5)
+    save_wav("lose_stinger.wav", gen_lose_stinger(), peak_db=-6.0)
+    save_wav("coins_collect.wav", gen_coins_collect(), peak_db=-4.5)
+    save_wav("lobby_ambient.wav", gen_lobby_ambient(), peak_db=-12.0)
+    save_wav("table_ambient.wav", gen_table_ambient(), peak_db=-20.0)
     
     print("=" * 60)
     print("ALL 20 HIGH-FIDELITY AUDIO ASSETS GENERATED SUCCESSFULLY")

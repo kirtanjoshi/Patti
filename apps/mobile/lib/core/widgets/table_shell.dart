@@ -51,12 +51,12 @@ class _TableShellState extends State<TableShell> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    AudioService.instance.playTableMusic();
+    AudioService.instance.enterTable();
   }
 
   @override
   void dispose() {
-    AudioService.instance.playLobbyMusic();
+    AudioService.instance.exitTable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,

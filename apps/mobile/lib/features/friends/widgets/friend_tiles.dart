@@ -161,30 +161,32 @@ class FriendItemTile extends StatelessWidget {
               ],
             ),
           ),
-          if (friend.isOnline) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onInvite,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: PatiiColors.info.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: PatiiColors.info.withValues(alpha: 0.4)),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onInvite,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: (friend.isOnline ? PatiiColors.info : PatiiColors.gold)
+                    .withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (friend.isOnline ? PatiiColors.info : PatiiColors.gold)
+                      .withValues(alpha: 0.4),
                 ),
-                child: Text(
-                  'friends.invite_to_play'.tr(),
-                  style: const TextStyle(
-                    color: PatiiColors.info,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
+              ),
+              child: Text(
+                'Invite to Room',
+                style: TextStyle(
+                  color:
+                      friend.isOnline ? PatiiColors.info : PatiiColors.goldLight,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
               ),
             ),
-          ],
+          ),
         ],
       ),
     );

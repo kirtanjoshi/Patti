@@ -4,6 +4,7 @@ import {
   Card,
   SeedRng,
   aceHighRankValue,
+  getLegalCards,
 } from '@patii/game-engine';
 import { BotStrategy } from '../index.js';
 
@@ -130,10 +131,13 @@ export class CallbreakBotStrategy
         card: ct.card,
       })),
     };
+    const isFirstTrick = hand.length === 13;
+    const legalCards = getLegalCards(hand, trick, view.rules, isFirstTrick);
+    const candidates = legalCards.length > 0 ? legalCards : hand;
 
     // Easy mode: 25% random legal move
     if (this.difficulty === 'easy' && rng.next() < 0.25) {
-      const randomCard = hand[rng.nextInt(0, hand.length - 1)]!;
+      const randomCard = candidates[rng.nextInt(0, candidates.length - 1)]!;
       return { type: 'playCard', cardId: randomCard.id };
     }
 
@@ -142,7 +146,7 @@ export class CallbreakBotStrategy
     if (view.currentTrick.length === 0) {
       if (!callMet) {
         // Need tricks: lead top Aces or Kings to secure tricks
-        const highNonSpades = [...hand]
+        const highNonSpades = [...candidates]
           .filter((c) => c.suit !== 'S' && aceHighRankValue(c.rank) >= 13)
           .sort((a, b) => aceHighRankValue(b.rank) - aceHighRankValue(a.rank));
 
@@ -151,23 +155,17 @@ export class CallbreakBotStrategy
         }
       } else {
         // Call met: dump low cards, avoid winning unnecessary tricks
-        const lowestCards = [...hand].sort(
+        const lowestCards = [...candidates].sort(
           (a, b) => aceHighRankValue(a.rank) - aceHighRankValue(b.rank),
         );
         return { type: 'playCard', cardId: lowestCards[0]!.id };
       }
     }
 
-    // Following: win cheaply if still short of call; dump high cards once call met
-    if (callMet) {
-      // Sort ascending to dump lowest cards
-      const sortedAsc = [...hand].sort(
-        (a, b) => aceHighRankValue(a.rank) - aceHighRankValue(b.rank),
-      );
-      return { type: 'playCard', cardId: sortedAsc[0]!.id };
-    } else {
-      // Sort to win cheaply: lowest card that beats current winning card
-      return { type: 'playCard', cardId: hand[0]!.id };
-    }
+    // Following: win cheaply if still short of call; dump low cards once call met
+    const sortedAsc = [...candidates].sort(
+      (a, b) => aceHighRankValue(a.rank) - aceHighRankValue(b.rank),
+    );
+    return { type: 'playCard', cardId: sortedAsc[0]!.id };
   }
 }

@@ -18,6 +18,7 @@ class PlayerSeat extends StatefulWidget {
   final String? infoPillText;
   final int totalTurnSeconds;
   final int remainingSeconds;
+  final bool enableCountdownAudio;
   final VoidCallback? onTap;
   final double avatarSize;
 
@@ -32,6 +33,7 @@ class PlayerSeat extends StatefulWidget {
     this.infoPillText,
     this.totalTurnSeconds = 15,
     this.remainingSeconds = 15,
+    this.enableCountdownAudio = false,
     this.onTap,
     this.avatarSize = 46,
   });
@@ -56,10 +58,12 @@ class _PlayerSeatState extends State<PlayerSeat> with TickerProviderStateMixin {
   }
 
   void _onCountdownTick() {
-    if (!widget.isCurrentTurn || widget.isBot) return;
+    if (!widget.enableCountdownAudio || !widget.isCurrentTurn || widget.isBot) {
+      return;
+    }
     final total = math.max(1, widget.totalTurnSeconds);
     final remaining = (_countdown.value * total).ceil();
-    if (remaining <= 5 && remaining > 0 && remaining != _lastTickSecond) {
+    if (remaining <= 4 && remaining > 0 && remaining != _lastTickSecond) {
       _lastTickSecond = remaining;
       AudioService.instance.playCountdownTick(urgent: remaining <= 2);
     }

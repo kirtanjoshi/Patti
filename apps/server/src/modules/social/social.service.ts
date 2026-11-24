@@ -21,9 +21,43 @@ export interface FriendSummary {
   readonly presence: UserPresence;
 }
 
+export interface FriendEventNotification {
+  readonly targetUserId: string;
+  readonly type: 'request_received' | 'request_accepted' | 'request_declined' | 'friend_removed';
+  readonly fromUser: {
+    readonly userId: string;
+    readonly displayName: string;
+    readonly avatarUrl?: string | null;
+    readonly friendCode?: string | null;
+  };
+}
+
+export type FriendEventListener = (event: FriendEventNotification) => void;
+export type PresenceEventListener = (userId: string, presence: UserPresence) => void;
+
 @Injectable()
 export class SocialService {
   private readonly presenceStore = new Map<string, UserPresence>();
+  private readonly friendEventListeners = new Set<FriendEventListener>();
+  private readonly presenceListeners = new Set<PresenceEventListener>();
+
+  public onFriendEvent(listener: FriendEventListener): () => void {
+    this.friendEventListeners.add(listener);
+    return () => this.friendEventListeners.delete(listener);
+  }
+
+  public onPresenceChange(listener: PresenceEventListener): () => void {
+    this.presenceListeners.add(listener);
+    return () => this.presenceListeners.delete(listener);
+  }
+
+  private emitFriendEvent(event: FriendEventNotification): void {
+    for (const listener of this.friendEventListeners) {
+      try {
+        listener(event);
+      } catch {}
+    }
+  }
 
   public setPresence(userId: string, status: PresenceStatus, gameId?: GameId | null): UserPresence {
     const presence: UserPresence = {
@@ -32,6 +66,11 @@ export class SocialService {
       updatedAt: Date.now(),
     };
     this.presenceStore.set(userId, presence);
+    for (const listener of this.presenceListeners) {
+      try {
+        listener(userId, presence);
+      } catch {}
+    }
     return presence;
   }
 
@@ -173,6 +212,24 @@ export class SocialService {
       },
     });
 
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, displayName: true, avatarUrl: true, friendCode: true },
+    });
+
+    if (sender) {
+      this.emitFriendEvent({
+        targetUserId: targetUser.id,
+        type: 'request_received',
+        fromUser: {
+          userId: sender.id,
+          displayName: sender.displayName,
+          avatarUrl: sender.avatarUrl,
+          friendCode: sender.friendCode,
+        },
+      });
+    }
+
     return {
       success: true,
       status: created.status,
@@ -250,16 +307,45 @@ export class SocialService {
       throw new NotFoundException('Friend request not found.');
     }
 
+    const responder = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, displayName: true, avatarUrl: true, friendCode: true },
+    });
+
     if (action === 'accept') {
       await prisma.friendship.update({
         where: { userId_friendId: { userId: requesterUserId, friendId: userId } },
         data: { status: 'accepted' },
       });
+      if (responder) {
+        this.emitFriendEvent({
+          targetUserId: requesterUserId,
+          type: 'request_accepted',
+          fromUser: {
+            userId: responder.id,
+            displayName: responder.displayName,
+            avatarUrl: responder.avatarUrl,
+            friendCode: responder.friendCode,
+          },
+        });
+      }
       return { success: true, status: 'accepted' };
     } else {
       await prisma.friendship.delete({
         where: { userId_friendId: { userId: requesterUserId, friendId: userId } },
       });
+      if (responder) {
+        this.emitFriendEvent({
+          targetUserId: requesterUserId,
+          type: 'request_declined',
+          fromUser: {
+            userId: responder.id,
+            displayName: responder.displayName,
+            avatarUrl: responder.avatarUrl,
+            friendCode: responder.friendCode,
+          },
+        });
+      }
       return { success: true, status: 'declined' };
     }
   }
@@ -273,6 +359,22 @@ export class SocialService {
         ],
       },
     });
+    const remover = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, displayName: true, avatarUrl: true, friendCode: true },
+    });
+    if (remover) {
+      this.emitFriendEvent({
+        targetUserId,
+        type: 'friend_removed',
+        fromUser: {
+          userId: remover.id,
+          displayName: remover.displayName,
+          avatarUrl: remover.avatarUrl,
+          friendCode: remover.friendCode,
+        },
+      });
+    }
     return { success: true };
   }
 }

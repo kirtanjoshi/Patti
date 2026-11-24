@@ -143,12 +143,23 @@ export class MarriageGameModule
     const pState = state.playerStates[seat]!;
 
     if (move.type === 'draw') {
-      const drawn = move.source === 'stock'
-        ? state.stock[state.stock.length - 1]!
-        : state.discardPile[state.discardPile.length - 1]!;
+      let currentStock = [...state.stock];
+      let currentDiscards = [...state.discardPile];
+      if (currentStock.length === 0 && currentDiscards.length > 1) {
+        const top = currentDiscards.pop()!;
+        currentStock = currentDiscards;
+        currentDiscards = [top];
+      }
 
-      const newStock = move.source === 'stock' ? state.stock.slice(0, -1) : state.stock;
-      const newDiscards = move.source === 'discard' ? state.discardPile.slice(0, -1) : state.discardPile;
+      const useStock = move.source === 'stock' && currentStock.length > 0;
+      const drawn = useStock
+        ? currentStock[currentStock.length - 1]!
+        : currentDiscards[currentDiscards.length - 1]!;
+
+      const newStock = useStock ? currentStock.slice(0, -1) : currentStock;
+      const newDiscards = !useStock && currentDiscards.length > 1
+        ? currentDiscards.slice(0, -1)
+        : currentDiscards;
 
       const newHand = [...state.hands[seat]!, drawn];
       const newHands = state.hands.map((h, i) => (i === seat ? newHand : h));

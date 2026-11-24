@@ -1,0 +1,48 @@
+name: Shorebird Mobile Release & Patch
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Shorebird action (release or patch)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - release
+      release_version:
+        description: 'Target release version for patch (e.g. 1.1.0+2, optional)'
+        required: false
+        default: ''
+
+jobs:
+  shorebird-android:
+    name: Shorebird Android (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Run Shorebird ${{ inputs.mode }}
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: |
+          if [ "${{ inputs.mode }}" = "release" ]; then
+            shorebird release android --no-confirm
+          else
+            if [ -n "${{ inputs.release_version }}" ]; then
+              shorebird patch android --release-version "${{ inputs.release_version }}" --no-confirm
+            else
+              shorebird patch android --no-confirm
+            fi
+          fi

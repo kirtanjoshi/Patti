@@ -48,7 +48,9 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
   final List<int?> _bids = [null, null, null, null];
   final List<int> _tricksWon = [0, 0, 0, 0];
   final List<int> _cardCounts = [13, 13, 13, 13];
+  late Map<int, List<engine.Card>> _botHands;
 
+  Timer? _botTimer;
   StreamSubscription? _stateSub;
   StreamSubscription? _turnSub;
   StreamSubscription? _resultSub;
@@ -75,8 +77,38 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
   @override
   void initState() {
     super.initState();
+    _initOfflineBotHands();
     if (widget.tableId != null) {
       _initOnlineTable();
+    }
+  }
+
+  static int _aceHighRank(int rank) => rank == 1 ? 14 : rank;
+
+  void _initOfflineBotHands() {
+    final myIds = myHand.map((c) => '${c.suit.name}_${_aceHighRank(c.rank)}').toSet();
+    final remaining = <engine.Card>[];
+    for (final s in [engine.Suit.S, engine.Suit.H, engine.Suit.D, engine.Suit.C]) {
+      for (int r = 2; r <= 14; r++) {
+        final key = '${s.name}_$r';
+        if (!myIds.contains(key)) {
+          remaining.add(engine.Card(
+            suit: s,
+            rank: r == 14 ? 1 : r,
+            deck: 0,
+            id: '${r == 14 ? 'A' : r}${s.name}0',
+          ));
+        }
+      }
+    }
+    _botHands = {
+      1: remaining.sublist(0, 13),
+      2: remaining.sublist(13, 26),
+      3: remaining.sublist(26, 39),
+    };
+    for (int s = 0; s < 4; s++) {
+      _cardCounts[s] = 13;
+      _tricksWon[s] = 0;
     }
   }
 
@@ -167,6 +199,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
 
   @override
   void dispose() {
+    _botTimer?.cancel();
     _stateSub?.cancel();
     _turnSub?.cancel();
     _resultSub?.cancel();
@@ -188,6 +221,9 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
     } else {
       setState(() {
         _bids[0] = bid;
+        _bids[1] = 3;
+        _bids[2] = 3;
+        _bids[3] = 4;
         phase = 'playing';
         currentTurnSeat = 0;
       });
@@ -199,10 +235,33 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
     }
   }
 
+  Set<String> _computePlayableIds() {
+    if (phase != 'playing' || currentTurnSeat != widget.mySeat) {
+      return const <String>{};
+    }
+    if (playedTrick.isEmpty) {
+      return myHand.map((c) => c.id).toSet();
+    }
+    final leadSuit = playedTrick.first.card.suit;
+    final sameSuit = myHand.where((c) => c.suit == leadSuit).toList();
+    if (sameSuit.isNotEmpty) {
+      return sameSuit.map((c) => c.id).toSet();
+    }
+    final spades = myHand.where((c) => c.suit == engine.Suit.S).toList();
+    if (spades.isNotEmpty) {
+      return spades.map((c) => c.id).toSet();
+    }
+    return myHand.map((c) => c.id).toSet();
+  }
+
   void _onPlayCard(engine.Card card) {
     if (phase != 'playing' || currentTurnSeat != widget.mySeat) return;
+    if (playedTrick.length >= 4) return;
 
-    if (card.suit == engine.Suit.S) {
+    final isTrumpCut = playedTrick.isNotEmpty &&
+        playedTrick.first.card.suit != engine.Suit.S &&
+        card.suit == engine.Suit.S;
+    if (isTrumpCut) {
       AudioService.instance.playSpecialHand();
     } else {
       AudioService.instance.playCardSnap();
@@ -216,82 +275,125 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
       );
       setState(() {
         myHand.removeWhere((c) => c.id == card.id);
+        _cardCounts[widget.mySeat] = myHand.length;
         selectedCardId = null;
       });
     } else {
       setState(() {
         myHand.removeWhere((c) => c.id == card.id);
+        _cardCounts[0] = myHand.length;
         selectedCardId = null;
         playedTrick.add(PlayedTrickCard(seat: 0, card: card));
-        currentTurnSeat = 1;
+        if (playedTrick.length < 4) {
+          currentTurnSeat = 1;
+        }
       });
 
-      // Simulate bot responses in sequence (offline demo)
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (!mounted) return;
-        AudioService.instance.playCardSnap();
-        setState(() {
-          playedTrick.add(
-            const PlayedTrickCard(
-              seat: 1,
-              card:
-                  engine.Card(suit: engine.Suit.H, rank: 4, deck: 0, id: '4H0'),
-            ),
-          );
-          currentTurnSeat = 2;
-        });
-
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (!mounted) return;
-          AudioService.instance.playCardSnap();
-          setState(() {
-            playedTrick.add(
-              const PlayedTrickCard(
-                seat: 2,
-                card: engine.Card(
-                    suit: engine.Suit.H, rank: 8, deck: 0, id: '8H0'),
-              ),
-            );
-            currentTurnSeat = 3;
-          });
-
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (!mounted) return;
-            AudioService.instance.playCardSnap();
-            setState(() {
-              playedTrick.add(
-                const PlayedTrickCard(
-                  seat: 3,
-                  card: engine.Card(
-                      suit: engine.Suit.S, rank: 2, deck: 0, id: '2S0'),
-                ),
-              );
-            });
-
-            Future.delayed(const Duration(milliseconds: 800), () {
-              if (!mounted) return;
-              _resolveTrick();
-            });
-          });
-        });
-      });
+      _botTimer?.cancel();
+      if (playedTrick.length >= 4) {
+        _botTimer = Timer(const Duration(milliseconds: 650), _resolveTrick);
+      } else {
+        _scheduleNextOfflineBotIfNeeded();
+      }
     }
   }
 
-  void _resolveTrick() {
-    int winningSeat = 0;
-    engine.Card bestCard = playedTrick.first.card;
+  engine.Card _pickBotCard(int seat) {
+    final hand = _botHands[seat] ?? [];
+    if (hand.isEmpty) {
+      return engine.Card(
+          suit: engine.Suit.C, rank: 2, deck: 0, id: '2C_bot$seat');
+    }
 
+    if (playedTrick.isEmpty) {
+      // Bot leads: prefer highest non-spade, otherwise lowest card
+      final nonSpades = hand.where((c) => c.suit != engine.Suit.S).toList()
+        ..sort((a, b) => _aceHighRank(b.rank).compareTo(_aceHighRank(a.rank)));
+      return nonSpades.isNotEmpty ? nonSpades.first : hand.first;
+    }
+
+    final leadSuit = playedTrick.first.card.suit;
+    final currentBest = _currentWinningCard();
+    final sameSuit = hand.where((c) => c.suit == leadSuit).toList()
+      ..sort((a, b) => _aceHighRank(a.rank).compareTo(_aceHighRank(b.rank)));
+
+    if (sameSuit.isNotEmpty) {
+      if (currentBest.card.suit == leadSuit) {
+        final higher = sameSuit.where(
+            (c) => _aceHighRank(c.rank) > _aceHighRank(currentBest.card.rank));
+        if (higher.isNotEmpty) return higher.first;
+      }
+      return sameSuit.first;
+    }
+
+    // Void in lead suit: must play spade if available
+    final spades = hand.where((c) => c.suit == engine.Suit.S).toList()
+      ..sort((a, b) => _aceHighRank(a.rank).compareTo(_aceHighRank(b.rank)));
+    if (spades.isNotEmpty) {
+      if (currentBest.card.suit == engine.Suit.S) {
+        final higherSpades = spades.where(
+            (c) => _aceHighRank(c.rank) > _aceHighRank(currentBest.card.rank));
+        if (higherSpades.isNotEmpty) return higherSpades.first;
+      }
+      return spades.first;
+    }
+
+    final sorted = [...hand]
+      ..sort((a, b) => _aceHighRank(a.rank).compareTo(_aceHighRank(b.rank)));
+    return sorted.first;
+  }
+
+  void _scheduleNextOfflineBotIfNeeded() {
+    if (widget.tableId != null ||
+        phase != 'playing' ||
+        currentTurnSeat == widget.mySeat ||
+        playedTrick.length >= 4) {
+      return;
+    }
+
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 480), () {
+      if (!mounted || phase != 'playing') return;
+      final seat = currentTurnSeat;
+      if (seat == widget.mySeat || playedTrick.length >= 4) return;
+
+      final botCard = _pickBotCard(seat);
+      _botHands[seat]?.removeWhere((c) => c.id == botCard.id);
+      AudioService.instance.playCardSnap();
+
+      setState(() {
+        _cardCounts[seat] = _botHands[seat]?.length ?? 0;
+        playedTrick.add(PlayedTrickCard(seat: seat, card: botCard));
+        if (playedTrick.length < 4) {
+          currentTurnSeat = (seat + 1) % 4;
+        }
+      });
+
+      if (playedTrick.length >= 4) {
+        _botTimer = Timer(const Duration(milliseconds: 650), _resolveTrick);
+      } else if (currentTurnSeat != widget.mySeat) {
+        _scheduleNextOfflineBotIfNeeded();
+      }
+    });
+  }
+
+  PlayedTrickCard _currentWinningCard() {
+    PlayedTrickCard best = playedTrick.first;
     for (final pt in playedTrick) {
-      if (pt.card.suit == engine.Suit.S && bestCard.suit != engine.Suit.S) {
-        bestCard = pt.card;
-        winningSeat = pt.seat;
-      } else if (pt.card.suit == bestCard.suit &&
-          pt.card.rank > bestCard.rank) {
-        bestCard = pt.card;
-        winningSeat = pt.seat;
+      if (pt.card.suit == engine.Suit.S && best.card.suit != engine.Suit.S) {
+        best = pt;
+      } else if (pt.card.suit == best.card.suit &&
+          _aceHighRank(pt.card.rank) > _aceHighRank(best.card.rank)) {
+        best = pt;
       }
     }
+    return best;
+  }
+
+  void _resolveTrick() {
+    if (!mounted || playedTrick.isEmpty) return;
+    final winningPlay = _currentWinningCard();
+    final winningSeat = winningPlay.seat;
 
     if (winningSeat == widget.mySeat) {
       AudioService.instance.playPotCollect();
@@ -308,7 +410,8 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
       icon: Icons.emoji_events,
     );
 
-    Future.delayed(const Duration(milliseconds: 650), () {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 650), () {
       if (!mounted) return;
       setState(() {
         _tricksWon[winningSeat] = _tricksWon[winningSeat] + 1;
@@ -316,6 +419,39 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
         trickWinner = null;
         currentTurnSeat = winningSeat;
       });
+
+      // Check if all 13 tricks in offline round are complete
+      if (widget.tableId == null && myHand.isEmpty) {
+        AudioService.instance.playWinJingle();
+        setState(() {
+          currentRound = currentRound < 5 ? currentRound + 1 : 1;
+          phase = 'bidding';
+          currentTurnSeat = 0;
+          _bids.fillRange(0, 4, null);
+          myHand = [
+            const engine.Card(suit: engine.Suit.S, rank: 1, deck: 0, id: 'AS0'),
+            const engine.Card(suit: engine.Suit.S, rank: 12, deck: 0, id: 'QS0'),
+            const engine.Card(suit: engine.Suit.S, rank: 7, deck: 0, id: '7S0'),
+            const engine.Card(suit: engine.Suit.H, rank: 13, deck: 0, id: 'KH0'),
+            const engine.Card(suit: engine.Suit.H, rank: 10, deck: 0, id: '10H0'),
+            const engine.Card(suit: engine.Suit.H, rank: 5, deck: 0, id: '5H0'),
+            const engine.Card(suit: engine.Suit.D, rank: 14, deck: 0, id: 'AD0'),
+            const engine.Card(suit: engine.Suit.D, rank: 9, deck: 0, id: '9D0'),
+            const engine.Card(suit: engine.Suit.D, rank: 3, deck: 0, id: '3D0'),
+            const engine.Card(suit: engine.Suit.C, rank: 11, deck: 0, id: 'JC0'),
+            const engine.Card(suit: engine.Suit.C, rank: 8, deck: 0, id: '8C0'),
+            const engine.Card(suit: engine.Suit.C, rank: 6, deck: 0, id: '6C0'),
+            const engine.Card(suit: engine.Suit.C, rank: 2, deck: 0, id: '2C0'),
+          ];
+          _initOfflineBotHands();
+        });
+        return;
+      }
+
+      // If a bot won the trick, that bot must lead the next trick!
+      if (widget.tableId == null && winningSeat != widget.mySeat) {
+        _scheduleNextOfflineBotIfNeeded();
+      }
     });
   }
 
@@ -388,8 +524,7 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
     final isMyTurn = phase == 'playing' && currentTurnSeat == widget.mySeat;
     final isBiddingTurn = phase == 'bidding' &&
         (widget.tableId == null || currentTurnSeat == widget.mySeat);
-    final playableIds =
-        isMyTurn ? myHand.map((c) => c.id).toSet() : const <String>{};
+    final playableIds = _computePlayableIds();
 
     final westSeat = (widget.mySeat + 1) % 4;
     final northSeat = (widget.mySeat + 2) % 4;
@@ -502,7 +637,10 @@ class _CallbreakTableScreenState extends ConsumerState<CallbreakTableScreen> {
                   cardWidth: 60,
                   cardHeight: 86,
                   onCardTap: (card) {
-                    if (isMyTurn) {
+                    if (!isMyTurn || !playableIds.contains(card.id)) return;
+                    if (selectedCardId == card.id) {
+                      _onPlayCard(card);
+                    } else {
                       setState(() {
                         selectedCardId = card.id;
                       });

@@ -60,9 +60,10 @@ class ApiConst {
   // ==========================================
   static String get friends => '$baseUrl/social/friends';
   static String get friendRequest => '$baseUrl/social/friends/request';
-  static String get friendAccept => '$baseUrl/social/friends/accept';
-  static String get friendDecline => '$baseUrl/social/friends/decline';
-  static String get friendConnect => '$baseUrl/social/friends/connect';
+  static String get friendRespond => '$baseUrl/social/friends/respond';
+  static String get friendConnect => '$baseUrl/social/friends/connect-link';
+  static String removeFriend(String friendId) =>
+      '$baseUrl/social/friends/$friendId';
 
   // ==========================================
   // Nearby Discovery Radar Endpoints
@@ -74,10 +75,22 @@ class ApiConst {
     required double radiusKm,
     required double lat,
     required double lon,
+    String? localIp,
+    String? localSubnet,
   }) {
-    return Uri.parse(
-      '$baseUrl/social/nearby?radiusKm=$radiusKm&lat=$lat&lon=$lon',
-    );
+    final params = <String, String>{
+      'radiusKm': radiusKm.toString(),
+      'lat': lat.toString(),
+      'lon': lon.toString(),
+    };
+    if (localIp != null && localIp.isNotEmpty) {
+      params['localIp'] = localIp;
+    }
+    if (localSubnet != null && localSubnet.isNotEmpty) {
+      params['localSubnet'] = localSubnet;
+    }
+    return Uri.parse('$baseUrl/social/nearby')
+        .replace(queryParameters: params);
   }
 
   // ==========================================

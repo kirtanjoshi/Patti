@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
 import '../../../core/services/audio_service.dart';
@@ -31,12 +32,22 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
   String turnPhase = 'draw'; // 'draw' | 'discard'
   int pot = 300;
   String? selectedCardId;
+  Timer? _botTimer;
 
   List<Card> stockPile = [
     const Card(suit: Suit.S, rank: 9, deck: 0, id: '9S1'),
     const Card(suit: Suit.H, rank: 4, deck: 0, id: '4H1'),
     const Card(suit: Suit.D, rank: 11, deck: 0, id: 'JD1'),
     const Card(suit: Suit.C, rank: 7, deck: 0, id: '7C1'),
+    const Card(suit: Suit.H, rank: 12, deck: 0, id: 'QH1'),
+    const Card(suit: Suit.D, rank: 9, deck: 0, id: '9D1'),
+    const Card(suit: Suit.C, rank: 4, deck: 0, id: '4C1'),
+    const Card(suit: Suit.S, rank: 11, deck: 0, id: 'JS1'),
+    const Card(suit: Suit.D, rank: 7, deck: 0, id: '7D1'),
+    const Card(suit: Suit.C, rank: 10, deck: 0, id: '10C1'),
+    const Card(suit: Suit.D, rank: 12, deck: 0, id: 'QD1'),
+    const Card(suit: Suit.S, rank: 3, deck: 0, id: '3S1'),
+    const Card(suit: Suit.H, rank: 3, deck: 0, id: '3H1'),
   ];
 
   List<Card> discardPile = [
@@ -66,7 +77,23 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
   bool get canDeclare =>
       myHand.length % 2 == 0 && (pairsCount * 2 == myHand.length);
 
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    super.dispose();
+  }
+
+  void _ensureStockNotEmpty() {
+    if (stockPile.length <= 2 && discardPile.length > 1) {
+      final top = discardPile.removeLast();
+      final recycled = List<Card>.from(discardPile)..shuffle();
+      discardPile = [top];
+      stockPile.insertAll(0, recycled);
+    }
+  }
+
   void _onDrawStock() {
+    _ensureStockNotEmpty();
     if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) {
       return;
     }
@@ -105,15 +132,21 @@ class _JutpattiTableScreenState extends State<JutpattiTableScreen> {
       selectedCardId = null;
       turnPhase = 'draw';
       currentTurnSeat = 1;
+    });
 
-      Future.delayed(const Duration(milliseconds: 700), () {
-        if (!mounted) return;
-        setState(() {
-          currentTurnSeat = 0;
-          turnPhase = 'draw';
-        });
-        ToastBanner.show(context, 'Your turn to draw', icon: Icons.touch_app);
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      _ensureStockNotEmpty();
+      if (stockPile.isNotEmpty) {
+        discardPile.add(stockPile.removeAt(0));
+      }
+      AudioService.instance.playCardSlide();
+      setState(() {
+        currentTurnSeat = 0;
+        turnPhase = 'draw';
       });
+      ToastBanner.show(context, 'Your turn to draw', icon: Icons.touch_app);
     });
   }
 

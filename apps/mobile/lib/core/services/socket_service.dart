@@ -38,8 +38,10 @@ class RoomInviteNotification {
 class SocketService {
   io.Socket? _socket;
   bool _isConnected = false;
+  RoomStateModel? _currentRoom;
 
   bool get isConnected => _isConnected;
+  RoomStateModel? get currentRoom => _currentRoom;
 
   final _roomStateController = StreamController<RoomStateModel>.broadcast();
   final _roomStartedController =
@@ -55,6 +57,11 @@ class SocketService {
   final _tableResultController =
       StreamController<Map<String, dynamic>>.broadcast();
   final _shakeMatchedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _shakeTimeoutController = StreamController<String>.broadcast();
+  final _friendEventController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _presenceUpdateController =
       StreamController<Map<String, dynamic>>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
@@ -73,6 +80,11 @@ class SocketService {
       _tableResultController.stream;
   Stream<Map<String, dynamic>> get shakeMatchedStream =>
       _shakeMatchedController.stream;
+  Stream<String> get shakeTimeoutStream => _shakeTimeoutController.stream;
+  Stream<Map<String, dynamic>> get friendEventStream =>
+      _friendEventController.stream;
+  Stream<Map<String, dynamic>> get presenceUpdateStream =>
+      _presenceUpdateController.stream;
   Stream<String> get errorStream => _errorController.stream;
 
   void connect(String? token) {
@@ -100,13 +112,18 @@ class SocketService {
 
     _socket!.on('room:state', (data) {
       if (data is Map) {
-        _roomStateController.add(
-          RoomStateModel.fromJson(Map<String, dynamic>.from(data)),
-        );
+        final room = RoomStateModel.fromJson(Map<String, dynamic>.from(data));
+        _currentRoom = room;
+        _roomStateController.add(room);
       }
     });
 
+    _socket!.on('room:left', (_) {
+      _currentRoom = null;
+    });
+
     _socket!.on('room:started', (data) {
+      _currentRoom = null;
       if (data is Map) {
         _roomStartedController.add(Map<String, dynamic>.from(data));
       }
@@ -147,6 +164,26 @@ class SocketService {
     _socket!.on('social:shake_matched', (data) {
       if (data is Map) {
         _shakeMatchedController.add(Map<String, dynamic>.from(data));
+      }
+    });
+
+    _socket!.on('social:shake_timeout', (data) {
+      if (data is Map && data['message'] != null) {
+        _shakeTimeoutController.add(data['message'].toString());
+      } else {
+        _shakeTimeoutController.add('No players found nearby. Try again!');
+      }
+    });
+
+    _socket!.on('social:friend_event', (data) {
+      if (data is Map) {
+        _friendEventController.add(Map<String, dynamic>.from(data));
+      }
+    });
+
+    _socket!.on('social:presence_update', (data) {
+      if (data is Map) {
+        _presenceUpdateController.add(Map<String, dynamic>.from(data));
       }
     });
 
@@ -234,6 +271,7 @@ class SocketService {
   }
 
   void leaveRoom(String code) {
+    _currentRoom = null;
     _socket?.emit('room:leave', {'code': code});
   }
 
@@ -314,6 +352,9 @@ class SocketService {
     _tableTurnController.close();
     _tableResultController.close();
     _shakeMatchedController.close();
+    _shakeTimeoutController.close();
+    _friendEventController.close();
+    _presenceUpdateController.close();
     _errorController.close();
   }
 }

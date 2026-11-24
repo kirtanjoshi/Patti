@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart' hide Card;
 import 'package:patii_engine/patii_engine.dart';
 import '../../../core/services/audio_service.dart';
@@ -33,6 +34,7 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
   String turnPhase = 'throw'; // 'throw' | 'draw'
   int pot = 400;
   bool isGameOver = false;
+  Timer? _botTimer;
 
   final Set<String> selectedForThrow = {};
 
@@ -43,6 +45,15 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
     const Card(suit: Suit.C, rank: 2, deck: 0, id: '2C1'),
     const Card(suit: Suit.S, rank: 8, deck: 0, id: '8S1'),
     const Card(suit: Suit.H, rank: 1, deck: 0, id: 'AH1'),
+    const Card(suit: Suit.D, rank: 1, deck: 0, id: 'AD1'),
+    const Card(suit: Suit.C, rank: 1, deck: 0, id: 'AC1'),
+    const Card(suit: Suit.S, rank: 2, deck: 0, id: '2S1'),
+    const Card(suit: Suit.D, rank: 2, deck: 0, id: '2D1'),
+    const Card(suit: Suit.H, rank: 3, deck: 0, id: '3H1'),
+    const Card(suit: Suit.C, rank: 3, deck: 0, id: '3C1'),
+    const Card(suit: Suit.S, rank: 4, deck: 0, id: '4S1'),
+    const Card(suit: Suit.H, rank: 5, deck: 0, id: '5H1'),
+    const Card(suit: Suit.D, rank: 6, deck: 0, id: '6D1'),
   ];
 
   List<Card> discardPile = [
@@ -102,7 +113,23 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
         icon: Icons.touch_app);
   }
 
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    super.dispose();
+  }
+
+  void _ensureStockNotEmpty() {
+    if (stockPile.length <= 2 && discardPile.length > 1) {
+      final top = discardPile.removeLast();
+      final recycled = List<Card>.from(discardPile)..shuffle();
+      discardPile = [top];
+      stockPile.insertAll(0, recycled);
+    }
+  }
+
   void _onDrawStock() {
+    _ensureStockNotEmpty();
     if (currentTurnSeat != 0 || turnPhase != 'draw' || stockPile.isEmpty) {
       return;
     }
@@ -112,8 +139,8 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
       myHand.add(drawn);
       turnPhase = 'throw';
       currentTurnSeat = 1;
-      _runBotTurns();
     });
+    _runBotTurns();
   }
 
   void _onDrawDiscard() {
@@ -126,14 +153,17 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
       myHand.add(drawn);
       turnPhase = 'throw';
       currentTurnSeat = 1;
-      _runBotTurns();
     });
+    _runBotTurns();
   }
 
   void _onCallJhyap() {
     if (!canCallJhyap) return;
+    _botTimer?.cancel();
     AudioService.instance.playSpecialHand();
-    AudioService.instance.playWinJingle();
+    Future.delayed(const Duration(milliseconds: 240), () {
+      if (mounted) AudioService.instance.playWinJingle();
+    });
     setState(() {
       isGameOver = true;
     });
@@ -195,22 +225,26 @@ class _DhumbalTableScreenState extends State<DhumbalTableScreen> {
   }
 
   void _runBotTurns() {
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-      setState(() => currentTurnSeat = 2);
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (!mounted) return;
-        setState(() => currentTurnSeat = 3);
-        Future.delayed(const Duration(milliseconds: 600), () {
-          if (!mounted) return;
-          setState(() {
-            currentTurnSeat = 0;
-            turnPhase = 'throw';
-          });
-          ToastBanner.show(context, 'Your turn! Select cards to throw',
-              icon: Icons.touch_app);
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 520), () {
+      if (!mounted || isGameOver) return;
+      _ensureStockNotEmpty();
+      if (stockPile.isNotEmpty) {
+        discardPile.add(stockPile.removeAt(0));
+      }
+      AudioService.instance.playCardSlide();
+
+      if (currentTurnSeat < 3) {
+        setState(() => currentTurnSeat = currentTurnSeat + 1);
+        _runBotTurns();
+      } else {
+        setState(() {
+          currentTurnSeat = 0;
+          turnPhase = 'throw';
         });
-      });
+        ToastBanner.show(context, 'Your turn! Select cards to throw',
+            icon: Icons.touch_app);
+      }
     });
   }
 

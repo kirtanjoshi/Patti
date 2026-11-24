@@ -108,7 +108,6 @@ class CardHand extends StatelessWidget {
                     onVerticalDragEnd: (details) {
                       final v = details.primaryVelocity;
                       if (v != null && v < -200 && isPlayable) {
-                        AudioService.instance.playCardSnap();
                         onCardPlay?.call(card);
                       }
                     },

@@ -119,6 +119,15 @@ export const SocialShakeMatchedSchema = z.object({
   code: z.string().length(6),
   pin: z.string(),
   gameId: GameIdEnum,
+  matchedWith: z.string().optional(),
+  matchedUser: z
+    .object({
+      userId: z.string(),
+      displayName: z.string(),
+      friendCode: z.string().nullable().optional(),
+      avatarUrl: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
 export const SocialPresenceStatusEnum = z.enum(['online', 'in_room', 'in_table', 'offline']);
@@ -130,7 +139,12 @@ export const SocialPresenceUpdateSchema = z.object({
   gameId: GameIdEnum.nullable().optional(),
 });
 
-export const SocialFriendEventTypeEnum = z.enum(['request_received', 'request_accepted', 'friend_removed']);
+export const SocialFriendEventTypeEnum = z.enum([
+  'request_received',
+  'request_accepted',
+  'request_declined',
+  'friend_removed',
+]);
 export type SocialFriendEventType = z.infer<typeof SocialFriendEventTypeEnum>;
 
 export const SocialFriendEventSchema = z.object({

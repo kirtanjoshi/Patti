@@ -28,6 +28,7 @@ import { MatchmakingService } from '../modules/matchmaking/matchmaking.service.j
 import { AuthService } from '../modules/auth/auth.service.js';
 import { RoomsService } from '../modules/rooms/rooms.service.js';
 import { SocialService } from '../modules/social/social.service.js';
+import { prisma } from '@patii/db';
 
 interface PendingShake {
   socket: Socket;
@@ -56,7 +57,27 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly authService: AuthService,
     private readonly roomsService: RoomsService,
     private readonly socialService: SocialService,
-  ) {}
+  ) {
+    this.socialService.onFriendEvent((event) => {
+      const targetSockets = this.userSockets.get(event.targetUserId);
+      if (targetSockets) {
+        for (const s of targetSockets) {
+          s.emit('social:friend_event', {
+            type: event.type,
+            fromUser: event.fromUser,
+          });
+        }
+      }
+    });
+
+    this.socialService.onPresenceChange((userId, presence) => {
+      this.server?.emit('social:presence_update', {
+        userId,
+        status: presence.status,
+        gameId: presence.gameId ?? null,
+      });
+    });
+  }
 
   handleConnection(client: Socket): void {
     const token = client.handshake.auth?.token as string | undefined;
@@ -352,10 +373,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('social:shake')
-  handleSocialShake(
+  async handleSocialShake(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: unknown,
-  ): void {
+  ): Promise<void> {
     const userId = client.data.user?.userId ?? `guest_${client.id}`;
     const displayName = client.data.user?.name ?? 'Player';
     const clientIp = this.extractSocketIp(client);
@@ -424,14 +445,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.socialService.setPresence(userId, 'in_room', room.gameId);
         this.socialService.setPresence(bestMatch.userId, 'in_room', room.gameId);
 
-        const matchedPayload: SocialShakeMatchedPayload = {
+        const [selfUser, peerUser] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, displayName: true, friendCode: true, avatarUrl: true },
+          }).catch(() => null),
+          prisma.user.findUnique({
+            where: { id: bestMatch.userId },
+            select: { id: true, displayName: true, friendCode: true, avatarUrl: true },
+          }).catch(() => null),
+        ]);
+
+        const payloadForClient: SocialShakeMatchedPayload = {
           code: room.code,
           pin: room.pin,
           gameId: room.gameId,
+          matchedWith: peerUser?.displayName ?? bestMatch.displayName,
+          matchedUser: {
+            userId: bestMatch.userId,
+            displayName: peerUser?.displayName ?? bestMatch.displayName,
+            friendCode: peerUser?.friendCode ?? null,
+            avatarUrl: peerUser?.avatarUrl ?? null,
+          },
         };
 
-        client.emit('social:shake_matched', matchedPayload);
-        bestMatch.socket.emit('social:shake_matched', matchedPayload);
+        const payloadForPeer: SocialShakeMatchedPayload = {
+          code: room.code,
+          pin: room.pin,
+          gameId: room.gameId,
+          matchedWith: selfUser?.displayName ?? displayName,
+          matchedUser: {
+            userId,
+            displayName: selfUser?.displayName ?? displayName,
+            friendCode: selfUser?.friendCode ?? null,
+            avatarUrl: selfUser?.avatarUrl ?? null,
+          },
+        };
+
+        client.emit('social:shake_matched', payloadForClient);
+        bestMatch.socket.emit('social:shake_matched', payloadForPeer);
 
         const roomState = this.roomsService.toRoomStatePayload(room);
         client.emit('room:state', roomState);

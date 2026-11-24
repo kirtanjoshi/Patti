@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,13 +8,16 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/api_const.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/socket_service.dart';
+import '../../../core/services/lan_discovery_service.dart';
+import '../../../core/services/social_provider.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/toast_banner.dart';
+import 'invite_to_room_sheet.dart';
 import 'nearby_player_card.dart';
 import 'radar_dome_widget.dart';
+import 'shake_match_dialog.dart';
 
 /// Visually compelling Sonar Radar Scanner and Nearby Players Discovery
 class NearbyRadarView extends ConsumerStatefulWidget {
@@ -26,12 +30,16 @@ class NearbyRadarView extends ConsumerStatefulWidget {
 class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _radarAnim;
+  final LanDiscoveryService _lanService = LanDiscoveryService();
+  StreamSubscription<List<LanPeer>>? _lanSub;
+  Timer? _pollTimer;
+
   bool _isDiscoverable = true;
   bool _isScanning = false;
   double _radiusKm = 5.0;
 
-  // Real nearby players list loaded from API (empty by default)
-  List<NearbyPlayerModel> _nearbyPlayers = [];
+  List<NearbyPlayerModel> _apiNearbyPlayers = [];
+  List<LanPeer> _lanPeers = [];
   NearbyPlayerModel? _selectedPlayer;
 
   @override
@@ -41,22 +49,49 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
-    _fetchNearbyPlayers();
+    _startDiscovery();
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
+    _lanSub?.cancel();
+    _lanService.dispose();
     _radarAnim.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchNearbyPlayers() async {
-    setState(() => _isScanning = true);
+  Future<void> _startDiscovery() async {
+    final user = ref.read(authProvider).user;
+    if (user != null) {
+      _lanSub = _lanService.peersStream.listen((peers) {
+        if (mounted) {
+          setState(() => _lanPeers = peers);
+        }
+      });
+      await _lanService.start(user: user, isVisible: _isDiscoverable);
+    }
+
+    await _fetchNearbyPlayers();
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _isDiscoverable) {
+        _fetchNearbyPlayers(silent: true);
+      }
+    });
+  }
+
+  Future<void> _fetchNearbyPlayers({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _isScanning = true);
+    }
     final token = ref.read(authProvider).token;
 
     try {
       if (token != null) {
-        // Broadcast location (Kathmandu central default: 27.7172, 85.3240)
+        final netInfo = await _lanService.getLocalNetworkInfo();
+
+        // Broadcast location & local Wi-Fi subnet
         await http
             .post(
               Uri.parse(ApiConst.nearbyLocation),
@@ -68,9 +103,11 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                 'latitude': 27.7172,
                 'longitude': 85.3240,
                 'isVisible': _isDiscoverable,
+                if (netInfo.ip != null) 'localIp': netInfo.ip,
+                if (netInfo.subnet != null) 'localSubnet': netInfo.subnet,
               }),
             )
-            .timeout(const Duration(seconds: 3));
+            .timeout(const Duration(seconds: 4));
 
         // Query active nearby players
         final res = await http.get(
@@ -78,36 +115,95 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
             radiusKm: _radiusKm,
             lat: 27.7172,
             lon: 85.3240,
+            localIp: netInfo.ip,
+            localSubnet: netInfo.subnet,
           ),
           headers: {'Authorization': 'Bearer $token'},
-        ).timeout(const Duration(seconds: 4));
+        ).timeout(const Duration(seconds: 5));
 
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body) as List<dynamic>;
           if (mounted) {
             setState(() {
-              _nearbyPlayers = data
+              _apiNearbyPlayers = data
                   .map((p) => NearbyPlayerModel.fromJson(
                       Map<String, dynamic>.from(p as Map)))
                   .toList();
             });
           }
-        } else {
-          if (mounted) setState(() => _nearbyPlayers = []);
         }
-      } else {
-        if (mounted) setState(() => _nearbyPlayers = []);
       }
     } catch (_) {
-      if (mounted) setState(() => _nearbyPlayers = []);
+      // Keep existing LAN-discovered peers even if backend request times out
     } finally {
-      if (mounted) setState(() => _isScanning = false);
+      if (mounted && !silent) setState(() => _isScanning = false);
     }
+  }
+
+  /// Merges backend nearby players + LAN UDP-discovered peers and enriches
+  /// each with live friendship & device-connection state from [socialProvider].
+  List<NearbyPlayerModel> _mergedPlayers(SocialState social) {
+    final byId = <String, NearbyPlayerModel>{};
+
+    for (final p in _apiNearbyPlayers) {
+      byId[p.userId] = p;
+    }
+
+    for (final lan in _lanPeers) {
+      final existing = byId[lan.userId];
+      if (existing != null) {
+        byId[lan.userId] = existing.copyWith(
+          isSameWifi: true,
+          distanceMeters: 0,
+          distanceText: 'Same Wi-Fi Network',
+          isOnline: true,
+        );
+      } else {
+        byId[lan.userId] = lan.toNearbyPlayer();
+      }
+    }
+
+    final enriched = byId.values.map((p) {
+      final socialStatus = social.friendStatusFor(p.userId);
+      final effectiveStatus = socialStatus != NearbyFriendStatus.none
+          ? socialStatus
+          : p.friendStatus;
+      final isFriend = effectiveStatus == NearbyFriendStatus.accepted;
+      final hasPending =
+          effectiveStatus == NearbyFriendStatus.outgoingPending ||
+              effectiveStatus == NearbyFriendStatus.incomingPending;
+      final isConnected = social.isDeviceConnected(p.userId) || p.isConnected;
+
+      return p.copyWith(
+        friendStatus: effectiveStatus,
+        isFriend: isFriend,
+        hasPendingRequest: hasPending,
+        isConnected: isConnected,
+      );
+    }).toList();
+
+    enriched.sort((a, b) {
+      if (a.isSameWifi != b.isSameWifi) return a.isSameWifi ? -1 : 1;
+      if (a.isConnected != b.isConnected) return a.isConnected ? -1 : 1;
+      return a.distanceMeters.compareTo(b.distanceMeters);
+    });
+
+    return enriched;
   }
 
   Future<void> _toggleDiscoverable(bool value) async {
     setState(() => _isDiscoverable = value);
     HapticFeedback.selectionClick();
+
+    final user = ref.read(authProvider).user;
+    if (user != null) {
+      if (value) {
+        await _lanService.start(user: user, isVisible: true);
+        _fetchNearbyPlayers();
+      } else {
+        await _lanService.stop();
+      }
+    }
 
     final token = ref.read(authProvider).token;
     if (token != null) {
@@ -138,39 +234,62 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
 
   Future<void> _sendFriendRequest(NearbyPlayerModel player) async {
     HapticFeedback.lightImpact();
-    final token = ref.read(authProvider).token;
-
-    try {
-      if (token != null) {
-        await http.post(
-          Uri.parse(ApiConst.friendRequest),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({'targetCodeOrId': player.friendCode}),
+    final target = player.friendCode.isNotEmpty
+        ? player.friendCode
+        : player.userId;
+    final err = await ref.read(socialProvider.notifier).sendFriendRequest(
+          target,
+          knownUserId: player.userId,
+          knownDisplayName: player.displayName,
+          knownFriendCode: player.friendCode,
         );
-      }
-    } catch (_) {}
 
     if (mounted) {
       ToastBanner.show(
         context,
-        'Friend request sent to ${player.displayName}!',
-        icon: Icons.person_add_rounded,
+        err ?? 'Friend request sent to ${player.displayName}!',
+        icon: err != null
+            ? Icons.info_outline_rounded
+            : Icons.person_add_rounded,
+      );
+    }
+  }
+
+  Future<void> _respondToRequest(
+    NearbyPlayerModel player, {
+    required bool accept,
+  }) async {
+    HapticFeedback.selectionClick();
+    final err = await ref.read(socialProvider.notifier).respondToRequest(
+          FriendModel(
+            userId: player.userId,
+            displayName: player.displayName,
+            friendCode: player.friendCode,
+            avatarUrl: player.avatarUrl,
+            status: 'pending',
+            isOnline: player.isOnline,
+          ),
+          accept: accept,
+        );
+    if (mounted) {
+      ToastBanner.show(
+        context,
+        err ??
+            (accept
+                ? 'You and ${player.displayName} are now friends!'
+                : 'Friend request declined'),
+        icon: accept ? Icons.check_circle_rounded : Icons.close_rounded,
       );
     }
   }
 
   void _inviteToTable(NearbyPlayerModel player) {
     HapticFeedback.lightImpact();
-    final socket = ref.read(socketServiceProvider);
-    socket.inviteFriend(player.userId);
-
-    ToastBanner.show(
+    InviteToRoomHelper.inviteFriend(
       context,
-      'Table invite sent to ${player.displayName}!',
-      icon: Icons.casino_rounded,
+      ref,
+      userId: player.userId,
+      displayName: player.displayName,
     );
   }
 
@@ -186,13 +305,16 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
 
   @override
   Widget build(BuildContext context) {
+    final social = ref.watch(socialProvider);
+    final players = _mergedPlayers(social);
+
     return Column(
       children: [
         // 1. Interactive Sonar Radar Dome
         RadarDomeWidget(
           animation: _radarAnim,
           radiusKm: _radiusKm,
-          players: _nearbyPlayers,
+          players: players,
           selectedPlayer: _selectedPlayer,
           onSelectPlayer: (p) => setState(() => _selectedPlayer = p),
         ),
@@ -201,11 +323,11 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
         _buildControlsCard(),
 
         // 3. Status Bar
-        _buildStatusBar(),
+        _buildStatusBar(players.length),
 
         // 4. Players List or Empty State
         Expanded(
-          child: _nearbyPlayers.isEmpty
+          child: players.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(
                   color: PatiiColors.gold,
@@ -214,14 +336,21 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
                   child: ListView.separated(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: _nearbyPlayers.length,
+                    itemCount: players.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (ctx, idx) {
-                      final p = _nearbyPlayers[idx];
+                      final p = players[idx];
+                      final isBusy = social.pendingActionUserIds.contains(p.userId);
                       return NearbyPlayerCard(
                         player: p,
                         isSelected: _selectedPlayer?.userId == p.userId,
+                        isBusy: isBusy,
+                        onConnect: () => ShakeMatchDialog.show(context),
                         onAddFriend: () => _sendFriendRequest(p),
+                        onAcceptRequest: () =>
+                            _respondToRequest(p, accept: true),
+                        onDeclineRequest: () =>
+                            _respondToRequest(p, accept: false),
                         onInvite: () => _inviteToTable(p),
                       );
                     },
@@ -324,7 +453,7 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
     );
   }
 
-  Widget _buildStatusBar() {
+  Widget _buildStatusBar(int playerCount) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -344,10 +473,10 @@ class _NearbyRadarViewState extends ConsumerState<NearbyRadarView>
           Expanded(
             child: Text(
               _isScanning
-                  ? 'Scanning area for card players...'
-                  : _nearbyPlayers.isEmpty
+                  ? 'Scanning Wi-Fi & area for card players...'
+                  : playerCount == 0
                       ? 'No other players detected within ${_radiusKm.toInt()} km'
-                      : '${_nearbyPlayers.length} card players detected in range',
+                      : '$playerCount card player${playerCount == 1 ? '' : 's'} detected in range',
               style: PatiiTypography.body(
                   fontSize: 11.5, color: PatiiColors.goldLight),
             ),

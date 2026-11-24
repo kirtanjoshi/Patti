@@ -465,7 +465,7 @@ class _CasinoLobbyScreenState extends ConsumerState<CasinoLobbyScreen> {
                       onAddCoins: _openDailyReward,
                       onAvatarTap: () => GoogleAuthSheet.show(context),
                       onOpenGallery: () =>
-                          Navigator.pushNamed(context, '/dev/gallery'),
+                          Navigator.pushNamed(context, '/settings'),
                     ),
                   ),
                   SliverPadding(
